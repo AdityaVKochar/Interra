@@ -71,3 +71,14 @@ Next: Phase 5 state-changing ledger and unknown-outcome handling.
 Decision: FIFO insertion order resolves equal timestamps; original event timestamps remain in traces.
 Explicit bindings must cover every argument and match state; absent bindings conservatively depend
 on all slots. Remote cancellation acknowledgment is not required for local invalidation.
+
+## Phase 5 gate - passed
+Session ledger reserves writes atomically before emitting actions. Logical keys plus canonical
+argument fingerprints block repeated proposals, including attempts using different operation keys.
+Write failures, timeouts and cancellation after dispatch become OUTCOME_UNKNOWN; no automatic write
+retry is permitted. Unknown outcomes block further writes until reconciled. Late success can update
+only the safety ledger, never active state/planning. Cancel acknowledgments do not imply rollback.
+Full suite: 25 tests passed; duplicate proposals, timeout and canceled/late-success tests added.
+Limit: identical intended repeat operations require a future explicit user-authorized repeat policy;
+we conservatively block them throughout the session. Persistence across process crashes is out of scope.
+Next: Phase 6 truthful floor management and trace-based latency evidence.

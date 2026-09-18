@@ -12,6 +12,7 @@ from .trace import IDs, TraceRecorder
 from .scheduler import ToolScheduler, Timer
 from jsonschema.exceptions import ValidationError as SchemaError
 from .coordinator import compatible
+from .safety import SafetyLedger
 
 
 @dataclass
@@ -32,6 +33,7 @@ class SessionRuntime:
         self.state = StateManager(session_id)
         self.registry = ToolRegistry()
         self.scheduler = ToolScheduler(self)
+        self.ledger = SafetyLedger()
         self.calls = self.scheduler.calls
         self.results = {}
         self.tasks = set()
@@ -155,8 +157,6 @@ class SessionRuntime:
         try:
             candidate, _, _ = self.state.preview(proposal.state_patch)
             specs = [self.registry.validate(req, candidate) for req in proposal.tool_requests]
-            if any(s.effect_type != "READ_ONLY" for s in specs):
-                raise ValueError("state-changing tools not enabled yet")
         except Exception as exc:
             self.trace.record("PROPOSAL_REJECTED", error=str(exc))
             self.emit("CLARIFY", question="The proposed tool arguments were invalid. Please clarify the request.")
@@ -177,7 +177,10 @@ class SessionRuntime:
         if proposal.clarification:
             self.emit("CLARIFY", question=proposal.clarification)
         if proposal.final_response:
-            if any(c.status == CallStatus.DISPATCHED for c in self.calls.values()):
+            if self.ledger.uncertain:
+                self.trace.record("FINAL_BLOCKED_UNCERTAIN")
+                self.emit("CLARIFY", question="A previous change may have completed. Please verify its outcome before another change.")
+            elif any(c.status == CallStatus.DISPATCHED for c in self.calls.values()):
                 self.trace.record("FINAL_DEFERRED")
             else:
                 self.emit("FINAL", text=proposal.final_response,
@@ -192,6 +195,9 @@ class SessionRuntime:
             self.trace.record("UNKNOWN_RESULT", call_id=payload["call_id"])
             return
         if call.status in {CallStatus.STALE, CallStatus.CANCEL_REQUESTED, CallStatus.CANCELLED} or not compatible(call, self.state.snapshot):
+            if call.operation_key and payload["ok"]:
+                self.ledger.update(call.operation_key, "COMMITTED")
+                self.trace.record("STALE_WRITE_RECONCILED", call_id=call.call_id, operation_key=call.operation_key)
             self.trace.record("STALE_RESULT_DISCARDED", call_id=call.call_id)
             return
         if call.status != CallStatus.DISPATCHED:
@@ -202,6 +208,7 @@ class SessionRuntime:
             self.scheduler.failure(call, CallStatus.FAILED, payload.get("error"))
             return
         self.calls[call.call_id] = call.model_copy(update={"status": CallStatus.COMPLETED})
+        self.ledger.update(call.operation_key, "COMMITTED")
         self.results[call.call_id] = payload
         self.trace.record("RESULT_ACCEPTED", call_id=call.call_id, result=payload)
         if not self.user_pending:
