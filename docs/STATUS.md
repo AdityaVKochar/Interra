@@ -41,3 +41,12 @@ Phase gate: `.venv/Scripts/python -m unittest discover -v`: 8 tests, passed.
 Dependencies: pydantic for strict model parsing, jsonschema for dynamic tool schemas.
 Next: Phase 2 text-only queue runtime, state manager, planner boundary and exact scenario trace.
 Limits: no runtime yet; no official schema/evaluator available.
+
+## Phase 2 gate - passed (2026-09-19)
+Session-owned two-queue runtime, serialized state manager, mockable planner, call/result path,
+chunk assembly and complete JSONL traces implemented. Proposal validation precedes state mutation.
+Full suite: `.venv/Scripts/python -m unittest discover -v`: 10 tests passed.
+Exact single-turn trace and malformed planner/chunk scenarios added; shutdown leaves no planner tasks.
+Trace files: artifacts/traces/*.jsonl (generated, not source-controlled).
+Next: Phase 3 scheduler, timeouts, failures, read-only retries, chained/unseen tool tests.
+Limits: interruption and writes remain disabled; phase 4/5 gates are not claimed.
