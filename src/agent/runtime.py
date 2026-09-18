@@ -11,6 +11,7 @@ from .tools.registry import ToolRegistry
 from .trace import IDs, TraceRecorder
 from .scheduler import ToolScheduler, Timer
 from jsonschema.exceptions import ValidationError as SchemaError
+from .coordinator import compatible
 
 
 @dataclass
@@ -39,6 +40,8 @@ class SessionRuntime:
         self.chunks = []
         self.seen = set()
         self.last_input = {}
+        self.user_pending = False
+        self.deferred_retries = set()
 
     def spawn(self, coroutine):
         task = asyncio.create_task(coroutine)
@@ -92,6 +95,11 @@ class SessionRuntime:
             self.registry.replace(event.payload["tools"])
             self.trace.record("MANIFEST_UPDATED")
         elif event.type == "TEXT_CHUNK":
+            if not self.chunks:
+                self.user_pending = True
+                self.token += 1
+                if self.planner_task and not self.planner_task.done():
+                    self.planner_task.cancel()
             self.chunks.append(event.payload["text"])
             if event.payload["end_of_turn"]:
                 self.last_input = {"text": "".join(self.chunks), "event_id": event.event_id}
@@ -99,6 +107,21 @@ class SessionRuntime:
                 self.start_plan()
         elif event.type == "TOOL_RESULT":
             self.result(event.payload)
+        elif event.type == "INTERRUPTION":
+            self.token += 1
+            self.user_pending = True
+            self.chunks.clear()
+            if self.planner_task and not self.planner_task.done():
+                self.planner_task.cancel()
+            self.scheduler.reconcile(self.state.snapshot, all_calls=True)
+            self.trace.record("INTERRUPTED", event_id=event.event_id)
+        elif event.type == "CANCEL_ACK":
+            call = self.calls.get(event.payload["call_id"])
+            if call and call.status == CallStatus.CANCEL_REQUESTED:
+                self.calls[call.call_id] = call.model_copy(update={"status": CallStatus.CANCELLED})
+                self.trace.record("CANCEL_ACKNOWLEDGED", call_id=call.call_id)
+            else:
+                self.trace.record("CANCEL_ACK_IGNORED", call_id=event.payload["call_id"])
         else:
             self.trace.record("UNSUPPORTED_INPUT", event_id=event.event_id)
 
@@ -144,6 +167,11 @@ class SessionRuntime:
         if state.version != old.version:
             self.trace.record("STATE_UPDATED", before=old.model_dump(), after=state.model_dump(),
                               changed=sorted(changed), intent_changed=switched)
+        self.scheduler.reconcile(state)
+        self.user_pending = False
+        for call_id in list(self.deferred_retries):
+            self.deferred_retries.discard(call_id)
+            self.scheduler.timer(Timer(call_id, "retry"))
         for request, spec in zip(proposal.tool_requests, specs):
             self.dispatch(request, spec)
         if proposal.clarification:
@@ -163,6 +191,9 @@ class SessionRuntime:
         if call is None:
             self.trace.record("UNKNOWN_RESULT", call_id=payload["call_id"])
             return
+        if call.status in {CallStatus.STALE, CallStatus.CANCEL_REQUESTED, CallStatus.CANCELLED} or not compatible(call, self.state.snapshot):
+            self.trace.record("STALE_RESULT_DISCARDED", call_id=call.call_id)
+            return
         if call.status != CallStatus.DISPATCHED:
             self.trace.record("DUPLICATE_RESULT_DISCARDED", call_id=call.call_id)
             return
@@ -173,4 +204,7 @@ class SessionRuntime:
         self.calls[call.call_id] = call.model_copy(update={"status": CallStatus.COMPLETED})
         self.results[call.call_id] = payload
         self.trace.record("RESULT_ACCEPTED", call_id=call.call_id, result=payload)
-        self.start_plan()
+        if not self.user_pending:
+            self.start_plan()
+        else:
+            self.trace.record("RESULT_PLANNING_DEFERRED", call_id=call.call_id)

@@ -1,6 +1,7 @@
 """Call lifecycle and clock-driven deadlines; all mutations run in the coordinator."""
 from dataclasses import dataclass
 from .models import Call, CallStatus
+from .coordinator import compatible
 
 
 @dataclass
@@ -59,5 +60,31 @@ class ToolScheduler:
         if timer.kind == "timeout" and call.status == CallStatus.DISPATCHED:
             self.failure(call, CallStatus.TIMED_OUT, "deadline exceeded")
         elif timer.kind == "retry" and call.status in {CallStatus.FAILED, CallStatus.TIMED_OUT}:
+            if not compatible(call, self.runtime.state.snapshot):
+                self.invalidate(call, "dependencies changed")
+                return
+            if self.runtime.user_pending:
+                self.runtime.trace.record("RETRY_DEFERRED", call_id=call.call_id)
+                self.runtime.deferred_retries.add(call.call_id)
+                return
             self.timers.pop(call.call_id, None)
             self.dispatch(call.request, call.spec, call.attempt + 1)
+
+    def invalidate(self, call, reason):
+        if call.status in {CallStatus.STALE, CallStatus.CANCEL_REQUESTED, CallStatus.CANCELLED}:
+            return
+        self.disarm(call.call_id)
+        r = self.runtime
+        r.deferred_retries.discard(call.call_id)
+        status = CallStatus.CANCEL_REQUESTED if call.status == CallStatus.DISPATCHED else CallStatus.STALE
+        self.calls[call.call_id] = call.model_copy(update={"status": status})
+        r.results.pop(call.call_id, None)
+        r.trace.record("CALL_INVALIDATED", call_id=call.call_id, reason=reason)
+        if status == CallStatus.CANCEL_REQUESTED:
+            r.emit("CANCEL_TOOL_CALL", call_id=call.call_id)
+            r.trace.record("CANCEL_EMITTED", call_id=call.call_id)
+
+    def reconcile(self, state, all_calls=False):
+        for call in list(self.calls.values()):
+            if all_calls or not compatible(call, state):
+                self.invalidate(call, "superseded" if all_calls else "dependencies changed")

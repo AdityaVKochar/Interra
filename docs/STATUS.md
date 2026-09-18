@@ -59,3 +59,15 @@ Full suite: 15 tests passed. Traces saved under artifacts/traces.
 Inspection found JSON Schema errors were not caught by the input boundary; corrected with a
 regression proving malformed payloads do not terminate consumption.
 Next: Phase 4 dependency invalidation, pending-user barriers, late-plan/result rejection and timing matrix.
+
+## Phase 4 gate - passed
+Dependency-aware cancellation/invalidation and a pending-user barrier prevent old tool completions
+from canceling correction reasoning. Explicit interruption invalidates work but retains canonical slots
+until semantics arrive. Intent switches clear old intent slots; localized patches preserve other slots.
+Full suite: 22 tests passed, including eight boundary matrix cases (-50/-10/-1/0/+1/+10/+50 ms,
+both insertion orders at zero), rapid corrections, stale plans, cancel acknowledgment, stale retry,
+and unrelated-slot preservation. No stale result entered active planning in these cases.
+Next: Phase 5 state-changing ledger and unknown-outcome handling.
+Decision: FIFO insertion order resolves equal timestamps; original event timestamps remain in traces.
+Explicit bindings must cover every argument and match state; absent bindings conservatively depend
+on all slots. Remote cancellation acknowledgment is not required for local invalidation.
