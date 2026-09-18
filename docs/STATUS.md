@@ -1,33 +1,31 @@
 # Implementation status
 
 ## Current phase
-Phase 13 minimal actual-runtime demo passed; Phase 11 remains blocked on the absent
-official kit and Phase 14 is next (2026-09-19).
+All locally executable work through Phase 14 passes. Phase 11 and final release readiness
+remain blocked by external evaluator/submission artifacts (2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-10 and 12 are committed on `codex/interruptible-runtime`; Phase 13 has passing
-evidence and is ready to commit. The repository currently has 28 Python source files and
-14 Python test files, plus generated JSONL scenario traces and local profiler output.
+Phases 1-10 and 12-13 are committed on `codex/interruptible-runtime`; Phase 14 has passing
+local evidence and is ready to commit. The repository currently has 28 Python source files
+and 16 Python test files, plus generated JSONL scenario traces and local profiler/build output.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
 ## Requirements gaps
-Phase gates 1-10 and available local Phases 12-13 have recorded test evidence. Official
-evaluator integration is externally blocked; submission packaging remains. README.md,
-Dockerfile, presentation assets, recorded demo video and final release tag are absent.
-Definition-of-done boxes remain intentionally unchecked pending a consolidated evidence audit.
+Phase gates 1-10 and available local Phases 12-14 have recorded evidence. README, Dockerfile,
+architecture, demo guide and reviewable deck source exist. Official evaluator integration,
+Docker execution, recorded demo video, exported PPT/PDF and the final release tag remain open.
+The definition-of-done audit marks only test/build/scan-backed items complete.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Commit Phase 13 now that its gate passes.
-2. Integrate the official kit immediately when supplied; until then, retain the explicit
-   Phase 11 external blocker and do not claim evaluator compatibility.
-3. Complete Phase 14 reproducible README and Docker verification plus remaining submission
-   assets that can be represented in the repository.
-4. Audit definition-of-done evidence and do not mark externally unavailable deliverables done.
-5. Re-run every available gate and inspect the final diff; do not create the final tag until
-   the official-kit and human-produced submission deliverables are supplied and evidenced.
+1. Commit Phase 14 now that all locally executable checks pass.
+2. Supply the official Samsung kit/schema; implement its adapter and run all nine public cases.
+3. Install/start Docker and run both documented image commands.
+4. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
+5. Re-run all local and official gates, review the final commit and only then create
+   `PRISM_GENAI_HACKATHON_Y2026`.
 
 ## Decisions
 - Documented local envelopes are provisional; official schema compatibility is not claimed.
@@ -175,3 +173,22 @@ state versions and slots, call statuses, stale rejection and local safety/latenc
 operation dispatches. The scenario test asserts those runtime traces rather than a simulated UI.
 Full suite: `.venv/Scripts/python -m unittest discover -v`: 44 tests passed in 3.552 seconds.
 Next: Phase 14 reproducible packaging, architecture/demo documentation and Docker verification.
+
+## Phase 14 local packaging - passed with external blockers
+Added reproducible Windows/POSIX setup, test and actual-runtime demo instructions; an
+unprivileged Python 3.11 Dockerfile; architecture and demo documents; known limitations; and
+reviewable ten-slide submission source with explicit team/result placeholders. Packaging tests
+prevent these artifacts or official-kit caveats from disappearing.
+Added explicit parallel-session isolation and reverse-order concurrent result scenarios during
+the definition-of-done audit. Both assert canonical state, session-qualified IDs, call/result
+matching and traces.
+`uv build --wheel --out-dir artifacts/wheel` built
+`interra_runtime-0.1.0-py3-none-any.whl`. A fresh Python 3.11 virtual environment installed that
+wheel plus resolved dependencies and successfully ran both the module demo and packaged
+`interra-demo` console entrypoint.
+Secret-pattern scans found no credentials, private keys or `.env` files.
+Docker execution could not be verified because the `docker` command is not installed on this
+machine; the checklist remains open. The official kit, exported PPT/PDF, recorded video and
+release tag are also intentionally open.
+Final local suite: `.venv/Scripts/python -m unittest discover -v`: 48 tests passed in
+1.900 seconds.

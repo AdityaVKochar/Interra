@@ -6,8 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "interra-runtime"
 version = "0.1.0"
 description = "Interruptible session-scoped event/action runtime"
+readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = ["pydantic>=2.10,<3", "jsonschema>=4.23,<5", "httpx>=0.28,<1"]
+
+[project.scripts]
+interra-demo = "agent.demo:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
