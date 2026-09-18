@@ -23,8 +23,14 @@ class Completion:
     error: str | None = None
 
 
+@dataclass
+class PlannerDeadline:
+    token: int
+
+
 class SessionRuntime:
-    def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None):
+    def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None,
+                 planner_repairs=0, planner_timeout=60.):
         self.session_id, self.provider, self.clock = session_id, provider, clock
         self.input = input_queue if input_queue is not None else asyncio.Queue()
         self.output = output_queue if output_queue is not None else asyncio.Queue()
@@ -39,6 +45,9 @@ class SessionRuntime:
         self.results = {}
         self.tasks = set()
         self.planner_task = None
+        self.planner_timer = None
+        self.planner_repairs = planner_repairs
+        self.planner_timeout = planner_timeout
         self.token = 0
         self.chunks = []
         self.seen = set()
@@ -71,6 +80,13 @@ class SessionRuntime:
                         self.complete(item)
                     elif isinstance(item, Timer):
                         self.scheduler.timer(item)
+                    elif isinstance(item, PlannerDeadline):
+                        if item.token == self.token:
+                            self.token += 1
+                            if self.planner_task:
+                                self.planner_task.cancel()
+                            self.trace.record("PLANNER_TIMED_OUT", token=item.token)
+                            self.emit("CLARIFY", question="Reasoning took too long. Please restate the next step.")
                     else:
                         try:
                             event = self.protocol.decode(item.model_dump() if isinstance(item, Event) else item)
@@ -139,23 +155,35 @@ class SessionRuntime:
         token = self.token
         if self.planner_task and not self.planner_task.done():
             self.planner_task.cancel()
+        if self.planner_timer:
+            self.planner_timer.cancel()
         context = PlanningContext(state=self.state.snapshot, input=self.last_input,
                                   tools=self.registry.specs, results=self.results)
         self.trace.record("PLANNER_STARTED", token=token, version=context.state.version)
         async def work():
             try:
-                value = await propose(self.provider, context)
+                value = await propose(self.provider, context, repairs=self.planner_repairs,
+                    on_invalid=lambda attempt, error: self.trace.record("MODEL_SCHEMA_REJECTED", attempt=attempt, error=error))
                 self.input.put_nowait(Completion(token, value))
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 self.input.put_nowait(Completion(token, error=str(exc)))
         self.planner_task = self.spawn(work())
+        deadline = self.clock.now() + self.planner_timeout
+        async def timeout():
+            remaining = deadline - self.clock.now()
+            if remaining > 0:
+                await self.clock.sleep(remaining)
+            self.input.put_nowait(PlannerDeadline(token))
+        self.planner_timer = self.spawn(timeout())
 
     def complete(self, completion):
         if completion.token != self.token:
             self.trace.record("STALE_PLAN_DISCARDED", token=completion.token)
             return
+        if self.planner_timer:
+            self.planner_timer.cancel()
         if completion.error:
             self.trace.record("PLANNER_FAILED", error=completion.error)
             self.emit("CLARIFY", question="I could not interpret that request safely. What should I do next?")

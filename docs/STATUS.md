@@ -90,3 +90,13 @@ input timestamps. Full suite: 27 tests passed, including pending-provider latenc
 Local virtual first-action latency is 0 seconds for immediate queue processing; this is not a live
 provider benchmark or Samsung score. Exact baseline trace updated to require the added floor actions.
 Next: Phase 7 configurable real provider adapter with schema repair limits and mocked transport tests.
+
+## Phase 7 gate - passed with transport mocks
+Added configurable Ollama structured-output adapter and httpx async transport, bounded schema repair,
+provider failure fallback and injected-clock reasoning deadlines. Runtime is unchanged when swapping
+scripted and real adapter implementations. Full suite: 31 tests passed, including mocked HTTP
+request/response, schema repair/exhaustion, timeout and cancellation cleanup.
+Adapter contract checked against https://docs.ollama.com/api/chat and
+https://docs.ollama.com/capabilities/structured-outputs on 2026-09-19.
+No live model endpoint/model was supplied; no live quality or latency result is claimed.
+Next: Phase 8 WAV parsing, asynchronous audio provider interface and provenance-gated observations.

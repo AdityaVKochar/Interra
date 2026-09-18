@@ -7,7 +7,7 @@ name = "interra-runtime"
 version = "0.1.0"
 description = "Interruptible session-scoped event/action runtime"
 requires-python = ">=3.11,<3.13"
-dependencies = ["pydantic>=2.10,<3", "jsonschema>=4.23,<5"]
+dependencies = ["pydantic>=2.10,<3", "jsonschema>=4.23,<5", "httpx>=0.28,<1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
