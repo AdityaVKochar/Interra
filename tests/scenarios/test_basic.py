@@ -11,10 +11,12 @@ class BasicTests(unittest.IsolatedAsyncioTestCase):
             await h.send("TOOL_RESULT", call_id=call.payload["call_id"], ok=True, result={"options": [1]})
             final = await h.action("FINAL")
             self.assertEqual(final.payload["state_snapshot"]["slots"]["destination"], "Delhi")
-            self.assertEqual(h.kinds(), ["INPUT_RECEIVED", "MANIFEST_UPDATED", "INPUT_RECEIVED",
+            self.assertEqual(h.kinds(), ["INPUT_RECEIVED", "INPUT_QUEUE_LATENCY",
+                "MANIFEST_UPDATED", "INPUT_RECEIVED", "INPUT_QUEUE_LATENCY",
                 "ACTION_EMITTED", "FIRST_RESPONSE_LATENCY",
                 "PLANNER_STARTED", "PROPOSAL_ACCEPTED", "STATE_UPDATED", "CALL_DISPATCHED",
-                "ACTION_EMITTED", "INPUT_RECEIVED", "RESULT_ACCEPTED", "PLANNER_STARTED",
+                "ACTION_EMITTED", "INPUT_RECEIVED", "INPUT_QUEUE_LATENCY",
+                "RESULT_ACCEPTED", "PLANNER_STARTED",
                 "PROPOSAL_ACCEPTED", "ACTION_EMITTED"])
         self.assertFalse(h.runtime.tasks)
 

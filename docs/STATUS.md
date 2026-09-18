@@ -1,31 +1,34 @@
 # Implementation status
 
 ## Current phase
-Phase 10 multimodal fusion gate passed; Phase 11 blocked on the absent official kit
-(2026-09-19).
+Phase 12 local performance hardening passed; Phase 11 remains blocked on the absent
+official kit and Phase 13 is next (2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-9 are committed on `codex/interruptible-runtime`; Phase 10 has passing gate
-evidence and is ready to commit. The repository currently has 26 Python source files and
-11 Python test files, plus generated JSONL scenario traces.
+Phases 1-10 are committed on `codex/interruptible-runtime`; Phase 12 has passing local
+evidence and is ready to commit. The repository currently has 27 Python source files and
+13 Python test files, plus generated JSONL scenario traces and local profiler output.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
 ## Requirements gaps
-Phase gates 1-10 have recorded test evidence. Official evaluator integration is externally
-blocked; performance hardening, demo mode and submission packaging remain. README.md,
-Dockerfile, presentation/demo assets and final release tag are absent. Definition-of-done
-boxes remain intentionally unchecked pending a consolidated evidence audit.
+Phase gates 1-10 and available local Phase 12 work have recorded test evidence. Official
+evaluator integration is externally blocked; demo mode and submission packaging remain.
+README.md, Dockerfile, presentation/demo assets and final release tag are absent.
+Definition-of-done boxes remain intentionally unchecked pending a consolidated evidence audit.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Commit Phase 10 now that its gate passes.
+1. Commit Phase 12 now that its local checks pass.
 2. Integrate the official kit immediately when supplied; until then, retain the explicit
    Phase 11 external blocker and do not claim evaluator compatibility.
-3. Audit definition-of-done evidence and local performance traces without inventing a score.
-4. Continue Phases 12-14 in order, including reproducible README and Docker verification;
-   do not create the final tag until every available gate is evidenced.
+3. Build Phase 13's minimal trace/state/call timeline using the actual runtime.
+4. Complete Phase 14 reproducible README and Docker verification plus remaining submission
+   assets that can be represented in the repository.
+5. Audit definition-of-done evidence and do not mark externally unavailable deliverables done.
+6. Re-run every available gate and inspect the final diff; do not create the final tag until
+   the official-kit and human-produced submission deliverables are supplied and evidenced.
 
 ## Decisions
 - Documented local envelopes are provisional; official schema compatibility is not claimed.
@@ -138,3 +141,26 @@ It asserts combined context, stale-result rejection, planner cancellation and th
 evening snapshot.
 Full suite: `.venv/Scripts/python -m unittest discover -v`: 41 tests passed in 1.794 seconds.
 Next: Phase 11 official evaluator adapter and nine public scenarios when the kit is supplied.
+
+## Phase 11 - externally blocked
+No Samsung evaluator package, exact schema, queue harness, expected entrypoint or nine public
+scenarios exists in the repository. The provisional `LocalProtocol` remains isolated from the
+runtime so an official adapter can replace it without changing orchestration code. No official
+compatibility or public-scenario score is claimed.
+
+## Phase 12 local performance hardening - passed
+Added trace-derived runtime metrics for input-queue, first-response and cancellation latency,
+planner/stale-result counts, invalid inputs, provider failures and duplicate write operation
+dispatches. Runtime traces now record source timestamps for queue and cancellation latency.
+Protocol and dynamic argument validators are compiled once per stable schema/manifest rather
+than reconstructed for every event, action or dispatch.
+The first full profile ran 41 tests in 2.700 seconds under `cProfile`; runtime-specific costs
+were dominated by the event consumer and test event-loop setup. After instrumentation and two
+new tests, the profiled 43-test suite ran in 2.774 seconds. These differently sized runs are
+not presented as a speedup claim; focused cumulative costs remained small (protocol decode
+0.040 seconds across 139 calls, registry validation 0.011 seconds across 49 calls).
+An exact-trace failure caused by the new queue-latency records was fixed by requiring the new
+records in the baseline trace rather than weakening the assertion.
+Full unprofiled suite: `.venv/Scripts/python -m unittest discover -v`: 43 tests passed in
+1.881 seconds. Local profiler files are generated under `artifacts/` and are not source code.
+Next: Phase 13 minimal demo view backed by real runtime traces.

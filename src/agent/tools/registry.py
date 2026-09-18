@@ -5,9 +5,16 @@ from .manifest import normalize_manifest
 class ToolRegistry:
     def __init__(self):
         self._specs = {}
+        self._validators = {}
 
     def replace(self, tools):
-        self._specs = normalize_manifest(tools)
+        specs = normalize_manifest(tools)
+        validators = {
+            name: Draft202012Validator(spec.argument_schema)
+            for name, spec in specs.items()
+        }
+        self._specs = specs
+        self._validators = validators
 
     @property
     def specs(self):
@@ -17,7 +24,7 @@ class ToolRegistry:
         if request.tool_name not in self._specs:
             raise ValueError("unknown tool")
         spec = self._specs[request.tool_name]
-        Draft202012Validator(spec.argument_schema).validate(request.arguments)
+        self._validators[request.tool_name].validate(request.arguments)
         if request.bindings is not None:
             if set(request.bindings) != set(request.arguments):
                 raise ValueError("explicit bindings must cover every argument")

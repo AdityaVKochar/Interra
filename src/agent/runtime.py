@@ -57,6 +57,7 @@ class SessionRuntime:
         self.user_pending = False
         self.deferred_retries = set()
         self.epoch = 0
+        self.latest_user_timestamp = None
         self.perception = PerceptionManager(self, audio_provider, vision_provider)
 
     def spawn(self, coroutine):
@@ -116,6 +117,19 @@ class SessionRuntime:
             return
         self.seen.add(event.event_id)
         self.trace.record("INPUT_RECEIVED", event=event.model_dump())
+        self.trace.record(
+            "INPUT_QUEUE_LATENCY",
+            event_id=event.event_id,
+            source_timestamp=event.timestamp,
+            latency=self.clock.now() - event.timestamp,
+        )
+        if event.type in {
+            "TEXT_CHUNK",
+            "INTERRUPTION",
+            "AUDIO_CLIP",
+            "VIDEO_FRAME",
+        }:
+            self.latest_user_timestamp = event.timestamp
         acknowledgment = self.floor.acknowledge(event)
         if acknowledgment:
             self.emit("SPEAK", text=acknowledgment)

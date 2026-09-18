@@ -32,6 +32,14 @@ ACTION_PAYLOADS = {
     "FINAL": obj({"text": S, "state_snapshot": obj({
         "intent": {"type": ["string", "null"]}, "slots": D})}),
 }
+EVENT_VALIDATORS = {
+    kind: Draft202012Validator(schema)
+    for kind, schema in EVENT_PAYLOADS.items()
+}
+ACTION_VALIDATORS = {
+    kind: Draft202012Validator(schema)
+    for kind, schema in ACTION_PAYLOADS.items()
+}
 
 
 class ProtocolAdapter(Protocol):
@@ -42,9 +50,9 @@ class ProtocolAdapter(Protocol):
 class LocalProtocol:
     def decode(self, value: str | dict) -> Event:
         event = Event.model_validate_json(value) if isinstance(value, str) else Event.model_validate(value)
-        Draft202012Validator(EVENT_PAYLOADS[event.type]).validate(event.payload)
+        EVENT_VALIDATORS[event.type].validate(event.payload)
         return event.model_copy(deep=True)
 
     def encode(self, action: Action) -> str:
-        Draft202012Validator(ACTION_PAYLOADS[action.type]).validate(action.payload)
+        ACTION_VALIDATORS[action.type].validate(action.payload)
         return json.dumps(action.model_dump(mode="json"), allow_nan=False, sort_keys=True)

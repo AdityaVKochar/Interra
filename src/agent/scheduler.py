@@ -106,6 +106,13 @@ class ToolScheduler:
         if status == CallStatus.CANCEL_REQUESTED:
             r.emit("CANCEL_TOOL_CALL", call_id=call.call_id)
             r.trace.record("CANCEL_EMITTED", call_id=call.call_id)
+            if r.latest_user_timestamp is not None:
+                r.trace.record(
+                    "CANCEL_EMISSION_LATENCY",
+                    call_id=call.call_id,
+                    source_timestamp=r.latest_user_timestamp,
+                    latency=r.clock.now() - r.latest_user_timestamp,
+                )
 
     def reconcile(self, state, all_calls=False):
         for call in list(self.calls.values()):
