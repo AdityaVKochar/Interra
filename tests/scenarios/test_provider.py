@@ -7,6 +7,12 @@ from tests.helpers import Harness, ScriptedPlanner, spec, plan
 
 
 class ProviderTests(unittest.IsolatedAsyncioTestCase):
+    async def test_exception_with_empty_message_is_failure(self):
+        async with Harness(ScriptedPlanner(EOFError()), self.id()) as h:
+            await h.text("item")
+            await h.action("CLARIFY")
+            self.assertIn("PLANNER_FAILED", h.kinds())
+
     async def test_real_adapter_swaps_without_runtime_changes(self):
         requests = []
         def transport(request):

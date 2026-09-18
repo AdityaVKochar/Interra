@@ -14,6 +14,7 @@ from jsonschema.exceptions import ValidationError as SchemaError
 from .coordinator import compatible
 from .safety import SafetyLedger
 from .floor import FloorManager
+from .multimodal.fusion import PerceptionManager, PerceptionResult
 
 
 @dataclass
@@ -30,7 +31,7 @@ class PlannerDeadline:
 
 class SessionRuntime:
     def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None,
-                 planner_repairs=0, planner_timeout=60.):
+                 planner_repairs=0, planner_timeout=60., audio_provider=None):
         self.session_id, self.provider, self.clock = session_id, provider, clock
         self.input = input_queue if input_queue is not None else asyncio.Queue()
         self.output = output_queue if output_queue is not None else asyncio.Queue()
@@ -55,6 +56,8 @@ class SessionRuntime:
         self.floor = FloorManager()
         self.user_pending = False
         self.deferred_retries = set()
+        self.epoch = 0
+        self.perception = PerceptionManager(self, audio_provider)
 
     def spawn(self, coroutine):
         task = asyncio.create_task(coroutine)
@@ -80,6 +83,8 @@ class SessionRuntime:
                         self.complete(item)
                     elif isinstance(item, Timer):
                         self.scheduler.timer(item)
+                    elif isinstance(item, PerceptionResult):
+                        self.perception.complete(item)
                     elif isinstance(item, PlannerDeadline):
                         if item.token == self.token:
                             self.token += 1
@@ -121,6 +126,8 @@ class SessionRuntime:
             self.trace.record("MANIFEST_UPDATED")
         elif event.type == "TEXT_CHUNK":
             if not self.chunks:
+                self.epoch += 1
+                self.perception.invalidate()
                 self.user_pending = True
                 self.token += 1
                 if self.planner_task and not self.planner_task.done():
@@ -133,6 +140,8 @@ class SessionRuntime:
         elif event.type == "TOOL_RESULT":
             self.result(event.payload)
         elif event.type == "INTERRUPTION":
+            self.epoch += 1
+            self.perception.invalidate()
             self.token += 1
             self.user_pending = True
             self.chunks.clear()
@@ -140,6 +149,17 @@ class SessionRuntime:
                 self.planner_task.cancel()
             self.scheduler.reconcile(self.state.snapshot, all_calls=True)
             self.trace.record("INTERRUPTED", event_id=event.event_id)
+        elif event.type == "AUDIO_CLIP":
+            self.epoch += 1
+            self.token += 1
+            self.user_pending = True
+            self.chunks.clear()
+            self.perception.invalidate()
+            if self.planner_task:
+                self.planner_task.cancel()
+            if self.planner_timer:
+                self.planner_timer.cancel()
+            self.perception.start(event)
         elif event.type == "CANCEL_ACK":
             call = self.calls.get(event.payload["call_id"])
             if call and call.status == CallStatus.CANCEL_REQUESTED:
@@ -184,7 +204,7 @@ class SessionRuntime:
             return
         if self.planner_timer:
             self.planner_timer.cancel()
-        if completion.error:
+        if completion.error is not None:
             self.trace.record("PLANNER_FAILED", error=completion.error)
             self.emit("CLARIFY", question="I could not interpret that request safely. What should I do next?")
             return

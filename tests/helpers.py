@@ -41,8 +41,10 @@ class Harness:
 
     async def __aexit__(self, *args):
         self.runtime.input.put_nowait(None)
-        await self.task
-        self.runtime.trace.save(f"artifacts/traces/{self.runtime.session_id}.jsonl")
+        try:
+            await self.task
+        finally:
+            self.runtime.trace.save(f"artifacts/traces/{self.runtime.session_id}.jsonl")
 
     async def send(self, kind, **payload):
         self.n += 1

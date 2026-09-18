@@ -100,3 +100,14 @@ Adapter contract checked against https://docs.ollama.com/api/chat and
 https://docs.ollama.com/capabilities/structured-outputs on 2026-09-19.
 No live model endpoint/model was supplied; no live quality or latency result is claimed.
 Next: Phase 8 WAV parsing, asynchronous audio provider interface and provenance-gated observations.
+
+## Phase 8 gate - passed
+PCM WAV validation, asynchronous audio boundary, configurable raw-WAV HTTP adapter, source timestamps
+and epoch-gated observations integrated into the existing runtime. Local protocol uses bounded
+base64 media references; evaluator-specific path/bytes resolution remains an adapter responsibility.
+Full suite: 36 tests passed. Audio-only, active-call correction, ambiguous/invalid WAV and delayed
+interpretation rejection are covered. Providers are mocked; live speech accuracy is not measured.
+Failure/root cause: truncated WAV raised EOFError with an empty string; truthiness-based error checks
+misclassified failure as success. Replaced both planning/perception checks with explicit None checks,
+added empty-exception regression, and made harness trace saving unconditional on failure.
+Next: Phase 9 PNG/vision adapter, ambiguity and delayed-frame cases.
