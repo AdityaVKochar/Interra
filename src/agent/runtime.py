@@ -150,11 +150,8 @@ class SessionRuntime:
             self.scheduler.reconcile(self.state.snapshot, all_calls=True)
             self.trace.record("INTERRUPTED", event_id=event.event_id)
         elif event.type in {"AUDIO_CLIP", "VIDEO_FRAME"}:
-            self.epoch += 1
             self.token += 1
             self.user_pending = True
-            self.chunks.clear()
-            self.perception.invalidate()
             if self.planner_task:
                 self.planner_task.cancel()
             if self.planner_timer:

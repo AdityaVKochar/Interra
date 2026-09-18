@@ -1,32 +1,30 @@
 # Implementation status
 
 ## Current phase
-Phase 9 vision gate passed; Phase 10 multimodal fusion next (2026-09-19).
+Phase 10 multimodal fusion gate passed; Phase 11 blocked on the absent official kit
+(2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-8 are committed on `codex/interruptible-runtime`; Phase 9 has passing gate evidence
-and is ready to commit. The repository currently has 26 Python source files and 10 Python
-test files, plus generated JSONL scenario traces.
+Phases 1-9 are committed on `codex/interruptible-runtime`; Phase 10 has passing gate
+evidence and is ready to commit. The repository currently has 26 Python source files and
+11 Python test files, plus generated JSONL scenario traces.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
 ## Requirements gaps
-Phase gates 1-9 have recorded test evidence. Multimodal fusion, official evaluator
-integration, performance hardening, demo mode and submission packaging remain. README.md,
+Phase gates 1-10 have recorded test evidence. Official evaluator integration is externally
+blocked; performance hardening, demo mode and submission packaging remain. README.md,
 Dockerfile, presentation/demo assets and final release tag are absent. Definition-of-done
 boxes remain intentionally unchecked pending a consolidated evidence audit.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Commit Phase 9 now that its gate passes.
-2. Implement Phase 10 multimodal fusion and its deterministic adversarial interruption gate.
-3. Re-run all tests, inspect traces on failure and add root-cause regressions.
-4. Record and commit Phase 10 only after its gate passes.
-5. Re-run a definition-of-done evidence audit before Phase 11.
-6. Integrate the official kit immediately when supplied; until then, explicitly record the
+1. Commit Phase 10 now that its gate passes.
+2. Integrate the official kit immediately when supplied; until then, retain the explicit
    Phase 11 external blocker and do not claim evaluator compatibility.
-7. Continue Phases 12-14 in order, including reproducible README and Docker verification;
+3. Audit definition-of-done evidence and local performance traces without inventing a score.
+4. Continue Phases 12-14 in order, including reproducible README and Docker verification;
    do not create the final tag until every available gate is evidenced.
 
 ## Decisions
@@ -127,3 +125,16 @@ Tests cover clear frame-grounded tool use, targeted ambiguous-frame clarificatio
 corrupt PNG rejection and stale frame analysis after newer text.
 Live vision accuracy is not claimed; provider behavior is deterministic/mocked.
 Next: Phase 10 combined text + audio + image + tool-result interruption scenario.
+
+## Phase 10 gate - passed
+Audio and vision now retain separately owned in-flight tasks within the same semantic epoch,
+so one modality no longer cancels the other. Accepted observations are fused into one planner
+context with per-modality source event, timestamp and epoch provenance; newer text or explicit
+interruption still invalidates the entire obsolete perception branch.
+Test-first failure proved the previous cross-modality cancellation bug (`audio_result` became
+cancelled when a frame arrived). The regression now interleaves text, an explicit interruption,
+audio, PNG vision, a stale old tool result, canceled partial reasoning and a current tool result.
+It asserts combined context, stale-result rejection, planner cancellation and the final Mumbai
+evening snapshot.
+Full suite: `.venv/Scripts/python -m unittest discover -v`: 41 tests passed in 1.794 seconds.
+Next: Phase 11 official evaluator adapter and nine public scenarios when the kit is supplied.

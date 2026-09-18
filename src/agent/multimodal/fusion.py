@@ -22,12 +22,14 @@ class PerceptionManager:
         self.vision_provider = vision_provider
         self.tasks = {}
         self.latest = {}
+        self.accepted = {}
 
     def invalidate(self):
         for task in self.tasks.values():
             task.cancel()
         self.tasks.clear()
         self.latest.clear()
+        self.accepted.clear()
 
     def start(self, event):
         r = self.runtime
@@ -39,6 +41,11 @@ class PerceptionManager:
             r.emit("CLARIFY", question=f"{modality.capitalize()} understanding is not configured. Please send the request as text.")
             return
         epoch = r.epoch
+        previous_id = self.latest.get(modality)
+        previous_task = self.tasks.pop(previous_id, None)
+        if previous_task is not None:
+            previous_task.cancel()
+        self.accepted.pop(modality, None)
         self.latest[modality] = event.event_id
         r.trace.record("PERCEPTION_STARTED", source_id=event.event_id, source_timestamp=event.timestamp, epoch=epoch, modality=modality)
         async def work():
@@ -67,7 +74,43 @@ class PerceptionManager:
         if observation.ambiguous:
             r.emit("CLARIFY", question=observation.question or f"Could you clarify the {result.modality} input?")
             return
-        text = observation.transcript if result.modality == "audio" else observation.summary
-        r.last_input = {"text": text, "observation": observation.model_dump(), "source_event_id": result.source_id,
-                        "source_timestamp": result.source_timestamp, "modality": result.modality}
+        self.accepted[result.modality] = {
+            "source_event_id": result.source_id,
+            "source_timestamp": result.source_timestamp,
+            "epoch": result.epoch,
+            "observation": observation.model_dump(),
+        }
+        observations = {
+            modality: provenance["observation"]
+            for modality, provenance in self.accepted.items()
+        }
+        text_parts = []
+        if "audio" in observations:
+            text_parts.append(observations["audio"]["transcript"])
+        if "vision" in observations:
+            text_parts.append(observations["vision"]["summary"])
+        r.trace.record(
+            "FUSION_CONTEXT_UPDATED",
+            modalities=sorted(observations),
+            sources={
+                modality: provenance["source_event_id"]
+                for modality, provenance in self.accepted.items()
+            },
+        )
+        r.last_input = {
+            "text": " ".join(part for part in text_parts if part),
+            "observation": observation.model_dump(),
+            "observations": observations,
+            "observation_provenance": {
+                modality: {
+                    key: value
+                    for key, value in provenance.items()
+                    if key != "observation"
+                }
+                for modality, provenance in self.accepted.items()
+            },
+            "source_event_id": result.source_id,
+            "source_timestamp": result.source_timestamp,
+            "modality": result.modality,
+        }
         r.start_plan()
