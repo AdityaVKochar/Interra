@@ -50,3 +50,12 @@ Exact single-turn trace and malformed planner/chunk scenarios added; shutdown le
 Trace files: artifacts/traces/*.jsonl (generated, not source-controlled).
 Next: Phase 3 scheduler, timeouts, failures, read-only retries, chained/unseen tool tests.
 Limits: interruption and writes remain disabled; phase 4/5 gates are not claimed.
+
+## Phase 3 gate - passed
+Dynamic schema-validated tools, call registry, virtual deadlines, bounded read retries and failure
+handling implemented. Added chained opaque tool names, timeout/retry limits, duplicate result,
+atomic batch validation and malformed input regression scenarios.
+Full suite: 15 tests passed. Traces saved under artifacts/traces.
+Inspection found JSON Schema errors were not caught by the input boundary; corrected with a
+regression proving malformed payloads do not terminate consumption.
+Next: Phase 4 dependency invalidation, pending-user barriers, late-plan/result rejection and timing matrix.

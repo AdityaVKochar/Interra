@@ -62,3 +62,10 @@ class Harness:
 
     def kinds(self):
         return [e.kind for e in self.runtime.trace.entries]
+
+    async def advance(self, timestamp):
+        # Yield to register sleepers, then process timer notifications. No wall-clock delay.
+        await asyncio.sleep(0)
+        self.clock.advance_to(timestamp)
+        await asyncio.sleep(0)
+        await self.runtime.input.join()

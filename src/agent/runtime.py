@@ -9,6 +9,8 @@ from .providers.base import PlanningContext
 from .state import StateManager
 from .tools.registry import ToolRegistry
 from .trace import IDs, TraceRecorder
+from .scheduler import ToolScheduler, Timer
+from jsonschema.exceptions import ValidationError as SchemaError
 
 
 @dataclass
@@ -28,7 +30,8 @@ class SessionRuntime:
         self.protocol = LocalProtocol()
         self.state = StateManager(session_id)
         self.registry = ToolRegistry()
-        self.calls = {}
+        self.scheduler = ToolScheduler(self)
+        self.calls = self.scheduler.calls
         self.results = {}
         self.tasks = set()
         self.planner_task = None
@@ -59,11 +62,13 @@ class SessionRuntime:
                         break
                     if isinstance(item, Completion):
                         self.complete(item)
+                    elif isinstance(item, Timer):
+                        self.scheduler.timer(item)
                     else:
                         try:
                             event = self.protocol.decode(item.model_dump() if isinstance(item, Event) else item)
                             self.handle(event)
-                        except (ValueError, TypeError, KeyError) as exc:
+                        except (ValueError, TypeError, KeyError, SchemaError) as exc:
                             self.trace.record("INPUT_REJECTED", error=str(exc))
                 finally:
                     self.input.task_done()
@@ -151,11 +156,7 @@ class SessionRuntime:
                           state_snapshot={"intent": state.intent, "slots": state.slots})
 
     def dispatch(self, request, spec):
-        call = Call(call_id=self.ids.new("call"), request=request, spec=spec,
-                    state=self.state.snapshot, created_at=self.clock.now(), status=CallStatus.DISPATCHED)
-        self.calls[call.call_id] = call
-        self.trace.record("CALL_DISPATCHED", call=call.model_dump(mode="json"))
-        self.emit("TOOL_CALL", call_id=call.call_id, tool_name=request.tool_name, arguments=request.arguments)
+        return self.scheduler.dispatch(request, spec)
 
     def result(self, payload):
         call = self.calls.get(payload["call_id"])
@@ -165,7 +166,11 @@ class SessionRuntime:
         if call.status != CallStatus.DISPATCHED:
             self.trace.record("DUPLICATE_RESULT_DISCARDED", call_id=call.call_id)
             return
-        self.calls[call.call_id] = call.model_copy(update={"status": CallStatus.COMPLETED if payload["ok"] else CallStatus.FAILED})
+        self.scheduler.disarm(call.call_id)
+        if not payload["ok"]:
+            self.scheduler.failure(call, CallStatus.FAILED, payload.get("error"))
+            return
+        self.calls[call.call_id] = call.model_copy(update={"status": CallStatus.COMPLETED})
         self.results[call.call_id] = payload
         self.trace.record("RESULT_ACCEPTED", call_id=call.call_id, result=payload)
         self.start_plan()
