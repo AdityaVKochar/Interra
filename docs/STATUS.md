@@ -6,9 +6,9 @@ remain blocked by external evaluator/submission artifacts (2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-10 and 12-13 are committed on `codex/interruptible-runtime`; Phase 14 has passing
-local evidence and is ready to commit. The repository currently has 28 Python source files
-and 16 Python test files, plus generated JSONL scenario traces and local profiler/build output.
+Phases 1-10 and 12-14 are committed on `codex/interruptible-runtime`. The repository currently
+has 28 Python source files and 16 Python test files, plus generated JSONL scenario traces and
+local profiler/build output.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
@@ -20,11 +20,10 @@ The definition-of-done audit marks only test/build/scan-backed items complete.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Commit Phase 14 now that all locally executable checks pass.
-2. Supply the official Samsung kit/schema; implement its adapter and run all nine public cases.
-3. Install/start Docker and run both documented image commands.
-4. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
-5. Re-run all local and official gates, review the final commit and only then create
+1. Supply the official Samsung kit/schema; implement its adapter and run all nine public cases.
+2. Install/start Docker and run both documented image commands.
+3. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
+4. Re-run all local and official gates, review the final commit and only then create
    `PRISM_GENAI_HACKATHON_Y2026`.
 
 ## Decisions
