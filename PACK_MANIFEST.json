@@ -1,0 +1,25 @@
+{
+  "pack": "Samsung PRISM Theme 05 Agent Context Pack",
+  "documents": [
+    "AGENTS.md",
+    "MASTER_AGENT_PROMPT.md",
+    "README_AGENT_PACK.md",
+    "docs/00_REQUIREMENTS_SOURCE_OF_TRUTH.md",
+    "docs/01_PRODUCT_SCOPE.md",
+    "docs/02_ARCHITECTURE.md",
+    "docs/03_PROTOCOL_AND_DATA_MODELS.md",
+    "docs/04_STATE_INTERRUPTION_AND_SAFETY.md",
+    "docs/05_MULTIMODAL.md",
+    "docs/06_TOOL_SYSTEM.md",
+    "docs/07_TESTING_AND_EVALUATION.md",
+    "docs/08_IMPLEMENTATION_WORKFLOW.md",
+    "docs/09_DEMO_AND_SUBMISSION.md",
+    "docs/10_DEFINITION_OF_DONE.md",
+    "docs/11_FAILURE_MODES_AND_REVIEW_CHECKLIST.md",
+    "docs/STATUS.md"
+  ],
+  "official_sources": [
+    "Theme 5_Guide.pdf v1.0.0 pages 1-3",
+    "Samsung PRISM_Y2026_GenAI_Hackathon_3rd_Edition.V2(2).pdf pages 9-13"
+  ]
+}
