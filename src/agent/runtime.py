@@ -31,7 +31,7 @@ class PlannerDeadline:
 
 class SessionRuntime:
     def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None,
-                 planner_repairs=0, planner_timeout=60., audio_provider=None):
+                 planner_repairs=0, planner_timeout=60., audio_provider=None, vision_provider=None):
         self.session_id, self.provider, self.clock = session_id, provider, clock
         self.input = input_queue if input_queue is not None else asyncio.Queue()
         self.output = output_queue if output_queue is not None else asyncio.Queue()
@@ -57,7 +57,7 @@ class SessionRuntime:
         self.user_pending = False
         self.deferred_retries = set()
         self.epoch = 0
-        self.perception = PerceptionManager(self, audio_provider)
+        self.perception = PerceptionManager(self, audio_provider, vision_provider)
 
     def spawn(self, coroutine):
         task = asyncio.create_task(coroutine)
@@ -149,7 +149,7 @@ class SessionRuntime:
                 self.planner_task.cancel()
             self.scheduler.reconcile(self.state.snapshot, all_calls=True)
             self.trace.record("INTERRUPTED", event_id=event.event_id)
-        elif event.type == "AUDIO_CLIP":
+        elif event.type in {"AUDIO_CLIP", "VIDEO_FRAME"}:
             self.epoch += 1
             self.token += 1
             self.user_pending = True

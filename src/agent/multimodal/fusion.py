@@ -2,6 +2,7 @@
 import asyncio
 from dataclasses import dataclass
 from .audio import understand_audio
+from .vision import understand_image
 
 
 @dataclass
@@ -15,9 +16,10 @@ class PerceptionResult:
 
 
 class PerceptionManager:
-    def __init__(self, runtime, audio_provider=None):
+    def __init__(self, runtime, audio_provider=None, vision_provider=None):
         self.runtime = runtime
         self.audio_provider = audio_provider
+        self.vision_provider = vision_provider
         self.tasks = {}
         self.latest = {}
 
@@ -29,18 +31,19 @@ class PerceptionManager:
 
     def start(self, event):
         r = self.runtime
-        modality = "audio"
-        provider = self.audio_provider
+        modality = "audio" if event.type == "AUDIO_CLIP" else "vision"
+        provider = self.audio_provider if modality == "audio" else self.vision_provider
+        understand = understand_audio if modality == "audio" else understand_image
         if provider is None:
-            r.trace.record("PERCEPTION_FAILED", source_id=event.event_id, error="audio provider not configured")
-            r.emit("CLARIFY", question="Audio understanding is not configured. Please send the request as text.")
+            r.trace.record("PERCEPTION_FAILED", source_id=event.event_id, error=f"{modality} provider not configured")
+            r.emit("CLARIFY", question=f"{modality.capitalize()} understanding is not configured. Please send the request as text.")
             return
         epoch = r.epoch
         self.latest[modality] = event.event_id
         r.trace.record("PERCEPTION_STARTED", source_id=event.event_id, source_timestamp=event.timestamp, epoch=epoch, modality=modality)
         async def work():
             try:
-                value = await understand_audio(provider, event.payload["data_ref"])
+                value = await understand(provider, event.payload["data_ref"])
                 r.input.put_nowait(PerceptionResult(event.event_id, event.timestamp, epoch, modality, value))
             except asyncio.CancelledError:
                 raise
@@ -56,14 +59,15 @@ class PerceptionManager:
             return
         if result.error is not None:
             r.trace.record("PERCEPTION_FAILED", source_id=result.source_id, error=result.error)
-            r.emit("CLARIFY", question="I could not understand that audio. Could you repeat it or send text?")
+            r.emit("CLARIFY", question=f"I could not understand that {result.modality} input. Could you describe it in text?")
             return
         observation = result.value
         r.trace.record("OBSERVATION_ACCEPTED", source_id=result.source_id, source_timestamp=result.source_timestamp,
                        epoch=result.epoch, modality=result.modality, observation=observation.model_dump())
         if observation.ambiguous:
-            r.emit("CLARIFY", question=observation.question or "What did you want to change in the audio?")
+            r.emit("CLARIFY", question=observation.question or f"Could you clarify the {result.modality} input?")
             return
-        r.last_input = {"text": observation.transcript, "source_event_id": result.source_id,
+        text = observation.transcript if result.modality == "audio" else observation.summary
+        r.last_input = {"text": text, "observation": observation.model_dump(), "source_event_id": result.source_id,
                         "source_timestamp": result.source_timestamp, "modality": result.modality}
         r.start_plan()

@@ -1,28 +1,33 @@
 # Implementation status
 
 ## Current phase
-Phase 0 reconnaissance complete; Phase 1 next (2026-09-18).
+Phase 9 vision gate passed; Phase 10 multimodal fusion next (2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Only specifications exist: no implementation, dependencies, tests or commits.
+Phases 1-8 are committed on `codex/interruptible-runtime`; Phase 9 has passing gate evidence
+and is ready to commit. The repository currently has 26 Python source files and 10 Python
+test files, plus generated JSONL scenario traces.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
 ## Requirements gaps
-All runtime, protocol, state, scheduling, interruption, safety, provider, multimodal,
-evaluation and packaging requirements remain unimplemented. No requirement is marked done.
+Phase gates 1-9 have recorded test evidence. Multimodal fusion, official evaluator
+integration, performance hardening, demo mode and submission packaging remain. README.md,
+Dockerfile, presentation/demo assets and final release tag are absent. Definition-of-done
+boxes remain intentionally unchecked pending a consolidated evidence audit.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Run baseline unittest discovery (no existing suite found).
-2. Phase 1: typed models, strict local protocol, manifests, IDs, traces, injected clock;
-   test validation, round trips, snapshot isolation and deterministic clock behavior.
-3. Phase 2: two-queue runtime and mock planner; prove a single-turn trace.
-4. Phase 3: dynamic scheduler, chaining, timeout/failure and bounded read retries.
-5. Phase 4: dependency invalidation and adversarial interruption timing matrix.
-6. Proceed through phases 5-10 only after each preceding gate passes.
-7. Integrate official kit at phase 11 before advancing to performance/demo/release gates.
+1. Commit Phase 9 now that its gate passes.
+2. Implement Phase 10 multimodal fusion and its deterministic adversarial interruption gate.
+3. Re-run all tests, inspect traces on failure and add root-cause regressions.
+4. Record and commit Phase 10 only after its gate passes.
+5. Re-run a definition-of-done evidence audit before Phase 11.
+6. Integrate the official kit immediately when supplied; until then, explicitly record the
+   Phase 11 external blocker and do not claim evaluator compatibility.
+7. Continue Phases 12-14 in order, including reproducible README and Docker verification;
+   do not create the final tag until every available gate is evidenced.
 
 ## Decisions
 - Documented local envelopes are provisional; official schema compatibility is not claimed.
@@ -111,3 +116,14 @@ Failure/root cause: truncated WAV raised EOFError with an empty string; truthine
 misclassified failure as success. Replaced both planning/perception checks with explicit None checks,
 added empty-exception regression, and made harness trace saving unconditional on failure.
 Next: Phase 9 PNG/vision adapter, ambiguity and delayed-frame cases.
+
+## Phase 9 gate - passed
+Strict PNG structural/checksum validation, asynchronous vision provider boundary, structured
+observations, visual fact grounding and ambiguity handling now use the same owned perception
+pipeline as audio. Source event/timestamp/epoch provenance rejects delayed frame analysis after
+newer text and cancellation cleanup is asserted.
+Full suite: `.venv/Scripts/python -m unittest discover -v`: 40 tests passed in 1.962 seconds.
+Tests cover clear frame-grounded tool use, targeted ambiguous-frame clarification with no write,
+corrupt PNG rejection and stale frame analysis after newer text.
+Live vision accuracy is not claimed; provider behavior is deterministic/mocked.
+Next: Phase 10 combined text + audio + image + tool-result interruption scenario.
