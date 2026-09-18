@@ -1,33 +1,32 @@
 # Implementation status
 
 ## Current phase
-Phase 12 local performance hardening passed; Phase 11 remains blocked on the absent
-official kit and Phase 13 is next (2026-09-19).
+Phase 13 minimal actual-runtime demo passed; Phase 11 remains blocked on the absent
+official kit and Phase 14 is next (2026-09-19).
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-10 are committed on `codex/interruptible-runtime`; Phase 12 has passing local
-evidence and is ready to commit. The repository currently has 27 Python source files and
-13 Python test files, plus generated JSONL scenario traces and local profiler output.
+Phases 1-10 and 12 are committed on `codex/interruptible-runtime`; Phase 13 has passing
+evidence and is ready to commit. The repository currently has 28 Python source files and
+14 Python test files, plus generated JSONL scenario traces and local profiler output.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
 ## Requirements gaps
-Phase gates 1-10 and available local Phase 12 work have recorded test evidence. Official
-evaluator integration is externally blocked; demo mode and submission packaging remain.
-README.md, Dockerfile, presentation/demo assets and final release tag are absent.
+Phase gates 1-10 and available local Phases 12-13 have recorded test evidence. Official
+evaluator integration is externally blocked; submission packaging remains. README.md,
+Dockerfile, presentation assets, recorded demo video and final release tag are absent.
 Definition-of-done boxes remain intentionally unchecked pending a consolidated evidence audit.
 Official public-kit validation is blocked until its files are supplied.
 
 ## Exact next tasks
-1. Commit Phase 12 now that its local checks pass.
+1. Commit Phase 13 now that its gate passes.
 2. Integrate the official kit immediately when supplied; until then, retain the explicit
    Phase 11 external blocker and do not claim evaluator compatibility.
-3. Build Phase 13's minimal trace/state/call timeline using the actual runtime.
-4. Complete Phase 14 reproducible README and Docker verification plus remaining submission
+3. Complete Phase 14 reproducible README and Docker verification plus remaining submission
    assets that can be represented in the repository.
-5. Audit definition-of-done evidence and do not mark externally unavailable deliverables done.
-6. Re-run every available gate and inspect the final diff; do not create the final tag until
+4. Audit definition-of-done evidence and do not mark externally unavailable deliverables done.
+5. Re-run every available gate and inspect the final diff; do not create the final tag until
    the official-kit and human-produced submission deliverables are supplied and evidenced.
 
 ## Decisions
@@ -164,3 +163,15 @@ records in the baseline trace rather than weakening the assertion.
 Full unprofiled suite: `.venv/Scripts/python -m unittest discover -v`: 43 tests passed in
 1.881 seconds. Local profiler files are generated under `artifacts/` and are not source code.
 Next: Phase 13 minimal demo view backed by real runtime traces.
+
+## Phase 13 gate - passed
+Added a minimal console developer view that runs the actual `SessionRuntime` with the virtual
+clock and provisional queue protocol. Its edge-only deterministic demo planner drives a dynamic
+manifest through Delhi lookup, explicit barge-in, cancellation, Mumbai correction, late stale
+Delhi result and accepted Mumbai result. The rendered view exposes timestamped events/actions,
+state versions and slots, call statuses, stale rejection and local safety/latency metrics.
+`python -m agent.demo` completed successfully and visibly showed the old call as
+`CANCEL_REQUESTED`, the new call as `COMPLETED`, one stale result discarded and zero duplicate
+operation dispatches. The scenario test asserts those runtime traces rather than a simulated UI.
+Full suite: `.venv/Scripts/python -m unittest discover -v`: 44 tests passed in 3.552 seconds.
+Next: Phase 14 reproducible packaging, architecture/demo documentation and Docker verification.
