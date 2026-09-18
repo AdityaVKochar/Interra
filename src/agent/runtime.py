@@ -13,6 +13,7 @@ from .scheduler import ToolScheduler, Timer
 from jsonschema.exceptions import ValidationError as SchemaError
 from .coordinator import compatible
 from .safety import SafetyLedger
+from .floor import FloorManager
 
 
 @dataclass
@@ -42,6 +43,7 @@ class SessionRuntime:
         self.chunks = []
         self.seen = set()
         self.last_input = {}
+        self.floor = FloorManager()
         self.user_pending = False
         self.deferred_retries = set()
 
@@ -93,6 +95,11 @@ class SessionRuntime:
             return
         self.seen.add(event.event_id)
         self.trace.record("INPUT_RECEIVED", event=event.model_dump())
+        acknowledgment = self.floor.acknowledge(event)
+        if acknowledgment:
+            self.emit("SPEAK", text=acknowledgment)
+            self.trace.record("FIRST_RESPONSE_LATENCY", event_id=event.event_id,
+                              source_timestamp=event.timestamp, latency=self.clock.now() - event.timestamp)
         if event.type == "TOOL_MANIFEST":
             self.registry.replace(event.payload["tools"])
             self.trace.record("MANIFEST_UPDATED")

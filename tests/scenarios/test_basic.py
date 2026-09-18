@@ -12,6 +12,7 @@ class BasicTests(unittest.IsolatedAsyncioTestCase):
             final = await h.action("FINAL")
             self.assertEqual(final.payload["state_snapshot"]["slots"]["destination"], "Delhi")
             self.assertEqual(h.kinds(), ["INPUT_RECEIVED", "MANIFEST_UPDATED", "INPUT_RECEIVED",
+                "ACTION_EMITTED", "FIRST_RESPONSE_LATENCY",
                 "PLANNER_STARTED", "PROPOSAL_ACCEPTED", "STATE_UPDATED", "CALL_DISPATCHED",
                 "ACTION_EMITTED", "INPUT_RECEIVED", "RESULT_ACCEPTED", "PLANNER_STARTED",
                 "PROPOSAL_ACCEPTED", "ACTION_EMITTED"])

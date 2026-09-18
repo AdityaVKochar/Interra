@@ -82,3 +82,11 @@ Full suite: 25 tests passed; duplicate proposals, timeout and canceled/late-succ
 Limit: identical intended repeat operations require a future explicit user-authorized repeat policy;
 we conservatively block them throughout the session. Persistence across process crashes is out of scope.
 Next: Phase 6 truthful floor management and trace-based latency evidence.
+
+## Phase 6 gate - passed
+Truthful floor manager emits one acknowledgment per chunked text turn and on interruption.
+Acknowledgment precedes provider work; trace latency uses actual injected-clock values and preserved
+input timestamps. Full suite: 27 tests passed, including pending-provider latency and anti-spam cases.
+Local virtual first-action latency is 0 seconds for immediate queue processing; this is not a live
+provider benchmark or Samsung score. Exact baseline trace updated to require the added floor actions.
+Next: Phase 7 configurable real provider adapter with schema repair limits and mocked transport tests.
