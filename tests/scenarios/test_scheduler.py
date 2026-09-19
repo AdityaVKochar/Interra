@@ -58,6 +58,24 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(h.runtime.state.snapshot.version, 0)
             self.assertIn("PROPOSAL_REJECTED", h.kinds())
 
+    async def test_unknown_tool_is_never_dispatched(self):
+        invented = {
+            "state_patch": {"intent": "unsupported_request"},
+            "tool_requests": [{
+                "tool_name": "not_in_manifest",
+                "arguments": {"value": "x"},
+            }],
+        }
+        async with Harness(ScriptedPlanner(invented), self.id()) as h:
+            await h.send("TOOL_MANIFEST", tools=[spec("available_lookup")])
+            await h.text("perform an unsupported request")
+            clarification = await h.action("CLARIFY")
+
+            self.assertIn("invalid", clarification.payload["question"].lower())
+            self.assertFalse(h.runtime.calls)
+            self.assertEqual(h.kinds().count("CALL_DISPATCHED"), 0)
+            self.assertIn("PROPOSAL_REJECTED", h.kinds())
+
     async def test_bad_payload_does_not_kill_consumer(self):
         async with Harness(ScriptedPlanner({"clarification": "Which item?"}), self.id()) as h:
             await h.send("TEXT_CHUNK", text="x", end_of_turn="true")

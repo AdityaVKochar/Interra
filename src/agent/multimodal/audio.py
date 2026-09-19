@@ -2,12 +2,14 @@ import base64
 import io
 import wave
 from typing import Protocol
-from pydantic import Field
+from pydantic import Field, JsonValue
 from ..models import Model
 
 
 class AudioObservation(Model):
     transcript: str
+    intent_hint: str | None = None
+    slot_hints: dict[str, JsonValue] = Field(default_factory=dict)
     ambiguous: bool = False
     question: str | None = None
     evidence: str = ""

@@ -41,6 +41,26 @@ class AudioTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(mock.data.startswith(b"RIFF"))
             self.assertIn("OBSERVATION_ACCEPTED", h.kinds())
 
+    async def test_audio_semantic_hints_reach_planner(self):
+        observation = {
+            "transcript": "Find Delhi",
+            "intent_hint": "lookup",
+            "slot_hints": {"destination": "Delhi"},
+            "evidence": "clear speech",
+        }
+        provider = ScriptedPlanner({"clarification": "Which date?"})
+        async with Harness(provider, self.id()) as h:
+            h.runtime.perception.audio_provider = AudioMock(observation)
+            await h.send("AUDIO_CLIP", mime_type="audio/wav", data_ref=wav_ref())
+            await h.action("CLARIFY")
+
+            accepted = provider.contexts[0].input["observation"]
+            self.assertEqual(accepted["intent_hint"], "lookup")
+            self.assertEqual(
+                accepted["slot_hints"],
+                {"destination": "Delhi"},
+            )
+
     async def test_audio_correction(self):
         async with Harness(ScriptedPlanner(plan(), plan("Mumbai")), self.id()) as h:
             h.runtime.perception.audio_provider = AudioMock({"transcript": "Mumbai instead"})

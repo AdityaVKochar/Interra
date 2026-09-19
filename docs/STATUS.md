@@ -189,5 +189,8 @@ Secret-pattern scans found no credentials, private keys or `.env` files.
 Docker execution could not be verified because the `docker` command is not installed on this
 machine; the checklist remains open. The official kit, exported PPT/PDF, recorded video and
 release tag are also intentionally open.
-Final local suite: `.venv/Scripts/python -m unittest discover -v`: 48 tests passed in
-1.900 seconds.
+Post-gate audit added explicit S14 unknown-tool rejection and documented audio
+`intent_hint`/`slot_hints` compatibility. The strict audio model now accepts and carries those
+structured hints into the planner context; orchestration still decides all state/tool effects.
+Final local suite: `.venv/Scripts/python -m unittest discover -v`: 50 tests passed in
+1.614 seconds.
