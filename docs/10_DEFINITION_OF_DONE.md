@@ -94,7 +94,7 @@ It is done when the following are true.
 
 - [x] Clean setup works on Python 3.10–3.12-compatible target chosen for project.
 - [x] README complete.
-- [ ] Docker verified.
+- [x] Docker verified.
 - [x] No secrets in repo.
 - [x] Demo instructions complete.
 - [x] Architecture diagram included.

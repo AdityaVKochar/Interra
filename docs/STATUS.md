@@ -15,16 +15,15 @@ Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.
 
 ## Requirements gaps
 Phase gates 1-10 and available local Phases 12-14 have recorded evidence. README, Dockerfile,
-architecture, demo guide and reviewable deck source exist. Official evaluator integration,
-Docker execution, recorded demo video, exported PPT/PDF and the final release tag remain open.
+architecture, demo guide and reviewable deck source exist. Official evaluator integration, recorded demo video, exported PPT/PDF and the
+final release tag remain open. Docker Desktop 4.91.0 image build/run is now verified.
 The definition-of-done audit marks only test/build/scan-backed items complete.
 Official public-kit validation awaits Samsung's release (confirmed by the user).
 
 ## Exact next tasks
 1. Once Samsung releases its official kit/schema, implement its adapter and run all nine public cases.
-2. Install/start Docker and run both documented image commands.
-3. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
-4. Re-run all local and official gates, review the final commit and only then create
+2. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
+3. Re-run all local and official gates, review the final commit and only then create
    `PRISM_GENAI_HACKATHON_Y2026`.
 
 ## Decisions
@@ -187,9 +186,11 @@ matching and traces.
 wheel plus resolved dependencies and successfully ran both the module demo and packaged
 `interra-demo` console entrypoint.
 Secret-pattern scans found no credentials, private keys or `.env` files.
-Docker execution could not be verified because the `docker` command is not installed on this
-machine; the checklist remains open. The official kit, exported PPT/PDF, recorded video and
-release tag are also intentionally open.
+Docker Desktop 4.91.0 is installed. `docker build -t interra-runtime .` succeeded, and both
+documented image commands passed: `docker run --rm interra-runtime` produced the hero
+interruption timeline, and `docker run --rm interra-runtime python -m unittest discover -v`
+reported 61 tests OK. The official kit, exported PPT/PDF, recorded video and release tag
+remain open.
 Post-gate audit added explicit S14 unknown-tool rejection and documented audio
 `intent_hint`/`slot_hints` compatibility. The strict audio model now accepts and carries those
 structured hints into the planner context; orchestration still decides all state/tool effects.

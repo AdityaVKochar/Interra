@@ -163,7 +163,7 @@ Before 25 Sep 2026 11:59 PM:
 
 - [ ] Working repository is public/shared as required.
 - [ ] README setup is reproducible from clean environment.
-- [ ] Docker build/run verified.
+- [x] Docker build/run verified.
 - [ ] Demo video <=5 min.
 - [ ] PPT/PDF present.
 - [ ] Referenced docs/assets are in repo.
