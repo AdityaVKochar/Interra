@@ -194,3 +194,12 @@ Post-gate audit added explicit S14 unknown-tool rejection and documented audio
 structured hints into the planner context; orchestration still decides all state/tool effects.
 Final local suite: `.venv/Scripts/python -m unittest discover -v`: 50 tests passed in
 1.614 seconds.
+
+## Phase 9 gate - passed
+PNG signature/chunk/checksum/dimension validation, typed visual observations, async configurable
+PNG-to-observation HTTP adapter, ambiguity clarification and stale-frame rejection implemented.
+Full suite: 40 tests passed. Frame-grounded tools, ambiguity, corrupt PNG and delayed frame scenarios
+added. Image payload decoding is ultimately the perception provider's responsibility; local validation
+checks container integrity and bounded dimensions. No live visual accuracy claim.
+Next: Phase 10 coherent multimodal grouping, concurrent observations, perception deadlines,
+combined interruption tests and broader session-isolation/out-of-order regression coverage.
