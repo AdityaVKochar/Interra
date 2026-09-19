@@ -18,10 +18,10 @@ Phase gates 1-10 and available local Phases 12-14 have recorded evidence. README
 architecture, demo guide and reviewable deck source exist. Official evaluator integration,
 Docker execution, recorded demo video, exported PPT/PDF and the final release tag remain open.
 The definition-of-done audit marks only test/build/scan-backed items complete.
-Official public-kit validation is blocked until its files are supplied.
+Official public-kit validation awaits Samsung's release (confirmed by the user).
 
 ## Exact next tasks
-1. Supply the official Samsung kit/schema; implement its adapter and run all nine public cases.
+1. Once Samsung releases its official kit/schema, implement its adapter and run all nine public cases.
 2. Install/start Docker and run both documented image commands.
 3. Add submitter team details, export the reviewed deck to PPT/PDF and record the <=5-minute demo.
 4. Re-run all local and official gates, review the final commit and only then create
