@@ -11,10 +11,11 @@ from .tools.registry import ToolRegistry
 from .trace import IDs, TraceRecorder
 from .scheduler import ToolScheduler, Timer
 from jsonschema.exceptions import ValidationError as SchemaError
+from jsonschema.exceptions import SchemaError as InvalidSchema
 from .coordinator import compatible
 from .safety import SafetyLedger
 from .floor import FloorManager
-from .multimodal.fusion import PerceptionManager, PerceptionResult
+from .multimodal.fusion import PerceptionManager, PerceptionResult, PerceptionDeadline
 
 
 @dataclass
@@ -31,7 +32,8 @@ class PlannerDeadline:
 
 class SessionRuntime:
     def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None,
-                 planner_repairs=0, planner_timeout=60., audio_provider=None, vision_provider=None):
+                 planner_repairs=0, planner_timeout=60., audio_provider=None, vision_provider=None,
+                 perception_timeout=60.):
         self.session_id, self.provider, self.clock = session_id, provider, clock
         self.input = input_queue if input_queue is not None else asyncio.Queue()
         self.output = output_queue if output_queue is not None else asyncio.Queue()
@@ -47,12 +49,15 @@ class SessionRuntime:
         self.tasks = set()
         self.planner_task = None
         self.planner_timer = None
+        self.active_plan_token = None
         self.planner_repairs = planner_repairs
         self.planner_timeout = planner_timeout
+        self.perception_timeout = perception_timeout
         self.token = 0
         self.chunks = []
         self.seen = set()
         self.last_input = {}
+        self.text_input = {}
         self.floor = FloorManager()
         self.user_pending = False
         self.deferred_retries = set()
@@ -86,8 +91,11 @@ class SessionRuntime:
                         self.scheduler.timer(item)
                     elif isinstance(item, PerceptionResult):
                         self.perception.complete(item)
+                    elif isinstance(item, PerceptionDeadline):
+                        self.perception.timeout(item)
                     elif isinstance(item, PlannerDeadline):
-                        if item.token == self.token:
+                        if item.token == self.active_plan_token:
+                            self.active_plan_token = None
                             self.token += 1
                             if self.planner_task:
                                 self.planner_task.cancel()
@@ -97,7 +105,7 @@ class SessionRuntime:
                         try:
                             event = self.protocol.decode(item.model_dump() if isinstance(item, Event) else item)
                             self.handle(event)
-                        except (ValueError, TypeError, KeyError, SchemaError) as exc:
+                        except (ValueError, TypeError, KeyError, SchemaError, InvalidSchema) as exc:
                             self.trace.record("INPUT_REJECTED", error=str(exc))
                 finally:
                     self.input.task_done()
@@ -129,6 +137,10 @@ class SessionRuntime:
             "AUDIO_CLIP",
             "VIDEO_FRAME",
         }:
+            if self.latest_user_timestamp is not None and event.timestamp < self.latest_user_timestamp:
+                self.trace.record("STALE_INPUT_DISCARDED", event_id=event.event_id,
+                                  source_timestamp=event.timestamp, watermark=self.latest_user_timestamp)
+                return
             self.latest_user_timestamp = event.timestamp
         acknowledgment = self.floor.acknowledge(event)
         if acknowledgment:
@@ -136,40 +148,43 @@ class SessionRuntime:
             self.trace.record("FIRST_RESPONSE_LATENCY", event_id=event.event_id,
                               source_timestamp=event.timestamp, latency=self.clock.now() - event.timestamp)
         if event.type == "TOOL_MANIFEST":
+            before = self.registry.specs
             self.registry.replace(event.payload["tools"])
             self.trace.record("MANIFEST_UPDATED")
+            if before != self.registry.specs:
+                current = {s.name: s for s in self.registry.specs}
+                for call in list(self.calls.values()):
+                    if current.get(call.spec.name) != call.spec:
+                        self.scheduler.invalidate(call, "manifest changed")
+                if self.active_plan_token is not None:
+                    self.cancel_planning()
+                    self.emit("CLARIFY", question="The available tools changed. Please restate the next step.")
         elif event.type == "TEXT_CHUNK":
             if not self.chunks:
                 self.epoch += 1
                 self.perception.invalidate()
                 self.user_pending = True
-                self.token += 1
-                if self.planner_task and not self.planner_task.done():
-                    self.planner_task.cancel()
+                self.cancel_planning()
             self.chunks.append(event.payload["text"])
             if event.payload["end_of_turn"]:
-                self.last_input = {"text": "".join(self.chunks), "event_id": event.event_id}
+                self.text_input = {"text": "".join(self.chunks), "event_id": event.event_id}
                 self.chunks.clear()
+                self.perception.refresh_context()
                 self.start_plan()
         elif event.type == "TOOL_RESULT":
             self.result(event.payload)
         elif event.type == "INTERRUPTION":
             self.epoch += 1
             self.perception.invalidate()
-            self.token += 1
+            self.cancel_planning()
             self.user_pending = True
             self.chunks.clear()
-            if self.planner_task and not self.planner_task.done():
-                self.planner_task.cancel()
+            self.text_input = {}
             self.scheduler.reconcile(self.state.snapshot, all_calls=True)
             self.trace.record("INTERRUPTED", event_id=event.event_id)
         elif event.type in {"AUDIO_CLIP", "VIDEO_FRAME"}:
-            self.token += 1
+            self.cancel_planning()
             self.user_pending = True
-            if self.planner_task:
-                self.planner_task.cancel()
-            if self.planner_timer:
-                self.planner_timer.cancel()
             self.perception.start(event)
         elif event.type == "CANCEL_ACK":
             call = self.calls.get(event.payload["call_id"])
@@ -181,13 +196,18 @@ class SessionRuntime:
         else:
             self.trace.record("UNSUPPORTED_INPUT", event_id=event.event_id)
 
-    def start_plan(self):
+    def cancel_planning(self):
         self.token += 1
-        token = self.token
+        self.active_plan_token = None
         if self.planner_task and not self.planner_task.done():
             self.planner_task.cancel()
         if self.planner_timer:
             self.planner_timer.cancel()
+
+    def start_plan(self):
+        self.cancel_planning()
+        token = self.token
+        self.active_plan_token = token
         context = PlanningContext(state=self.state.snapshot, input=self.last_input,
                                   tools=self.registry.specs, results=self.results)
         self.trace.record("PLANNER_STARTED", token=token, version=context.state.version)
@@ -210,9 +230,10 @@ class SessionRuntime:
         self.planner_timer = self.spawn(timeout())
 
     def complete(self, completion):
-        if completion.token != self.token:
+        if completion.token != self.active_plan_token:
             self.trace.record("STALE_PLAN_DISCARDED", token=completion.token)
             return
+        self.active_plan_token = None
         if self.planner_timer:
             self.planner_timer.cancel()
         if completion.error is not None:
@@ -234,7 +255,7 @@ class SessionRuntime:
             self.trace.record("STATE_UPDATED", before=old.model_dump(), after=state.model_dump(),
                               changed=sorted(changed), intent_changed=switched)
         self.scheduler.reconcile(state)
-        self.user_pending = False
+        self.user_pending = bool(self.chunks) or self.perception.unresolved
         for call_id in list(self.deferred_retries):
             self.deferred_retries.discard(call_id)
             self.scheduler.timer(Timer(call_id, "retry"))
@@ -243,11 +264,16 @@ class SessionRuntime:
         if proposal.clarification:
             self.emit("CLARIFY", question=proposal.clarification)
         if proposal.final_response:
-            if self.ledger.uncertain:
+            if self.perception.unresolved or self.chunks:
+                self.trace.record("FINAL_DEFERRED_PERCEPTION")
+            elif self.ledger.uncertain:
                 self.trace.record("FINAL_BLOCKED_UNCERTAIN")
                 self.emit("CLARIFY", question="A previous change may have completed. Please verify its outcome before another change.")
             elif any(c.status == CallStatus.DISPATCHED for c in self.calls.values()):
                 self.trace.record("FINAL_DEFERRED")
+            elif self.calls and not self.results:
+                self.trace.record("FINAL_BLOCKED_NO_EVIDENCE")
+                self.emit("CLARIFY", question="No current tool result supports completion. What should I check next?")
             else:
                 self.emit("FINAL", text=proposal.final_response,
                           state_snapshot={"intent": state.intent, "slots": state.slots})
@@ -267,6 +293,9 @@ class SessionRuntime:
             self.trace.record("STALE_RESULT_DISCARDED", call_id=call.call_id)
             return
         if call.status != CallStatus.DISPATCHED:
+            if call.operation_key and payload["ok"] and call.status in {CallStatus.TIMED_OUT, CallStatus.FAILED}:
+                self.ledger.update(call.operation_key, "COMMITTED")
+                self.trace.record("LATE_WRITE_RECONCILED", call_id=call.call_id, operation_key=call.operation_key)
             self.trace.record("DUPLICATE_RESULT_DISCARDED", call_id=call.call_id)
             return
         self.scheduler.disarm(call.call_id)

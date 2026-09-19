@@ -36,6 +36,9 @@ class ToolScheduler:
         call_id = r.ids.new("call")
         operation_key = None
         if spec.effect_type == "STATE_MODIFYING":
+            if r.perception.unresolved or r.chunks:
+                r.trace.record("WRITE_DEFERRED_PERCEPTION", tool_name=request.tool_name)
+                return None
             if r.ledger.uncertain:
                 r.trace.record("WRITE_BLOCKED_UNCERTAIN", tool_name=request.tool_name)
                 r.emit("CLARIFY", question="A previous change has an unknown outcome. Please verify it before making another change.")

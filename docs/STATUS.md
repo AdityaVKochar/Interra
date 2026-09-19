@@ -1,14 +1,15 @@
 # Implementation status
 
 ## Current phase
-All locally executable work through Phase 14 passes. Phase 11 and final release readiness
-remain blocked by external evaluator/submission artifacts (2026-09-19).
+Core phase gates 4–10 revalidated after shared-workspace commits (2026-09-19).
+The full suite passes 61 tests. Phase 11 is the next gate and has NOT passed: the kit is absent.
+Later-phase artifacts already exist from other workspace commits; they are retained, but their
+presence does not waive the ordered evaluator gate or establish release readiness.
 
 ## Repository baseline
 Read AGENTS.md, all twelve numbered specifications, STATUS.md and root context pack.
-Phases 1-10 and 12-14 are committed on `codex/interruptible-runtime`. The repository currently
-has 28 Python source files and 16 Python test files, plus generated JSONL scenario traces and
-local profiler/build output.
+Phase implementations and preliminary later-phase artifacts are on `codex/interruptible-runtime`,
+with generated JSONL scenario traces and local profiler/build output.
 Official evaluation kit, source PDFs, external schemas and evaluator entrypoint are absent.
 Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.11.
 
@@ -33,7 +34,7 @@ Official public-kit validation is blocked until its files are supplied.
 - No final release tag until the definition of done is evidenced.
 
 ## Test log
-Baseline pending. No pre-existing tests or traces.
+Original baseline: no pre-existing tests or traces. Latest full suite: 61 tests passed.
 
 ## Phase 1 gate - passed
 Strict domain/proposal models, event/action payload validation, provisional protocol adapter,
@@ -195,11 +196,37 @@ structured hints into the planner context; orchestration still decides all state
 Final local suite: `.venv/Scripts/python -m unittest discover -v`: 50 tests passed in
 1.614 seconds.
 
-## Phase 9 gate - passed
-PNG signature/chunk/checksum/dimension validation, typed visual observations, async configurable
-PNG-to-observation HTTP adapter, ambiguity clarification and stale-frame rejection implemented.
-Full suite: 40 tests passed. Frame-grounded tools, ambiguity, corrupt PNG and delayed frame scenarios
-added. Image payload decoding is ultimately the perception provider's responsibility; local validation
-checks container integrity and bounded dimensions. No live visual accuracy claim.
-Next: Phase 10 coherent multimodal grouping, concurrent observations, perception deadlines,
-combined interruption tests and broader session-isolation/out-of-order regression coverage.
+## Shared workspace reconciliation
+Additional commits fe69732 through a407df4 were found while this task was active. Read the added
+architecture, demo and submission documentation, reviewed fusion/runtime changes, and independently
+reran the full baseline: 50 tests passed. Commit 77c05f9 recorded a redundant phase-9 note; this entry
+replaces it. Preserve others' implementation work, but do not claim phase 11 passed or advance release
+work until its gate can be evaluated. Continuing core correctness regression work is independent of it.
+
+## Core lifecycle revalidation - passed
+Test-first audit added 11 regressions. The first run reproduced five failures; follow-up tests
+reproduced four more. Inspected saved event/action trace sequences before changing coordination.
+Root-cause fixes:
+- Planner completions consume their active token; a queued deadline cannot time out a completed plan.
+- Explicit cancellation also cancels planner timers; duplicate completions cannot apply twice.
+- Pending/ambiguous/failed companion perception blocks modifying calls and final answers.
+- Perception deadlines use the injected clock and cancel owned work, retaining uncertainty until
+  the user clarifies. Duplicate perception completions are rejected.
+- Frame interpretation during a partial text turn waits for end-of-turn; completed text and accepted
+  image/audio observations are retained together in the planner context.
+- Older timestamped user input is discarded against a per-session watermark; equal timestamps
+  still follow insertion order. Tool-result arrival order remains independent.
+- Replacing a manifest invalidates affected calls/retries and supersedes old-manifest reasoning.
+  Invalid schema documents fail at the input boundary without terminating consumption.
+- A final with no remaining current tool evidence is blocked after its own patch invalidates results.
+- A successful late write result after timeout reconciles only the safety ledger, never active planning.
+An outgoing-payload mutation test also proves callers cannot alter recorded tool arguments.
+Full suite: `.venv/Scripts/python -m unittest discover -v`: 61 tests passed in 6.232 seconds.
+No assertions were relaxed. Traces: artifacts/traces/tests.adversarial.test_lifecycle_audit.*.jsonl.
+
+Limits/decisions: unresolved perception conservatively blocks all writes/finals until clarified;
+read-only work may proceed. After tool use, finals require at least one currently admissible result;
+this gate cannot verify every natural-language claim made by a model. Cross-modality observations
+share a semantic epoch, which newer text or interruption invalidates. Provider quality still needs
+live evaluation. The official evaluator kit remains absent; no new release/demo work is undertaken
+past that ordered gate, and no final release tag has been created.
