@@ -19,7 +19,8 @@ class PackagingTests(unittest.TestCase):
                 text = (ROOT / relative).read_text(encoding="utf-8")
                 self.assertIn(evidence, text)
 
-    def test_readme_states_official_evaluator_limitation(self):
+    def test_readme_states_live_evaluation_limitation_and_entrypoint(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("official Samsung evaluation kit is not present", readme)
-        self.assertIn("No official score is claimed", readme)
+        self.assertIn("interra_submission:ParticipantAgent", readme)
+        self.assertIn("No live-model task-completion score is claimed", readme)
+        self.assertTrue((ROOT / "submission.yaml").is_file())

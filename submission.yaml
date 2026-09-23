@@ -1,0 +1,8 @@
+team: "REPLACE_WITH_CollegeName_TeamName"
+entry_point: "interra_submission:ParticipantAgent"
+python: "3.11"
+requirements:
+  - pydantic>=2.10,<3
+  - jsonschema>=4.23,<5
+  - httpx>=0.28,<1
+env: []

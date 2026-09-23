@@ -231,3 +231,69 @@ this gate cannot verify every natural-language claim made by a model. Cross-moda
 share a semantic epoch, which newer text or interruption invalidates. Provider quality still needs
 live evaluation. The official evaluator kit remains absent; no new release/demo work is undertaken
 past that ordered gate, and no final release tag has been created.
+
+
+## Official kit integration and attachment review - 2026-09-23
+
+The supplied participant archive removes the previous phase-11 missing-kit blocker.
+Preserved all 34 Theme 05 kit files byte-for-byte under vendor/samsung_theme05;
+archive provenance and SHA-256 are in vendor/README.md. Reviewed the brochure,
+FAQ v4, 12-slide PPT template, and AI disclosure form as reference documents.
+
+Completed:
+- Official two-queue ParticipantAgent constructor/setup/run entrypoint, submission.yaml,
+  root import shim avoiding collision with the kit's sample agent package, and complete
+  external event/action conversion, including top-level final state snapshots.
+- Recursive dynamic manifest conversion for required fields, nested objects, arrays,
+  enums and effect tags. One read-only retry, no automatic write retry.
+- Interruption text now replans after immediate cancellation; scenario_end preserves
+  pending work until harness cancellation. TaskGroup owns both bridges and runtime.
+- Root-confined bounded media loading; cancellable asynchronous ffmpeg MP3-to-WAV
+  conversion; accumulated audio chunks with end-of-turn gating; missing-file fallback.
+- Optional official frame-context retention through following text, pending perception
+  completion and device hints. Explicit interruptions reject obsolete frame results.
+- New audio turns clear previous text while retaining the latest frame context.
+- Fixed final-response gating after a goal switch: obsolete calls from another intent
+  do not require evidence for a new conversational goal. Same-intent evidence and
+  uncertain-write gates remain intact.
+- Added public trace runner, Docker ffmpeg dependency, evaluation configuration and
+  source/conflict/submission review in docs/KIT_REVIEW.md; corrected obsolete README
+  and source-of-truth claims that the kit was absent.
+
+Tests/evidence:
+- Baseline: 61 tests passed. Added 10 tests in test_samsung and test_samsung_harness.
+- Final full suite: .venv/Scripts/python -m unittest discover -q: 71 tests passed
+  in 8.288 seconds, including actual supplied MP3 decoding with installed ffmpeg.
+- Added official action validation, nested/array schema conversion, interruption text,
+  stale result rejection, tail results, task cleanup, partial audio, missing media/path
+  traversal, retained and delayed frames, goal switching, malformed input, ignored
+  organizer annotations, and a novel chained read/write with duplicate suppression.
+- Unmodified official evaluator: package validation and contract smoke test passed;
+  nine public scenarios completed at time_scale=1, one repetition. Without configured
+  models: weighted 48.9, plain 48.8. This is fallback integration evidence, not successful
+  task completion, model quality, or a claimed submission-ready score.
+- Separate complete public trace run: all nine scenarios, zero agent crashes, setup
+  errors or protocol errors. artifacts/samsung-public-traces.json contains the traces;
+  artifacts/samsung-unconfigured-evaluation.json contains the official evaluator report.
+- Official harness chained-tool regression trace: artifacts/traces/samsung_harness_chain.jsonl.
+- Vendored source integrity check: 34 files checked, zero mismatches.
+
+Source conflict decisions:
+The executable kit's MP3 references and exact queue envelopes supersede guide-level
+WAV/interface assumptions. End-of-turn waiting is explicitly allowed by the kit.
+FAQ Theme 5 Q33 discusses 300 seconds, but the executable evaluator defaults to 120;
+retain 120 seconds for scenario checks and 300 for setup. Theme 02 REST/cache/deeplink
+requirements in the FAQ do not apply. Preserve original frame provenance across text
+only for the official adapter; local default epoch invalidation is unchanged.
+
+Remaining limits and next tasks:
+No model was configured or reachable at common local Ollama/LM Studio/model-server
+endpoints, and their common model directories were absent. No model was downloaded.
+Live reasoning, ASR and vision, a real visual embedding, and three-repetition quality
+results remain unverified. HTTP observation interfaces require real implementations;
+they are not themselves speech or vision models. Configure reproducible models next,
+then rerun the trace runner and official evaluator. No hidden-test success is claimed.
+Docker engine is stopped, so the updated Dockerfile has not been built in this phase.
+The team must supply identities/links, finish the prescribed deck and genuine demo
+video, and review/sign the AI disclosure. submission.yaml deliberately contains a team
+placeholder. No signatures, release tag, publication, or submission were fabricated.

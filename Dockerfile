@@ -10,8 +10,13 @@ COPY src ./src
 COPY tests ./tests
 COPY docs ./docs
 COPY Dockerfile ./Dockerfile
+COPY vendor ./vendor
+COPY interra_submission.py submission.yaml ./
+COPY scripts ./scripts
 
-RUN python -m pip install --no-cache-dir . \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --no-cache-dir . \
     && useradd --create-home --uid 10001 interra \
     && mkdir -p /app/artifacts/traces \
     && chown -R interra:interra /app

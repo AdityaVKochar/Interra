@@ -93,9 +93,10 @@ PNG frames and cancellation acknowledgments. Output actions include speech, clar
 tool calls, cancellation and final responses with intent/slot snapshots. Every envelope and
 tool call has an explicit ID and timestamp.
 
-`src/agent/protocol.py` deliberately isolates this local schema. The official Samsung evaluation kit is not present
-in this repository, so its exact queue adapter, schema and entrypoint cannot yet be
-implemented or verified. No official score is claimed.
+`src/agent/protocol.py` isolates the internal schema. The supplied official Samsung
+kit is preserved under `vendor/samsung_theme05`; `interra_submission:ParticipantAgent`
+implements its external queue contract. See [kit review and evaluation instructions](docs/KIT_REVIEW.md).
+No live-model task-completion score is claimed.
 
 ## Optional provider adapters
 
@@ -103,8 +104,22 @@ implemented or verified. No official score is claimed.
 - `HTTPAudioProvider(endpoint)` expects WAV bytes and returns an `AudioObservation` JSON body.
 - `HTTPVisionProvider(endpoint)` expects PNG bytes and returns a `VisualObservation` JSON body.
 
-No endpoint, model or credential is read implicitly, and no model is downloaded
-automatically. Core correctness is proven with deterministic mocks.
+The official entrypoint reads explicit `INTERRA_MODEL`, `INTERRA_OLLAMA_URL`,
+`INTERRA_AUDIO_URL`, `INTERRA_VISION_URL`, and `INTERRA_MEDIA_ROOT` configuration.
+MP3 decoding requires ffmpeg (`INTERRA_FFMPEG` can select its path). No model is
+downloaded automatically. Core correctness is tested with deterministic mocks.
+
+From the repository root, `python scripts/run_samsung.py` saves complete public
+harness traces. Configure models first; `--allow-unconfigured` explicitly tests
+the safe fallback. For the official three-repetition procedure run:
+
+```bash
+python vendor/samsung_theme05/eval_submission.py . --reps 3 --time-scale 1 --out artifacts/samsung-evaluation.json
+```
+
+Set `INTERRA_MEDIA_ROOT` to the absolute path of `vendor/samsung_theme05` for public
+media, or the supplied hidden-kit root during evaluation. Replace the team
+placeholder in `submission.yaml` before submission.
 
 ## Test organization
 
@@ -122,12 +137,13 @@ python -m unittest tests.adversarial.test_interruptions -v
 
 ## Known limitations
 
-- The official evaluator kit, exact external schemas and nine public scenarios are absent.
+- The official queue integration is tested; a configured reasoning/ASR/vision model
+  and live three-repetition quality evaluation remain outstanding.
 - Live model, speech and vision quality/latency have not been benchmarked.
 - A dispatched write can have an unknown external outcome; Interra blocks a blind retry but
   cannot guarantee rollback without tool-specific reconciliation semantics.
-- Local media envelopes use bounded base64 data; an evaluator adapter must resolve any
-  official path/bytes/reference representation.
+- Local media envelopes use bounded base64 data; the official adapter resolves MP3/WAV
+  and PNG file references within its configured media root.
 - Safety-ledger state is session/process scoped; crash-durable side-effect recovery is outside
   the supplied requirements.
 - A recorded demo video and team-completed presentation export are human submission tasks and

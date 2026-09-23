@@ -16,13 +16,15 @@ D = {"type": "object"}
 B = {"type": "boolean"}
 EVENT_PAYLOADS = {
     "TEXT_CHUNK": obj({"text": {"type": "string"}, "end_of_turn": B}),
-    "INTERRUPTION": obj({"reason": S}),
+    "INTERRUPTION": obj({"reason": S, "text": {"type": "string"}}, ["reason"]),
     "TOOL_MANIFEST": obj({"tools": {"type": "array", "items": D}}),
     "TOOL_RESULT": obj({"call_id": S, "ok": B, "result": {},
                          "error": {"type": ["string", "null"]}}, ["call_id", "ok", "result"]),
     "CANCEL_ACK": obj({"call_id": S}),
-    "AUDIO_CLIP": obj({"mime_type": {"const": "audio/wav"}, "data_ref": S}),
-    "VIDEO_FRAME": obj({"mime_type": {"const": "image/png"}, "data_ref": S, "frame_id": S}),
+    "AUDIO_CLIP": obj({"mime_type": {"const": "audio/wav"}, "data_ref": S,
+                       "end_of_turn": B}, ["mime_type", "data_ref"]),
+    "VIDEO_FRAME": obj({"mime_type": {"const": "image/png"}, "data_ref": S, "frame_id": S,
+                        "device_hint": S}, ["mime_type", "data_ref", "frame_id"]),
 }
 ACTION_PAYLOADS = {
     "SPEAK": obj({"text": S}), "CLARIFY": obj({"question": S}),

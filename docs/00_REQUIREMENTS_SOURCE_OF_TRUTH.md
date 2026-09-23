@@ -9,6 +9,15 @@ This document separates **official Samsung requirements** from the engineering c
 
 If the official evaluation kit released after registration provides more precise schemas or mechanics, the kit becomes the executable source of truth.
 
+### Kit received 2026-09-23
+
+The supplied kit is now preserved at `vendor/samsung_theme05`. Its `docs/PROTOCOL.md`,
+`TOOLS.md`, `SUBMISSION.md`, and executable harness take precedence over the earlier
+guide summaries below. In particular, audio is delivered as relative MP3 references,
+the entrypoint is an async Python class with two queues, and finals require a top-level
+state snapshot. See `docs/KIT_REVIEW.md` for source conflicts, implementation evidence,
+FAQ Theme 05 clarifications, and remaining live-model/submission requirements.
+
 ---
 
 ## Official Theme 05 problem

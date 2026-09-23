@@ -33,7 +33,7 @@ class PlannerDeadline:
 class SessionRuntime:
     def __init__(self, session_id, provider, clock, input_queue=None, output_queue=None,
                  planner_repairs=0, planner_timeout=60., audio_provider=None, vision_provider=None,
-                 perception_timeout=60.):
+                 perception_timeout=60., media_loader=None, retain_frame_context=False):
         self.session_id, self.provider, self.clock = session_id, provider, clock
         self.input = input_queue if input_queue is not None else asyncio.Queue()
         self.output = output_queue if output_queue is not None else asyncio.Queue()
@@ -53,6 +53,8 @@ class SessionRuntime:
         self.planner_repairs = planner_repairs
         self.planner_timeout = planner_timeout
         self.perception_timeout = perception_timeout
+        self.media_loader = media_loader
+        self.retain_frame_context = retain_frame_context
         self.token = 0
         self.chunks = []
         self.seen = set()
@@ -162,7 +164,7 @@ class SessionRuntime:
         elif event.type == "TEXT_CHUNK":
             if not self.chunks:
                 self.epoch += 1
-                self.perception.invalidate()
+                self.perception.invalidate(preserve_vision=self.retain_frame_context)
                 self.user_pending = True
                 self.cancel_planning()
             self.chunks.append(event.payload["text"])
@@ -182,7 +184,17 @@ class SessionRuntime:
             self.text_input = {}
             self.scheduler.reconcile(self.state.snapshot, all_calls=True)
             self.trace.record("INTERRUPTED", event_id=event.event_id)
+            if event.payload.get("text"):
+                self.text_input = {"text": event.payload["text"], "event_id": event.event_id}
+                self.perception.refresh_context()
+                self.start_plan()
         elif event.type in {"AUDIO_CLIP", "VIDEO_FRAME"}:
+            if (event.type == "AUDIO_CLIP" and self.retain_frame_context
+                    and not self.perception.audio_turn_open):
+                self.epoch += 1
+                self.perception.invalidate(preserve_vision=True)
+                self.text_input = {}
+                self.chunks.clear()
             self.cancel_planning()
             self.user_pending = True
             self.perception.start(event)
@@ -271,7 +283,7 @@ class SessionRuntime:
                 self.emit("CLARIFY", question="A previous change may have completed. Please verify its outcome before another change.")
             elif any(c.status == CallStatus.DISPATCHED for c in self.calls.values()):
                 self.trace.record("FINAL_DEFERRED")
-            elif self.calls and not self.results:
+            elif any(c.state.intent == state.intent for c in self.calls.values()) and not self.results:
                 self.trace.record("FINAL_BLOCKED_NO_EVIDENCE")
                 self.emit("CLARIFY", question="No current tool result supports completion. What should I check next?")
             else:
