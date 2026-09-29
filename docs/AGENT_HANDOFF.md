@@ -123,24 +123,23 @@ Use the following workflow from the PC after every meaningful code change.
    `.runtime`, `artifacts`, `.env*`, and credentials. Upload a new version of
    the existing **private** Kaggle dataset with `python -m kaggle datasets
    version`. Confirm its files with `python -m kaggle datasets files`.
-2. Make an upload folder containing exactly
-   `scripts/kaggle_setup.py` renamed to `interra_setup.py` and
-   `kaggle/kernel-metadata.json`:
+2. Make an upload folder containing exactly the packaged benchmark worker and
+   its metadata. The package embeds the tracked `src`, `scripts`, and
+   `pyproject.toml` files as a fallback for a missing private dataset mount:
 
    ```powershell
    $upload = Join-Path $env:TEMP "interra-kaggle-upload"
    New-Item -ItemType Directory -Force $upload | Out-Null
-   Copy-Item scripts\kaggle_setup.py (Join-Path $upload "interra_setup.py") -Force
-   Copy-Item kaggle\kernel-metadata.json (Join-Path $upload "kernel-metadata.json") -Force
-   python -m kaggle kernels push -p $upload
+   python scripts\kaggle_package.py $upload
    ```
 
-3. The CLI push checks dependencies, but it does **not** carry over Secrets
+3. A CLI push checks dependencies, but it does **not** carry over Secrets
    attached in the Kaggle editor. The 2026-09-29 CLI runs verified this: even
    after the four Secrets were added, a fresh CLI-pushed run reported all four
    missing. Do not use `kernels push` to start a credentialed evaluation.
-4. Open this kernel in Kaggle's editor. Set `RUN_FULL_BENCHMARK = True` in the
-   script, or use an already saved version with that switch. Keep GPU and
+4. Open this kernel in Kaggle's editor. Verify that the script visibly contains
+   `RUN_FULL_BENCHMARK = True` and `EMBEDDED_SOURCE_B64` with a nonempty value.
+   Keep GPU and
    Internet on. In **Add-ons → Secrets**, add and attach `LIVEKIT_URL`,
    `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `ELEVEN_API_KEY` to this exact
    notebook. Choose **Save Version → Save & Run All** in the editor. The worker

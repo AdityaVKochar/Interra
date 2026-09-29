@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -38,6 +39,21 @@ class KaggleSetupTests(unittest.TestCase):
                 source = kaggle_setup.source_root()
             self.assertTrue((source / "pyproject.toml").is_file())
             self.assertTrue((source / "scripts" / "fdb_v3.py").is_file())
+
+    def test_extracts_embedded_source_when_dataset_is_unmounted(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "source.zip"
+            with zipfile.ZipFile(archive, "w") as bundle:
+                bundle.writestr("pyproject.toml", "[project]\nname='interra-runtime'\n")
+            payload = base64.b64encode(archive.read_bytes()).decode("ascii")
+            with (
+                patch.object(kaggle_setup, "INPUT_ROOT", root / "unmounted"),
+                patch.object(kaggle_setup, "WORK", root / "work"),
+                patch.object(kaggle_setup, "EMBEDDED_SOURCE_B64", payload),
+            ):
+                source = kaggle_setup.source_root()
+            self.assertTrue((source / "pyproject.toml").is_file())
 
     def test_rejects_archive_path_traversal(self) -> None:
         with TemporaryDirectory() as directory:

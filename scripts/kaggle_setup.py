@@ -8,6 +8,8 @@ the notebook output or source dataset.
 from __future__ import annotations
 
 import json
+import base64
+import io
 import os
 from pathlib import Path
 import shutil
@@ -24,6 +26,7 @@ PROJECT = WORK / "Interra"
 VENV = SCRATCH / "interra-fdb-venv"
 REPORT = WORK / "interra-setup-report.json"
 RUN_FULL_BENCHMARK = False
+EMBEDDED_SOURCE_B64 = ""
 
 
 def run(command: list[str], *, cwd: Path | None = None) -> None:
@@ -63,9 +66,10 @@ def read_kaggle_secrets() -> list[str]:
 
 def source_root() -> Path:
     archive = INPUT_ROOT / "interra-source.zip"
-    if archive.is_file():
+    if archive.is_file() or EMBEDDED_SOURCE_B64:
         destination = WORK / "Interra-source"
-        with zipfile.ZipFile(archive) as bundle:
+        source = archive if archive.is_file() else io.BytesIO(base64.b64decode(EMBEDDED_SOURCE_B64))
+        with zipfile.ZipFile(source) as bundle:
             for member in bundle.infolist():
                 name = member.filename
                 if Path(name).is_absolute() or "\\" in name or ".." in Path(name).parts:

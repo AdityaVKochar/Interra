@@ -25,15 +25,21 @@
   but both reported all four Secret names unavailable, including a fresh push
   after the user added them in the editor. This is a CLI/editor attachment
   boundary, not a credential-validity result. Version 8 was saved without
-  running, with `RUN_FULL_BENCHMARK = True`; it awaits attachment of the four
-  Secrets and **Save & Run All** from the Kaggle editor. The handoff workflow
-  was corrected accordingly. No hosted speech request has run.
+  running, with `RUN_FULL_BENCHMARK = True`, but the editor run requested by the
+  user failed immediately: `/kaggle/input` contained no usable source dataset.
+  The latest downloadable notebook code also retained `RUN_FULL_BENCHMARK = False`,
+  so the editor did not run the prepared version. The worker now supports a
+  path-validated, embedded archive of tracked runtime files as a fallback when
+  Kaggle omits the dataset mount. `scripts/kaggle_package.py` prepares a private,
+  self-contained benchmark notebook with the full-run switch enabled. One
+  embedded-source regression was added. The full suite passed **96 tests in
+  12.198 seconds** on Python 3.11.15. No hosted speech request has run.
 - `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
   prevent local settings or installed packages entering the source archive.
 
-Next: run saved kernel version 8 from Kaggle's editor with all four Secrets
-attached, inspect its setup report and benchmark output, then diagnose any
-measured failures.
+Next: save and verify the self-contained notebook, then run it from Kaggle's
+editor with all four Secrets attached. Inspect its setup report and benchmark
+output, then diagnose measured failures.
 The camera extension, repeated seeded evaluation, video, and release package
 remain open. No architectural contract changed in this recovery phase.
 
