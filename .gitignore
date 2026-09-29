@@ -1,7 +1,10 @@
 .venv/
+.venv-fdb/
 __pycache__/
 *.egg-info/
 .env
+.env.*
+!.env.fdb.example
 artifacts/
 build/
 dist/

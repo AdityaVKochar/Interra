@@ -90,13 +90,21 @@ def start_ollama() -> subprocess.Popen[bytes]:
 
 def main() -> None:
     shutil.copytree(source_root(), PROJECT, dirs_exist_ok=True)
+    run(["apt-get", "update"])
+    run(
+        [
+            "apt-get",
+            "install",
+            "-y",
+            f"python{sys.version_info.major}.{sys.version_info.minor}-venv",
+            "zstd",
+        ]
+    )
     run([sys.executable, "-m", "venv", str(VENV)])
     python = venv_python()
     run([python, "-m", "pip", "install", "--upgrade", "pip"])
     run([python, "-m", "pip", "install", "-e", ".[fdb]"], cwd=PROJECT)
 
-    run(["apt-get", "update"])
-    run(["apt-get", "install", "-y", "zstd"])
     run(["bash", "-lc", "curl -fsSL https://ollama.com/install.sh | sh"])
     start_ollama()
     run(["ollama", "pull", "qwen3:8b"])

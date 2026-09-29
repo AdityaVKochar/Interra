@@ -1,4 +1,23 @@
-# Current implementation status — 2026-09-24
+# Current implementation status — 2026-09-29
+
+## Kaggle setup recovery — 2026-09-29
+
+- Switched to `codex/fdb-v3-livekit-kaggle-handoff`; its 89-test baseline passed.
+- Kaggle CLI 2.2.4 authenticated with an access token stored outside the repository.
+  The existing private kernel and source dataset are accessible.
+- The latest kernel had failed before dependency installation because Kaggle's
+  Python 3.12 image lacked `ensurepip` for `venv`. The worker now installs the
+  matching `python3.12-venv` package before creating its isolated environment,
+  alongside `zstd` for Ollama. A new setup-order regression test was added.
+- Full suite: **90 tests passed** in 9.852 seconds on Python 3.11.15. No new
+  FDB-v3 inference or score is claimed yet.
+- `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
+  prevent local settings or installed packages entering the source archive.
+
+Next: upload the corrected private source and kernel, inspect its setup report,
+then add the four provider values as Kaggle Secrets and run the first benchmark.
+The camera extension, repeated seeded evaluation, video, and release package
+remain open. No architectural contract changed in this recovery phase.
 
 The updated Theme 05 guide changes the scored target to FDB-v3 and a LiveKit
 voice agent. The repository now contains an initial FDB-v3 adapter using
