@@ -9,7 +9,10 @@
   Python 3.12 image lacked `ensurepip` for `venv`. The worker now installs the
   matching `python3.12-venv` package before creating its isolated environment,
   alongside `zstd` for Ollama. A new setup-order regression test was added.
-- Full suite: **90 tests passed** in 9.852 seconds on Python 3.11.15. No new
+- Kaggle's dataset CLI compressed nested source directories separately. The
+  worker now accepts one explicit source archive and validates member paths
+  before extraction. Two extraction regressions were added.
+- Full suite: **92 tests passed** in 9.457 seconds on Python 3.11.15. No new
   FDB-v3 inference or score is claimed yet.
 - `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
   prevent local settings or installed packages entering the source archive.

@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import time
+import zipfile
 
 
 WORK = Path("/kaggle/working")
@@ -60,6 +61,18 @@ def read_kaggle_secrets() -> list[str]:
 
 
 def source_root() -> Path:
+    archive = INPUT_ROOT / "interra-source.zip"
+    if archive.is_file():
+        destination = WORK / "Interra-source"
+        with zipfile.ZipFile(archive) as bundle:
+            for member in bundle.infolist():
+                name = member.filename
+                if Path(name).is_absolute() or "\\" in name or ".." in Path(name).parts:
+                    raise ValueError(f"Unsafe source archive member: {name}")
+            bundle.extractall(destination)
+        if not (destination / "pyproject.toml").is_file():
+            raise FileNotFoundError("Source archive has no pyproject.toml")
+        return destination
     if (INPUT_ROOT / "pyproject.toml").is_file():
         return INPUT_ROOT
     candidates = list(Path("/kaggle/input").rglob("pyproject.toml"))

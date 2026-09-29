@@ -7,11 +7,43 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
+import zipfile
 
 from scripts import kaggle_setup
 
 
 class KaggleSetupTests(unittest.TestCase):
+    def test_extracts_explicit_source_archive(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = root / "input"
+            inputs.mkdir()
+            with zipfile.ZipFile(inputs / "interra-source.zip", "w") as bundle:
+                bundle.writestr("pyproject.toml", "[project]\nname='interra-runtime'\n")
+                bundle.writestr("scripts/fdb_v3.py", "# setup entry point\n")
+            with (
+                patch.object(kaggle_setup, "INPUT_ROOT", inputs),
+                patch.object(kaggle_setup, "WORK", root / "work"),
+            ):
+                source = kaggle_setup.source_root()
+            self.assertTrue((source / "pyproject.toml").is_file())
+            self.assertTrue((source / "scripts" / "fdb_v3.py").is_file())
+
+    def test_rejects_archive_path_traversal(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = root / "input"
+            inputs.mkdir()
+            with zipfile.ZipFile(inputs / "interra-source.zip", "w") as bundle:
+                bundle.writestr("../escape.txt", "unsafe")
+            with (
+                patch.object(kaggle_setup, "INPUT_ROOT", inputs),
+                patch.object(kaggle_setup, "WORK", root / "work"),
+            ):
+                with self.assertRaises(ValueError):
+                    kaggle_setup.source_root()
+            self.assertFalse((root / "escape.txt").exists())
+
     def test_installs_venv_package_before_creating_environment(self) -> None:
         commands: list[list[str]] = []
         with TemporaryDirectory() as directory:
