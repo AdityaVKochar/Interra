@@ -17,8 +17,9 @@
   four provider Secret names missing, so no LiveKit check or benchmark ran.
   The kernel output was slow to process because the virtual environment was in
   `/kaggle/working`; it now lives in Kaggle's unsaved scratch area. A regression
-  guards the output boundary.
-- Full suite: **93 tests passed in 16.403 seconds** on Python 3.11.15. No new FDB-v3 inference
+  guards the output boundary. The worker also now owns and terminates its
+  Ollama server on success and failure; two lifecycle regressions were added.
+- Full suite: **95 tests passed in 12.742 seconds** on Python 3.11.15. No new FDB-v3 inference
   or score is claimed yet.
 - `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
   prevent local settings or installed packages entering the source archive.

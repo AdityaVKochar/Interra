@@ -6,13 +6,20 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import zipfile
 
 from scripts import kaggle_setup
 
 
 class KaggleSetupTests(unittest.TestCase):
+    def test_stops_running_ollama_process(self) -> None:
+        server = Mock()
+        server.poll.return_value = None
+        kaggle_setup.stop_ollama(server)
+        server.terminate.assert_called_once_with()
+        server.wait.assert_called_once_with(timeout=10)
+
     def test_virtual_environment_is_outside_saved_outputs(self) -> None:
         self.assertFalse(kaggle_setup.VENV.is_relative_to(kaggle_setup.WORK))
 
@@ -58,10 +65,12 @@ class KaggleSetupTests(unittest.TestCase):
                 patch.object(kaggle_setup, "source_root", return_value=root),
                 patch.object(kaggle_setup.shutil, "copytree"),
                 patch.object(kaggle_setup, "run", side_effect=lambda command, **_: commands.append(command)),
-                patch.object(kaggle_setup, "start_ollama"),
+                patch.object(kaggle_setup, "start_ollama") as start_ollama,
+                patch.object(kaggle_setup, "stop_ollama") as stop_ollama,
                 patch.object(kaggle_setup, "read_kaggle_secrets", return_value=["ELEVEN_API_KEY"]),
             ):
                 kaggle_setup.main()
+            stop_ollama.assert_called_once_with(start_ollama.return_value)
 
             install = next(i for i, command in enumerate(commands) if command[:3] == ["apt-get", "install", "-y"])
             create = next(i for i, command in enumerate(commands) if command[1:3] == ["-m", "venv"])
@@ -72,6 +81,27 @@ class KaggleSetupTests(unittest.TestCase):
             )
             self.assertFalse(json.loads((root / "report.json").read_text())["livekit_ready"])
             self.assertFalse(any("fdb_v3.py" in " ".join(command) and "all" in command for command in commands))
+
+    def test_stops_ollama_when_setup_fails_after_start(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def fail_on_model_pull(command: list[str], **_: object) -> None:
+                if command[:2] == ["ollama", "pull"]:
+                    raise RuntimeError("model pull failed")
+
+            with (
+                patch.object(kaggle_setup, "PROJECT", root / "project"),
+                patch.object(kaggle_setup, "VENV", root / "venv"),
+                patch.object(kaggle_setup, "source_root", return_value=root),
+                patch.object(kaggle_setup.shutil, "copytree"),
+                patch.object(kaggle_setup, "run", side_effect=fail_on_model_pull),
+                patch.object(kaggle_setup, "start_ollama") as start_ollama,
+                patch.object(kaggle_setup, "stop_ollama") as stop_ollama,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "model pull failed"):
+                    kaggle_setup.main()
+            stop_ollama.assert_called_once_with(start_ollama.return_value)
 
 
 if __name__ == "__main__":

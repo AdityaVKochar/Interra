@@ -86,20 +86,35 @@ def source_root() -> Path:
 
 
 def start_ollama() -> subprocess.Popen[bytes]:
-    log = (WORK / "ollama.log").open("w", encoding="utf-8")
-    server = subprocess.Popen(["ollama", "serve"], stdout=log, stderr=subprocess.STDOUT)
-    for _ in range(60):
-        probe = subprocess.run(
-            ["curl", "-fsS", "http://127.0.0.1:11434/api/tags"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if probe.returncode == 0:
-            return server
-        if server.poll() is not None:
-            raise RuntimeError(f"Ollama exited during startup: {server.returncode}")
-        time.sleep(1)
-    raise RuntimeError("Ollama did not become ready within 60 seconds")
+    with (WORK / "ollama.log").open("w", encoding="utf-8") as log:
+        server = subprocess.Popen(["ollama", "serve"], stdout=log, stderr=subprocess.STDOUT)
+    try:
+        for _ in range(60):
+            probe = subprocess.run(
+                ["curl", "-fsS", "http://127.0.0.1:11434/api/tags"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            if probe.returncode == 0:
+                return server
+            if server.poll() is not None:
+                raise RuntimeError(f"Ollama exited during startup: {server.returncode}")
+            time.sleep(1)
+        raise RuntimeError("Ollama did not become ready within 60 seconds")
+    except BaseException:
+        stop_ollama(server)
+        raise
+
+
+def stop_ollama(server: subprocess.Popen[bytes]) -> None:
+    if server.poll() is not None:
+        return
+    server.terminate()
+    try:
+        server.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait(timeout=5)
 
 
 def main() -> None:
@@ -120,19 +135,22 @@ def main() -> None:
     run([python, "-m", "pip", "install", "-e", ".[fdb]"], cwd=PROJECT)
 
     run(["bash", "-lc", "curl -fsSL https://ollama.com/install.sh | sh"])
-    start_ollama()
-    run(["ollama", "pull", "qwen3:8b"])
-    run(["ollama", "run", "qwen3:8b", "Reply with only READY."])
-    run(["nvidia-smi"])
+    server = start_ollama()
+    try:
+        run(["ollama", "pull", "qwen3:8b"])
+        run(["ollama", "run", "qwen3:8b", "Reply with only READY."])
+        run(["nvidia-smi"])
 
-    run([python, "scripts/fdb_v3.py", "bootstrap", "--download-data"], cwd=PROJECT)
-    missing = read_kaggle_secrets()
-    if not missing:
-        run([python, "scripts/fdb_v3.py", "check"], cwd=PROJECT)
-        if RUN_FULL_BENCHMARK:
-            run([python, "scripts/fdb_v3.py", "all", "--force"], cwd=PROJECT)
-    else:
-        print("Benchmark deferred; add Kaggle Secrets: " + ", ".join(missing), flush=True)
+        run([python, "scripts/fdb_v3.py", "bootstrap", "--download-data"], cwd=PROJECT)
+        missing = read_kaggle_secrets()
+        if not missing:
+            run([python, "scripts/fdb_v3.py", "check"], cwd=PROJECT)
+            if RUN_FULL_BENCHMARK:
+                run([python, "scripts/fdb_v3.py", "all", "--force"], cwd=PROJECT)
+        else:
+            print("Benchmark deferred; add Kaggle Secrets: " + ", ".join(missing), flush=True)
+    finally:
+        stop_ollama(server)
 
     report = {
         "qwen_model": "qwen3:8b",
