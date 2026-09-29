@@ -21,11 +21,19 @@
   Ollama server on success and failure; two lifecycle regressions were added.
 - Full suite: **95 tests passed in 12.742 seconds** on Python 3.11.15. No new FDB-v3 inference
   or score is claimed yet.
+- Kaggle CLI-pushed kernel versions 6 and 7 completed the model/bootstrap steps
+  but both reported all four Secret names unavailable, including a fresh push
+  after the user added them in the editor. This is a CLI/editor attachment
+  boundary, not a credential-validity result. Version 8 was saved without
+  running, with `RUN_FULL_BENCHMARK = True`; it awaits attachment of the four
+  Secrets and **Save & Run All** from the Kaggle editor. The handoff workflow
+  was corrected accordingly. No hosted speech request has run.
 - `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
   prevent local settings or installed packages entering the source archive.
 
-Next: add the four provider values as Kaggle Secrets, rerun the trimmed setup
-kernel, inspect its report, and run the first benchmark.
+Next: run saved kernel version 8 from Kaggle's editor with all four Secrets
+attached, inspect its setup report and benchmark output, then diagnose any
+measured failures.
 The camera extension, repeated seeded evaluation, video, and release package
 remain open. No architectural contract changed in this recovery phase.
 

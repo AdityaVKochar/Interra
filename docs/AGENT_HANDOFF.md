@@ -117,7 +117,6 @@ The current private resources are:
 - Source dataset: `adityavardhankochar/interra-fdb-v3-private-source`
 - Accelerator: Nvidia Tesla T4; Internet: enabled
 
-The last uploaded kernel run was cancelled while setup was being inspected.
 Use the following workflow from the PC after every meaningful code change.
 
 1. Create a clean temporary source archive that excludes `.git`, `.venv`,
@@ -136,24 +135,28 @@ Use the following workflow from the PC after every meaningful code change.
    python -m kaggle kernels push -p $upload
    ```
 
-3. In the Kaggle kernel settings, keep GPU and Internet on. In **Add-ons →
-   Secrets**, add `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and
-   `ELEVEN_API_KEY`. Enable each one for the notebook. This manual secret step
-   is required because the Kaggle CLI cannot safely create notebook secrets.
-4. Push the setup run, then monitor and retrieve its report:
+3. The CLI push checks dependencies, but it does **not** carry over Secrets
+   attached in the Kaggle editor. The 2026-09-29 CLI runs verified this: even
+   after the four Secrets were added, a fresh CLI-pushed run reported all four
+   missing. Do not use `kernels push` to start a credentialed evaluation.
+4. Open this kernel in Kaggle's editor. Set `RUN_FULL_BENCHMARK = True` in the
+   script, or use an already saved version with that switch. Keep GPU and
+   Internet on. In **Add-ons → Secrets**, add and attach `LIVEKIT_URL`,
+   `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `ELEVEN_API_KEY` to this exact
+   notebook. Choose **Save Version → Save & Run All** in the editor. The worker
+   checks that all four are readable before launching the benchmark.
+5. Monitor the run with the CLI and download selected reports:
 
    ```powershell
    $env:PYTHONUTF8 = "1"
    python -m kaggle kernels status adityavardhankochar/interra
-   python -m kaggle kernels logs adityavardhankochar/interra
-   python -m kaggle kernels output adityavardhankochar/interra -p .\artifacts\kaggle-output
+   python -m kaggle kernels logs -f adityavardhankochar/interra
+   python -m kaggle kernels output adityavardhankochar/interra -p .\artifacts\kaggle-output --file-pattern 'interra-setup-report.json|fdb_v3.*\.json|fdb_v3.*\.jsonl'
    ```
 
-5. Inspect `interra-setup-report.json`. It must show `livekit_ready: true`.
-   To launch the benchmark, set `RUN_FULL_BENCHMARK = True` in the staged copy
-   of `interra_setup.py`, push another kernel version, and retrieve the
-   resulting `artifacts/fdb_v3` directory. This deliberate switch avoids
-   spending ElevenLabs credits during dependency-only setup.
+6. Inspect `interra-setup-report.json`. It must show `livekit_ready: true` and
+   `full_benchmark_run: true`. If the first check still lists missing Secret
+   names, confirm they are attached to this notebook and rerun from the editor.
 
 If the kernel cannot install Ollama, first inspect its logs. The provided setup
 installs `zstd` before the Ollama installer because Kaggle images can omit it.
