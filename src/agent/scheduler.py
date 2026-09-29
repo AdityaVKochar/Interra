@@ -64,6 +64,7 @@ class ToolScheduler:
         r = self.runtime
         self.disarm(call.call_id)
         self.calls[call.call_id] = call.model_copy(update={"status": status})
+        r.call_errors[call.call_id] = error
         r.trace.record(status.value, call_id=call.call_id, error=error)
         if call.operation_key:
             r.ledger.update(call.operation_key, "OUTCOME_UNKNOWN")

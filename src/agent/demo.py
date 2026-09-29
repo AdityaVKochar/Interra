@@ -184,7 +184,25 @@ async def run_hero_demo() -> DemoResult:
 
 
 def main():
-    print(asyncio.run(run_hero_demo()).rendered)
+    import argparse
+    import json
+    from pathlib import Path
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--replay', type=Path)
+    parser.add_argument('--scenario')
+    parser.add_argument('--save', type=Path, help='Save the actual runtime demonstration trace')
+    args = parser.parse_args()
+    if args.replay:
+        from .replay import load_trace, render_replay
+        print(render_replay(load_trace(args.replay, args.scenario)))
+    else:
+        result = asyncio.run(run_hero_demo())
+        print('SCRIPTED REASONING - actual SessionRuntime, virtual timestamps; not a live model benchmark')
+        print(result.rendered)
+        if args.save:
+            args.save.parent.mkdir(parents=True, exist_ok=True)
+            args.save.write_text(''.join(json.dumps(e.model_dump(mode='json')) + '\n'
+                                         for e in result.trace), encoding='utf-8')
 
 
 if __name__ == "__main__":

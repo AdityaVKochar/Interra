@@ -1,0 +1,2 @@
+# Preserve the supplied evaluation kit byte-for-byte on Windows checkouts.
+vendor/samsung_theme05/** -text

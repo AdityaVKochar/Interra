@@ -12,6 +12,8 @@ class VisualObservation(Model):
     ambiguous: bool = False
     question: str | None = None
     evidence: str = ""
+    image_embedding: list[float] | None = Field(default=None, min_length=512, max_length=512)
+    embedding_model: str | None = None
 
 
 class VisionUnderstandingProvider(Protocol):

@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 INTERRA_PROFILE=local INTERRA_MODEL_ROOT=/models INTERRA_MEDIA_ROOT=/app/vendor/samsung_theme05
+WORKDIR /app
+COPY . .
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r requirements-local.lock \
+    && pip install --no-cache-dir --no-deps . \
+    && useradd --create-home --uid 10001 interra \
+    && mkdir -p /models /app/artifacts && chown -R interra:interra /models /app/artifacts
+USER interra
+CMD ["python", "scripts/run_samsung.py"]

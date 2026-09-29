@@ -1,152 +1,160 @@
 # Interra
 
-Interra is a provider-agnostic, interruptible real-time agent runtime for Samsung PRISM
-Theme 05. Its core contribution is deterministic coordination under concurrent user input,
-reasoning, multimodal perception and tool results—not a chatbot persona or UI.
+Interra is an interruptible LiveKit voice agent for Samsung PRISM Theme 05. The
+current submission target is **Full-Duplex-Bench v3 (FDB-v3)**: 100 recorded
+conversations, 79 scenarios, 12 mock tools, disfluent speech, multi-step tool
+chains, and latency scoring.
 
-## What it proves
+The updated participant guide supersedes the earlier queue-based development
+kit. That runtime remains in this repository as tested coordination research,
+but the scored entry point is now `agent.fdb_livekit`.
 
-- One session-owned asynchronous event consumer and output-action queue.
-- Fast, truthful acknowledgments while slow planning/perception remains cancellable.
-- Versioned intent/slot state with localized corrections.
-- Dependency-aware tool cancellation and stale-result rejection.
-- Dynamic manifest-driven tools with strict argument validation.
-- Logical operation keys that block duplicate state-changing calls.
-- Asynchronous WAV and PNG adapters with source provenance.
-- Deterministic virtual-clock scenarios and complete JSONL traces.
+## Current architecture
+
+```text
+recorded or live speech
+        |
+        v
+LiveKit room and Silero VAD
+        |
+        v
+ElevenLabs Scribe v2 Realtime STT
+        |
+        v
+Ollama Qwen 3 tool-calling LLM
+        |
+        +----> 12 official FDB-v3 mock tools
+        |              |
+        |              v
+        +------ grounded tool results
+        |
+        v
+ElevenLabs low-latency TTS
+```
+
+The agent keeps Scribe's `no_verbatim` option disabled so false starts,
+hesitations, and self-corrections remain visible to the planner. Tool execution
+runs outside the event loop, every call is recorded with the benchmark's room
+identifier and timestamps, and spoken responses are kept short so LiveKit can
+interrupt them.
 
 ## Requirements
 
-- Python 3.11 (the package accepts Python 3.11–3.12).
-- No model or network is required for the deterministic suite or demo.
-- Optional live adapters require explicitly configured Ollama/audio/vision services.
+- Python 3.11. The official benchmark recommends 3.10; the repository supports
+  3.11 and will be clean-tested before release.
+- A free LiveKit Cloud project.
+- An ElevenLabs API key for Scribe v2 Realtime and TTS.
+- Ollama with `qwen3:8b` by default. Override the model with
+  `INTERRA_FDB_LLM_MODEL`.
+- `ffmpeg` available on `PATH`.
+- The official Full-Duplex-Bench repository and released v3 audio data.
 
-## Setup
+Never commit credentials. Copy `.env.fdb.example` to a local ignored file and
+fill the values there, or export them in the shell.
 
-PowerShell:
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e .
-.\.venv\Scripts\python.exe -m unittest discover -v
-```
-
-POSIX shell:
+## Installation
 
 ```bash
-python3.11 -m venv .venv
+python -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m unittest discover -v
+.venv/bin/python -m pip install -e ".[fdb]"
 ```
 
-## Run the actual-runtime demo
+PowerShell uses `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+
+Clone the benchmark at the pinned revision:
 
 ```bash
-python -m agent.demo
-# or, after installation:
-interra-demo
+python scripts/fdb_v3.py bootstrap
 ```
 
-The console timeline uses the production `SessionRuntime`. It dispatches a read-only call,
-accepts a barge-in and destination correction, emits cancellation, receives the obsolete
-result late, rejects it, and completes only the current call. It displays state versions,
-call statuses and trace-derived safety/latency metrics. See `docs/DEMO.md`.
-
-## Docker
+To download the official released audio through its published Google Drive ID:
 
 ```bash
-docker build -t interra-runtime .
-docker run --rm interra-runtime
-docker run --rm interra-runtime python -m unittest discover -v
+python scripts/fdb_v3.py bootstrap --download-data
 ```
 
-The image runs as an unprivileged user and defaults to the same actual-runtime demo.
+The benchmark and data are placed under `.runtime/`, which is excluded from Git
+and Docker packaging. Set `INTERRA_FDB_V3_ROOT` and `INTERRA_FDB_DATA_ROOT` if
+you keep them elsewhere.
 
-## Architecture
+## Run FDB-v3
 
-```text
-timestamped events
-        |
-        v
-SessionRuntime / serialized coordination
-   |            |                    |
-Fast Path   State + Planner   Audio/Vision tasks
-   |            |                    |
-   +------------+---------+----------+
-                          v
-        ToolScheduler + SafetyLedger
-                          |
-                          v
-                 structured actions
-```
-
-The model proposes validated plans; it never controls cancellation, result admissibility,
-state mutation, write retries or completion. See `docs/ARCHITECTURE.md` and the numbered
-specifications in `docs/`.
-
-## Internal provisional protocol
-
-Input events include text chunks, interruptions, dynamic manifests, tool results, WAV audio,
-PNG frames and cancellation acknowledgments. Output actions include speech, clarification,
-tool calls, cancellation and final responses with intent/slot snapshots. Every envelope and
-tool call has an explicit ID and timestamp.
-
-`src/agent/protocol.py` isolates the internal schema. The supplied official Samsung
-kit is preserved under `vendor/samsung_theme05`; `interra_submission:ParticipantAgent`
-implements its external queue contract. See [kit review and evaluation instructions](docs/KIT_REVIEW.md).
-No live-model task-completion score is claimed.
-
-## Optional provider adapters
-
-- `OllamaProvider(model, endpoint)` posts schema-constrained planning requests.
-- `HTTPAudioProvider(endpoint)` expects WAV bytes and returns an `AudioObservation` JSON body.
-- `HTTPVisionProvider(endpoint)` expects PNG bytes and returns a `VisualObservation` JSON body.
-
-The official entrypoint reads explicit `INTERRA_MODEL`, `INTERRA_OLLAMA_URL`,
-`INTERRA_AUDIO_URL`, `INTERRA_VISION_URL`, and `INTERRA_MEDIA_ROOT` configuration.
-MP3 decoding requires ffmpeg (`INTERRA_FFMPEG` can select its path). No model is
-downloaded automatically. Core correctness is tested with deterministic mocks.
-
-From the repository root, `python scripts/run_samsung.py` saves complete public
-harness traces. Configure models first; `--allow-unconfigured` explicitly tests
-the safe fallback. For the official three-repetition procedure run:
+Start Ollama and prepare the model before timing:
 
 ```bash
-python vendor/samsung_theme05/eval_submission.py . --reps 3 --time-scale 1 --out artifacts/samsung-evaluation.json
+ollama pull qwen3:8b
+ollama serve
 ```
 
-Set `INTERRA_MEDIA_ROOT` to the absolute path of `vendor/samsung_theme05` for public
-media, or the supplied hidden-kit root during evaluation. Replace the team
-placeholder in `submission.yaml` before submission.
-
-## Test organization
-
-- `tests/unit/`: models, protocol, manifests, virtual clock, metrics and packaging.
-- `tests/scenarios/`: text, scheduling, safety, providers, floor management, audio, vision,
-  fusion, performance traces and the actual-runtime demo.
-- `tests/adversarial/`: interruption/result timing boundaries and stale-work races.
-- `artifacts/traces/`: generated per-test JSONL traces (ignored by Git).
-
-Run a focused module with:
+Check all required services and paths:
 
 ```bash
-python -m unittest tests.adversarial.test_interruptions -v
+python scripts/fdb_v3.py check
 ```
 
-## Known limitations
+Run the agent and benchmark in one command, then generate the exact-match and
+latency reports:
 
-- The official queue integration is tested; a configured reasoning/ASR/vision model
-  and live three-repetition quality evaluation remain outstanding.
-- Live model, speech and vision quality/latency have not been benchmarked.
-- A dispatched write can have an unknown external outcome; Interra blocks a blind retry but
-  cannot guarantee rollback without tool-specific reconciliation semantics.
-- Local media envelopes use bounded base64 data; the official adapter resolves MP3/WAV
-  and PNG file references within its configured media root.
-- Safety-ledger state is session/process scoped; crash-durable side-effect recovery is outside
-  the supplied requirements.
-- A recorded demo video and team-completed presentation export are human submission tasks and
-  are not fabricated by this repository.
+```bash
+python scripts/fdb_v3.py all --force
+```
 
-Current evidence, blockers and exact next work are maintained in `docs/STATUS.md`.
+For self-reported semantic argument and response scoring, set `OPENAI_API_KEY`
+and add `--use-llm`. The organizers' pinned judge and official re-run remain the
+scored result.
+
+Individual commands are also available:
+
+```bash
+python scripts/fdb_v3.py agent
+python scripts/fdb_v3.py benchmark --force
+python scripts/fdb_v3.py evaluate
+```
+
+Reports and Interra's agent trace are written to `artifacts/fdb_v3/`. The runner
+also preserves the official `/tmp/agent_tool_calls.log` telemetry contract.
+
+## ElevenLabs
+
+ElevenLabs credits are useful for this benchmark. The integration uses:
+
+- `scribe_v2_realtime` for streaming recognition;
+- `eleven_turbo_v2_5` for low-latency speech generation;
+- `ELEVEN_API_KEY` as the only ElevenLabs secret name.
+
+ElevenLabs does not provide the multi-step reasoning layer in this architecture;
+Ollama handles tool selection and argument generation. The API key name must be
+listed in the submission form, while its value must remain outside the repository.
+
+## Extension use case
+
+The retained Interra runtime already supports asynchronous PNG observations,
+source-bound CLIP embeddings, correction-aware state, stale-result rejection,
+and tool cancellation. The planned FDB-v3 extension is camera-assisted device
+troubleshooting. It must be connected to the LiveKit wrapper and shown working
+end to end in the demo before submission; the older scripted replay is supporting
+evidence rather than the required extension demo.
+
+## Tests
+
+The deterministic runtime suite remains useful for interruption and side-effect
+safety:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The current suite does not substitute for an FDB-v3 run. Submission readiness
+requires the official inference and evaluation reports from all released samples.
+
+## Legacy queue runtime
+
+The previous kit is retained under `vendor/samsung_theme05`, and its adapter is
+still available as `interra_submission:ParticipantAgent`. It is no longer the
+submission contract described by the updated participant guide. Its tests,
+traces, and safety mechanisms remain useful implementation evidence and a source
+for the camera-assisted extension.
+
+See [FDB-v3 migration](docs/FDB_V3.md), [current status](docs/STATUS.md), and
+[definition of done](docs/10_DEFINITION_OF_DONE.md).

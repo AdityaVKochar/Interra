@@ -1,0 +1,73 @@
+"""Assemble an FDB-v3 review archive; never tag, push, sign, or submit it."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import zipfile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = ROOT / "output" / "submission"
+REPORT_DIR = ROOT / "artifacts" / "fdb_v3"
+
+
+def main() -> None:
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    names = subprocess.check_output(
+        ["git", "ls-files", "-co", "--exclude-standard", "-z"],
+        cwd=ROOT,
+    ).decode("utf-8").split("\0")
+    selected = {
+        name: ROOT / name for name in names if name and (ROOT / name).is_file()
+    }
+
+    required = [
+        REPORT_DIR / "interra_elevenlabs_evaluation_report.json",
+        REPORT_DIR / "interra_elevenlabs_pass_rate_report.json",
+        REPORT_DIR / "verification-summary.json",
+        OUTPUT / "Interra-Theme5-FDB-v3-final-review.pptx",
+        OUTPUT / "Interra-FDB-v3-demo.mp4",
+    ]
+    for path in required:
+        if not path.is_file():
+            raise RuntimeError(f"Missing FDB-v3 review material: {path}")
+        selected[path.relative_to(ROOT).as_posix()] = path
+
+    for optional in [
+        REPORT_DIR / "interra_elevenlabs_latency_report.json",
+        REPORT_DIR / "livekit-agent.jsonl",
+    ]:
+        if optional.is_file():
+            selected[optional.relative_to(ROOT).as_posix()] = optional
+
+    manifest = {
+        "status": "review only; team approval and official submission outstanding",
+        "benchmark": "Full-Duplex-Bench v3",
+        "provider": "interra_elevenlabs",
+        "base_commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip(),
+        "branch": subprocess.check_output(
+            ["git", "branch", "--show-current"], cwd=ROOT, text=True
+        ).strip(),
+        "includes_uncommitted_work": True,
+        "sha256": {
+            name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for name, path in sorted(selected.items())
+        },
+    }
+    destination = OUTPUT / "Interra-Theme5-FDB-v3-review.zip"
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, path in sorted(selected.items()):
+            archive.write(path, name)
+        archive.writestr("release-manifest.json", json.dumps(manifest, indent=2))
+    with zipfile.ZipFile(destination) as archive:
+        assert archive.testzip() is None
+    print(destination)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,6 @@
 """Owned perception tasks and source-epoch acceptance gate."""
 import asyncio
+import copy
 from dataclasses import dataclass
 from .audio import understand_audio
 from .vision import understand_image
@@ -69,6 +70,10 @@ class PerceptionManager:
         modality = "audio" if event.type == "AUDIO_CLIP" else "vision"
         if modality == "audio":
             self.audio_turn_open = not event.payload.get("end_of_turn", True)
+            if self.audio_turn_open:
+                self.unresolved_modalities.add(modality)
+                r.trace.record("AUDIO_ACCUMULATING", source_id=event.event_id)
+                return  # The official adapter sends accumulated refs at end of turn.
         else:
             self.frame_context = {k: event.payload[k] for k in ("frame_id", "device_hint") if k in event.payload}
         self.unresolved_modalities.add(modality)
@@ -140,6 +145,8 @@ class PerceptionManager:
         r.trace.record("OBSERVATION_ACCEPTED", source_id=result.source_id, source_timestamp=result.source_timestamp,
                        epoch=result.epoch, modality=result.modality, observation=observation.model_dump())
         if observation.ambiguous:
+            r.clarification_context = {"uncertain_observation": observation.model_dump(),
+                "source_event_id": result.source_id, "modality": result.modality}
             r.emit("CLARIFY", question=observation.question or f"Could you clarify the {result.modality} input?")
             return
         if result.modality != "audio" or not self.audio_turn_open:
@@ -164,9 +171,15 @@ class PerceptionManager:
             r.last_input = dict(r.text_input)
             return
         observations = {
-            modality: provenance["observation"]
+            modality: copy.deepcopy(provenance["observation"])
             for modality, provenance in self.accepted.items()
         }
+        embeddings = []
+        for modality, observation in observations.items():
+            vector = observation.pop('image_embedding', None)
+            if vector:
+                embeddings.append({'source_id': self.accepted[modality]['source_event_id'],
+                                   'dimensions': len(vector), 'model': observation.get('embedding_model')})
         text_parts = [r.text_input.get("text", "")]
         if "audio" in observations:
             text_parts.append(observations["audio"]["transcript"])
@@ -185,6 +198,7 @@ class PerceptionManager:
             "text_input": dict(r.text_input),
             "observation": observations[result.modality] if result else next(reversed(observations.values())),
             "observations": observations,
+            "available_embeddings": embeddings,
             "observation_provenance": {
                 modality: {
                     key: value

@@ -106,6 +106,7 @@ class SamsungProtocol:
     @staticmethod
     def encode(action):
         p = copy.deepcopy(action.payload)
+        snapshot = p.pop("state_snapshot", None)
         kinds = {"SPEAK": "filler_speech", "CLARIFY": "clarification_request",
                  "TOOL_CALL": "tool_call", "CANCEL_TOOL_CALL": "cancel_tool", "FINAL": "final_response"}
         if action.type == "TOOL_CALL":
@@ -113,8 +114,8 @@ class SamsungProtocol:
         elif action.type == "CLARIFY":
             p = {"text": p["question"]}
         result = {"action": kinds[action.type], "payload": p}
-        if action.type == "FINAL":
-            result["state_snapshot"] = p.pop("state_snapshot")
+        if snapshot is not None:
+            result["state_snapshot"] = snapshot
         return result
 
 
@@ -148,8 +149,18 @@ class ParticipantAgent:
     async def setup(self):
         if self.runtime is not None:
             return
+        try:
+            await self.configure()
+        except BaseException:
+            for client in reversed(self.owned_clients):
+                await client.aclose()
+            self.owned_clients.clear()
+            raise
+
+    async def configure(self):
+        local = os.environ.get('INTERRA_PROFILE') == 'local'
         if self.provider is None:
-            model = os.environ.get("INTERRA_MODEL")
+            model = os.environ.get("INTERRA_MODEL", 'qwen3-vl:2b' if local else '')
             self.provider = OllamaProvider(model, os.environ.get("INTERRA_OLLAMA_URL", "http://localhost:11434")) if model else UnconfiguredProvider()
             if model:
                 self.owned_clients.append(self.provider)
@@ -159,12 +170,30 @@ class ParticipantAgent:
                 client = cls(os.environ[variable])
                 setattr(self, attr, client)
                 self.owned_clients.append(client)
+        if local:
+            from .providers.local_audio import LocalAudioProvider
+            from .providers.local_vision import LocalVisionProvider
+            model_root = Path(os.environ.get('INTERRA_MODEL_ROOT', '.models')).resolve()
+            if self.audio_provider is None:
+                self.audio_provider = LocalAudioProvider(os.environ.get('INTERRA_ASR_MODEL_PATH', str(model_root / 'whisper-base')))
+                self.owned_clients.append(self.audio_provider)
+            if self.vision_provider is None:
+                vision_llm = self.provider
+                if not isinstance(vision_llm, OllamaProvider):
+                    vision_llm = OllamaProvider(os.environ.get('INTERRA_MODEL', 'qwen3-vl:2b'),
+                        os.environ.get('INTERRA_OLLAMA_URL', 'http://localhost:11434'))
+                    self.owned_clients.append(vision_llm)
+                self.vision_provider = LocalVisionProvider(vision_llm, model_root / 'fastembed')
+                self.owned_clients.append(self.vision_provider)
+        for client in self.owned_clients:
+            if hasattr(client, 'setup'):
+                await client.setup()
         session_id = uuid4().hex
         self.protocol = SamsungProtocol(session_id)
         root = self.media_root or os.environ.get("INTERRA_MEDIA_ROOT") or Path.cwd()
         self.runtime = SessionRuntime(session_id, self.provider, self.clock,
             audio_provider=self.audio_provider, vision_provider=self.vision_provider,
-            media_loader=KitMediaLoader(root), retain_frame_context=True)
+            media_loader=KitMediaLoader(root), retain_frame_context=True, planner_repairs=1)
 
     async def run(self):
         await self.setup()
@@ -200,6 +229,9 @@ class ParticipantAgent:
                 group.create_task(receive())
                 group.create_task(send())
         finally:
-            for client in self.owned_clients:
+            trace_dir = os.environ.get('INTERRA_TRACE_DIR')
+            if trace_dir:
+                r.trace.save(Path(trace_dir) / f'{r.session_id}.jsonl')
+            for client in reversed(self.owned_clients):
                 await client.aclose()
             self.owned_clients.clear()

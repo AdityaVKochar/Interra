@@ -1,75 +1,67 @@
 # Submission deck source
 
-This is reviewable slide content for export to PPT/PDF. Team names and measured official
-results must be completed by the submitters; placeholders must not be presented as final.
+The updated participant guide limits the final deck to eight slides. Team names
+and measured FDB-v3 results must be completed by the submitters; placeholders
+must not be presented as final.
 
-## Slide 1 — Interra / Theme 05
+## Slide 1 Interra
 
-- Interruptible Real-Time Agents
-- Samsung PRISM GenAI Hackathon 2026–27
-- Team: **TODO: submitter-provided team details**
+- Theme 05 Interruptible Real Time Agents
+- Samsung PRISM GenAI Hackathon 2026
+- Team and college details supplied by the team
 
-## Slide 2 — The problem
+## Slide 2 Problem and benchmark
 
-- Real users interrupt, hesitate and correct themselves while work is running.
-- Tool and perception results can arrive out of order.
-- Cancellation alone is insufficient: late callbacks can still corrupt state.
-- Writes introduce duplicate side-effect risk.
+- People hesitate, self-correct, and interrupt while an agent is working.
+- FDB-v3 uses 100 recordings, 79 scenarios, 12 tools, and up to three chained calls.
+- It scores tool selection, argument accuracy, strict pass rate, response quality,
+  and latency.
 
-## Slide 3 — Evaluation-driven requirements
+## Slide 3 Architecture
 
-- Two asynchronous queues with typed, timestamped events/actions.
-- Fast substantive response plus non-blocking reasoning and tools.
-- 40% completion, 35% interruption recovery, 15% latency, 10% safety/protocol.
-- Hidden multimodal scenarios carry additional weight.
+- LiveKit carries full-duplex audio and interruption events.
+- ElevenLabs Scribe v2 Realtime preserves disfluencies for correction handling.
+- Ollama Qwen 3 performs tool selection and chained reasoning.
+- ElevenLabs Turbo v2.5 streams concise speech.
+- The official deterministic mock APIs ground responses.
 
-## Slide 4 — Architecture
+## Slide 4 Correction and tool lifecycle
 
-- Fast Path: truthful acknowledgment and floor management.
-- Slow Path: validated provider proposals and asynchronous multimodal understanding.
-- Coordination: versioned state, task ownership, cancellation, stale gates and idempotency.
-- Use the diagram in `docs/ARCHITECTURE.md`.
+- Partial speech remains interruptible.
+- The latest correction replaces obsolete values before tool dispatch.
+- Dependent calls consume returned identifiers and values.
+- Tool telemetry records the room, arguments, results, and timing.
+- Retained runtime tests cover cancellation, stale-result rejection, and duplicate writes.
 
-## Slide 5 — Interruption lifecycle
+## Slide 5 FDB-v3 results
 
-- Calls capture intent, state snapshot and slot dependencies.
-- A localized correction preserves unrelated slots.
-- Incompatible calls emit cancellation immediately after validated semantic change.
-- Every result passes one lifecycle/dependency acceptance gate.
+- Replace with the official best-run tool-selection F1.
+- Replace with semantic argument and response accuracy.
+- Replace with strict pass rate.
+- Replace with median first-response, first-tool, and completion latency.
+- Include provider/model versions, seed information, and report names.
 
-## Slide 6 — Safe dynamic tools
+Do not use the historical 49.5 queue-kit score on this slide.
 
-- Tool names and schemas come only from manifests.
-- JSON Schema validation precedes dispatch.
-- `call_id` identifies an attempt; `operation_key` identifies a logical write.
-- Unknown write outcomes block blind retries.
+## Slide 6 Extension use case
 
-## Slide 7 — Multimodal, one runtime
+- Camera-assisted device troubleshooting.
+- A frame is linked to the current conversation with source provenance.
+- The user can correct the device, symptom, or intended action while analysis runs.
+- Obsolete image/model results cannot complete the updated task.
+- Replace this plan with measured end-to-end evidence before submission.
 
-- WAV and PNG are asynchronous input events, not separate agents.
-- Audio and vision tasks can run concurrently.
-- Source event, timestamp and epoch provenance prevents delayed override.
-- Ambiguous evidence produces targeted clarification, never speculative writes.
+## Slide 7 Evidence and limitations
 
-## Slide 8 — Adversarial evidence
+- Reproduction command and pinned FDB-v3 commit.
+- Clean-machine result and crash count.
+- Hosted speech depends on declared ElevenLabs credentials and service availability.
+- Local Qwen quality and latency must be reported from the final GPU run.
+- State any failed scenario categories honestly.
 
-- Deterministic virtual clock and FIFO same-timestamp tie breaking.
-- Boundary tests around interruption/result order.
-- Exact trace assertions cover state, cancellation, stale rejection and final snapshots.
-- Local full-suite result: **update from `docs/STATUS.md` before export**.
+## Slide 8 Demonstration and next work
 
-## Slide 9 — Actual-runtime demo
-
-- Delhi lookup dispatched.
-- User barges in and changes destination to Mumbai.
-- Delhi call canceled; late Delhi result visibly rejected.
-- Mumbai call accepted; final state retains Chennai origin.
-- Safety metrics show zero duplicate logical operations in the demo.
-
-## Slide 10 — Limitations and next evidence
-
-- Official Samsung evaluation kit/schema is not yet present; no official score is claimed.
-- Live model/audio/vision quality remains provider-dependent and unbenchmarked.
-- External write rollback requires tool-specific semantics.
-- TODO before submission: team details, official public results, PPT/PDF export and <=5-minute
-  recorded demo.
+- Show one real FDB-v3 interruption or self-correction.
+- Show the extension use case running end to end.
+- Keep the video between three and five minutes.
+- Finish with the single most important measured improvement still needed.

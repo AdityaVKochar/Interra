@@ -1,4 +1,4 @@
-"""Provisional JSON protocol; replace this adapter when Samsung supplies its kit."""
+"""Internal JSON protocol; SamsungProtocol owns the official queue boundary."""
 import json
 from typing import Protocol
 from jsonschema import Draft202012Validator
@@ -34,6 +34,8 @@ ACTION_PAYLOADS = {
     "FINAL": obj({"text": S, "state_snapshot": obj({
         "intent": {"type": ["string", "null"]}, "slots": D})}),
 }
+for schema in ACTION_PAYLOADS.values():
+    schema["properties"]["state_snapshot"] = obj({"intent": {"type": ["string", "null"]}, "slots": D})
 EVENT_VALIDATORS = {
     kind: Draft202012Validator(schema)
     for kind, schema in EVENT_PAYLOADS.items()

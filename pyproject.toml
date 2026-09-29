@@ -10,8 +10,23 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = ["pydantic>=2.10,<3", "jsonschema>=4.23,<5", "httpx>=0.28,<1"]
 
+[project.optional-dependencies]
+local = ["faster-whisper>=1.1,<2", "fastembed>=0.7,<1", "Pillow>=11,<13", "psutil>=6,<8"]
+fdb = [
+    "livekit-agents[elevenlabs,openai,silero]>=1.8,<2",
+    "livekit[crypto]>=1.0,<2",
+    "python-dotenv>=1.0,<2",
+    "numpy>=1.26,<3",
+    "pydub>=0.25,<1",
+    "ffmpeg-python>=0.2,<1",
+    "gdown>=5,<6",
+    "nemo_toolkit[asr]>=2.4,<3",
+]
+
 [project.scripts]
 interra-demo = "agent.demo:main"
+interra-local = "agent.local_setup:main"
+interra-fdb-agent = "agent.fdb_livekit:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

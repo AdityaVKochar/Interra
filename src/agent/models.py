@@ -64,6 +64,8 @@ class ToolRequest(Model):
     # None means conservatively depend on every slot; explicit bindings are checked.
     bindings: dict[str, str] | None = None
     operation_key: str | None = None
+    # Maps numeric-array arguments to a current observation source ID, never generated numbers.
+    embedding_refs: dict[str, str] = Field(default_factory=dict)
 
 
 class Proposal(Model):
@@ -71,6 +73,7 @@ class Proposal(Model):
     tool_requests: list[ToolRequest] = Field(default_factory=list)
     clarification: str | None = None
     final_response: str | None = None
+    resolves_clarification: bool = False
 
     @model_validator(mode="after")
     def exclusive(self):

@@ -55,7 +55,10 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
             await h.text("lookup")
             await h.action("CLARIFY")
             self.assertFalse(h.runtime.calls)
-            self.assertEqual(h.runtime.state.snapshot.version, 0)
+            self.assertEqual(h.runtime.state.snapshot.version, 1)  # Only clarification metadata changed.
+            self.assertEqual(h.runtime.state.snapshot.slots, {})
+            self.assertIsNone(h.runtime.state.snapshot.intent)
+            self.assertIsNotNone(h.runtime.state.snapshot.pending_clarification)
             self.assertIn("PROPOSAL_REJECTED", h.kinds())
 
     async def test_unknown_tool_is_never_dispatched(self):

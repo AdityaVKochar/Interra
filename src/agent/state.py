@@ -19,10 +19,16 @@ class StateManager:
         changed = {key for key in old.slots.keys() | slots.keys()
                    if (key in old.slots) != (key in slots) or old.slots.get(key) != slots.get(key)}
         new = State(session_id=old.session_id, version=old.version + bool(changed or switched),
-                    intent=patch.intent if patch.intent is not None else old.intent, slots=slots)
+                    intent=patch.intent if patch.intent is not None else old.intent, slots=slots,
+                    pending_clarification=None if switched else old.pending_clarification)
         return new, changed, switched
 
     def apply(self, patch: Patch):
         result = self.preview(patch)
         self._state = result[0].model_copy(deep=True)
         return result
+
+    def clarify(self, question):
+        if question != self._state.pending_clarification:
+            self._state = self._state.model_copy(update={
+                "pending_clarification": question, "version": self._state.version + 1})

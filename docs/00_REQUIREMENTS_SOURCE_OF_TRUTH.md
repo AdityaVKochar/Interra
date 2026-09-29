@@ -2,21 +2,30 @@
 
 This document separates **official Samsung requirements** from the engineering choices in the rest of this pack.
 
+## Current authority as of 2026-09-24
+
+`Theme05_Participant_Guide_UPDATED_FBD.docx` is the newest participant guide and
+supersedes the earlier queue-interface guide and supplied nine-scenario kit. The
+current scored contract is Full-Duplex-Bench v3 inside a LiveKit voice agent.
+See `docs/FDB_V3.md` for the actionable requirements and pinned benchmark source.
+
+The remaining sections below describe historical requirements and retained
+engineering work. They are not the current submission interface.
+
 ## Source documents
 
-1. `Theme 5_Guide.pdf` — Theme 05: Interruptible Real-Time Agents, v1.0.0, pages 1–3.
-2. `Samsung PRISM_Y2026_GenAI_Hackathon_3rd_Edition.V2(2).pdf` — overall hackathon/submission guide, especially pages 9–13.
+1. `Theme05_Participant_Guide_UPDATED_FBD.docx` — current Theme 05 guide and FDB-v3 submission contract.
+2. `Theme 5_Guide.pdf` — earlier Theme 05 queue-interface guide, retained for history.
+3. `Samsung PRISM_Y2026_GenAI_Hackathon_3rd_Edition.V2(2).pdf` — overall hackathon/submission guide.
 
-If the official evaluation kit released after registration provides more precise schemas or mechanics, the kit becomes the executable source of truth.
+If a newer dated organizer update conflicts with these documents, the newest
+official update becomes the source of truth and the conflict must be recorded.
 
-### Kit received 2026-09-23
+### Historical kit received 2026-09-23
 
-The supplied kit is now preserved at `vendor/samsung_theme05`. Its `docs/PROTOCOL.md`,
-`TOOLS.md`, `SUBMISSION.md`, and executable harness take precedence over the earlier
-guide summaries below. In particular, audio is delivered as relative MP3 references,
-the entrypoint is an async Python class with two queues, and finals require a top-level
-state snapshot. See `docs/KIT_REVIEW.md` for source conflicts, implementation evidence,
-FAQ Theme 05 clarifications, and remaining live-model/submission requirements.
+The supplied queue kit is preserved at `vendor/samsung_theme05`. Its protocol,
+tools, and harness governed development until the updated FDB guide arrived. It
+is now regression evidence, not the scored interface. See `docs/KIT_REVIEW.md`.
 
 ---
 
@@ -209,11 +218,17 @@ They care about:
 
 ### Quality multiplier
 
-The guide states a **0.80×–1.20×** quality multiplier based on:
+The kit's `docs/SCORING.md` supersedes the earlier guide summary: the quality multiplier is
+**0.90×–1.10×**, based on:
 
 - transcript naturalness,
 - truthfulness,
 - relevance.
+
+The public Python scorer/evaluator does not run this LLM quality judge. Local
+reports contain automated scores only. It redistributes absent category weights
+within each scenario, and the evaluator weights audio/visual scenarios by 1.5 and
+L3/L4 difficulty by 1.25. Those weights affect the public aggregate too.
 
 It also states that hidden multimodal scenario scores use a **1.5× multiplier**.
 

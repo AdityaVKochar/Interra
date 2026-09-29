@@ -90,7 +90,7 @@ class SamsungTests(unittest.IsolatedAsyncioTestCase):
             Path(directory, 'frame.png').write_bytes(base64.b64decode(png_ref()[7:]))
             a = await self.start(planner, vision_provider=Vision(), media_root=directory)
             await self.send(a, 'video_frame', {'frame_id': 'f', 'image_ref': 'frame.png'})
-            await self.action(a, 'filler_speech')
+            self.assertTrue(a.out_q.empty())  # A passive frame is context, not a turn.
             # Drain perception completion without depending on wall-clock timing.
             await asyncio.gather(*a.runtime.perception.tasks.values())
             await a.runtime.input.join()

@@ -1,3 +1,5 @@
+# Legacy metadata for the superseded queue-based kit. FDB-v3 uses the LiveKit
+# entry point documented in README.md and does not consume this file.
 team: "REPLACE_WITH_CollegeName_TeamName"
 entry_point: "interra_submission:ParticipantAgent"
 python: "3.11"
@@ -5,4 +7,13 @@ requirements:
   - pydantic>=2.10,<3
   - jsonschema>=4.23,<5
   - httpx>=0.28,<1
-env: []
+  - faster-whisper>=1.1,<2
+  - fastembed>=0.7,<1
+  - Pillow>=11,<13
+  - psutil>=6,<8
+env:
+  - INTERRA_PROFILE
+  - INTERRA_MODEL
+  - INTERRA_OLLAMA_URL
+  - INTERRA_MODEL_ROOT
+  - INTERRA_MEDIA_ROOT

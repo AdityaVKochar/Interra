@@ -1,6 +1,13 @@
 # Supplied material review and remaining submission work
 
-Reviewed on 2026-09-23 against the actual local attachments.
+> Historical note: the 2026-09-24 updated participant guide supersedes this
+> queue-based kit with Full-Duplex-Bench v3 and a LiveKit agent. This review is
+> retained as engineering evidence only. See `docs/FDB_V3.md`.
+
+Historical review from 2026-09-23. Current implementation, model measurements,
+and remaining gates are in [STATUS.md](STATUS.md). References below to missing
+models and unconfigured scores describe that earlier review, not current status.
+The presentation template described by that review is not present in this workspace.
 
 ## Runtime requirements now available
 

@@ -5,3 +5,7 @@ __pycache__/
 artifacts/
 build/
 dist/
+.tools/
+.models/
+output/
+.runtime/

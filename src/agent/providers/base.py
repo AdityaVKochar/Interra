@@ -8,6 +8,8 @@ class PlanningContext(Model):
     input: dict[str, JsonValue]
     tools: list[ToolSpec]
     results: dict[str, JsonValue] = Field(default_factory=dict)
+    calls: dict[str, JsonValue] = Field(default_factory=dict)
+    clarification: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class ReasoningProvider(Protocol):

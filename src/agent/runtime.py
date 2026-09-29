@@ -1,5 +1,6 @@
 """Single owner of session mutations; slow work returns through the input mailbox."""
 import asyncio
+import copy
 from dataclasses import dataclass
 
 from .models import Action, Call, CallStatus, Event
@@ -46,6 +47,8 @@ class SessionRuntime:
         self.ledger = SafetyLedger()
         self.calls = self.scheduler.calls
         self.results = {}
+        self.call_errors = {}
+        self.clarification_context = {}
         self.tasks = set()
         self.planner_task = None
         self.planner_timer = None
@@ -65,6 +68,8 @@ class SessionRuntime:
         self.deferred_retries = set()
         self.epoch = 0
         self.latest_user_timestamp = None
+        self.turn_sequence = 0
+        self.pending_recovery = False
         self.perception = PerceptionManager(self, audio_provider, vision_provider)
 
     def spawn(self, coroutine):
@@ -74,6 +79,16 @@ class SessionRuntime:
         return task
 
     def emit(self, kind, **payload):
+        if kind == "CLARIFY":
+            old_version = self.state.snapshot.version
+            self.state.clarify(payload["question"])
+            self.clarification_context = {**self.clarification_context,
+                "question": payload["question"], "request": copy.deepcopy(self.last_input),
+                "turn_sequence": self.turn_sequence}
+            self.trace.record('CLARIFICATION_UPDATED', before_version=old_version,
+                              state=self.state.snapshot.model_dump())
+        state = self.state.snapshot
+        payload.setdefault("state_snapshot", {"intent": state.intent, "slots": state.slots})
         action = Action(action_id=self.ids.new("action"), session_id=self.session_id,
                         timestamp=self.clock.now(), type=kind, payload=payload)
         self.protocol.encode(action)
@@ -144,6 +159,9 @@ class SessionRuntime:
                                   source_timestamp=event.timestamp, watermark=self.latest_user_timestamp)
                 return
             self.latest_user_timestamp = event.timestamp
+        if (event.type == 'INTERRUPTION' or
+                event.type in {'TEXT_CHUNK', 'AUDIO_CLIP'} and event.payload.get('end_of_turn', True)):
+            self.turn_sequence += 1
         acknowledgment = self.floor.acknowledge(event)
         if acknowledgment:
             self.emit("SPEAK", text=acknowledgment)
@@ -176,6 +194,7 @@ class SessionRuntime:
         elif event.type == "TOOL_RESULT":
             self.result(event.payload)
         elif event.type == "INTERRUPTION":
+            self.pending_recovery = True
             self.epoch += 1
             self.perception.invalidate()
             self.cancel_planning()
@@ -189,6 +208,10 @@ class SessionRuntime:
                 self.perception.refresh_context()
                 self.start_plan()
         elif event.type in {"AUDIO_CLIP", "VIDEO_FRAME"}:
+            if event.type == "VIDEO_FRAME":
+                for call in list(self.calls.values()):
+                    if call.request.embedding_refs:
+                        self.scheduler.invalidate(call, "image source changed")
             if (event.type == "AUDIO_CLIP" and self.retain_frame_context
                     and not self.perception.audio_turn_open):
                 self.epoch += 1
@@ -221,7 +244,14 @@ class SessionRuntime:
         token = self.token
         self.active_plan_token = token
         context = PlanningContext(state=self.state.snapshot, input=self.last_input,
-                                  tools=self.registry.specs, results=self.results)
+            tools=self.registry.specs, results=self.results,
+            clarification=self.clarification_context,
+            calls={cid: {"tool_name": c.spec.name,
+                         "arguments": {k: v for k, v in c.request.arguments.items()
+                                       if k not in c.request.embedding_refs},
+                         "embedding_refs": c.request.embedding_refs,
+                         "status": c.status.value, "error": self.call_errors.get(cid)}
+                   for cid, c in self.calls.items()})
         self.trace.record("PLANNER_STARTED", token=token, version=context.state.version)
         async def work():
             try:
@@ -254,6 +284,8 @@ class SessionRuntime:
             return
         proposal = completion.value
         try:
+            proposal = proposal.model_copy(update={"tool_requests": [
+                self.resolve_embeddings(req) for req in proposal.tool_requests]})
             candidate, _, _ = self.state.preview(proposal.state_patch)
             specs = [self.registry.validate(req, candidate) for req in proposal.tool_requests]
         except Exception as exc:
@@ -263,10 +295,26 @@ class SessionRuntime:
         self.trace.record("PROPOSAL_ACCEPTED", proposal=proposal.model_dump())
         old = self.state.snapshot
         state, changed, switched = self.state.apply(proposal.state_patch)
+        if proposal.resolves_clarification:
+            modality = self.clarification_context.get('modality')
+            # Only a subsequent utterance can resolve a previously asked perception question.
+            if modality and self.turn_sequence > self.clarification_context.get('turn_sequence', self.turn_sequence):
+                if self.perception.latest.get(modality) not in self.perception.tasks:
+                    self.perception.unresolved_modalities.discard(modality)
+        if switched or (not proposal.clarification and not self.perception.unresolved):
+            self.clarification_context = {}
+            self.state.clarify(None)
+            state = self.state.snapshot
         if state.version != old.version:
             self.trace.record("STATE_UPDATED", before=old.model_dump(), after=state.model_dump(),
                               changed=sorted(changed), intent_changed=switched)
         self.scheduler.reconcile(state)
+        if self.pending_recovery:
+            self.pending_recovery = False
+            if proposal.tool_requests or not (proposal.clarification or proposal.final_response):
+                spoken_update = self.floor.correction(state.slots, changed)
+                if spoken_update:
+                    self.emit('SPEAK', text=spoken_update)
         self.user_pending = bool(self.chunks) or self.perception.unresolved
         for call_id in list(self.deferred_retries):
             self.deferred_retries.discard(call_id)
@@ -292,6 +340,23 @@ class SessionRuntime:
 
     def dispatch(self, request, spec):
         return self.scheduler.dispatch(request, spec)
+
+    def resolve_embeddings(self, request):
+        args = copy.deepcopy(request.arguments)
+        if any('embedding' in key.lower() for key in args):
+            raise ValueError('embedding arguments must use a source reference')
+        for argument, source in request.embedding_refs.items():
+            if argument in args:
+                raise ValueError('embedding argument supplied twice')
+            current = self.perception.accepted.get('vision')
+            if (not current or current['source_event_id'] != source or
+                    'vision' in self.perception.unresolved_modalities):
+                raise ValueError('embedding source is missing or stale')
+            vector = current['observation'].get('image_embedding')
+            if not vector:
+                raise ValueError('current frame has no computed embedding')
+            args[argument] = list(vector)
+        return request.model_copy(update={'arguments': args}, deep=True)
 
     def result(self, payload):
         call = self.calls.get(payload["call_id"])

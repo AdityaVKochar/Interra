@@ -1,107 +1,64 @@
-# 10 — Definition of Done
+# Definition of done
 
-The project is not done because the UI works.
+The updated participant guide makes FDB-v3, LiveKit, and a working extension the
+submission contract. The old queue-kit checklist is retained in Git history and
+its tests remain useful, but it no longer defines completion.
 
-It is done when the following are true.
+## FDB-v3 agent
 
-## Official requirement coverage
+- [x] LiveKit voice-agent entry point exists.
+- [x] The 12 official tool signatures are exposed to the model.
+- [x] Tool execution does not block the event loop.
+- [x] Tool calls use the room identifier and benchmark telemetry format.
+- [x] ElevenLabs Scribe v2 Realtime is configured with disfluencies preserved.
+- [x] ElevenLabs TTS model and voice are explicitly pinned by configuration.
+- [x] Ollama is available as the local tool-calling LLM backend.
+- [ ] Clean environment installation of the FDB dependency profile passes.
+- [ ] LiveKit Cloud credentials and dispatch are validated end to end.
+- [ ] Every released recording completes without agent or protocol crashes.
 
-- [ ] Two-queue/event-action evaluator interface is supported.
-- [x] Text chunks/end-of-turn handling works.
-- [x] WAV audio input works.
-- [x] PNG frame input works.
-- [x] Interruption signals work.
-- [x] Async tool results work.
-- [x] Dynamic tool manifests work.
-- [x] Spoken/fast-path actions work.
-- [x] Non-blocking tool calls contain explicit call IDs.
-- [x] Cancellation actions work.
-- [x] Clarification actions work.
-- [x] Final response carries required intent/slot snapshot.
-- [ ] JSON protocol output is valid.
+## Benchmark evidence
 
-## Floor management
+- [x] Official repository revision is pinned.
+- [x] Reproduction runner can bootstrap the benchmark and published data.
+- [x] Runner starts the agent, runs inference, and invokes all three evaluators.
+- [ ] Best run covers all 100 recordings.
+- [ ] Tool-selection F1 report is saved.
+- [ ] Semantic argument and response report is saved with the LLM judge enabled.
+- [ ] Strict pass-rate report is saved.
+- [ ] First-response, tool-call, and task-completion latency report is saved.
+- [ ] Seeds, model versions, provider configuration, and run logs are archived.
+- [ ] Reproduction is verified on a clean machine.
 
-- [x] First substantive response latency is measured.
-- [x] Fast path does not claim unverified completion.
-- [x] Filler is not spammed.
-- [x] Clarifications are specific.
+## Interruption and correction behavior
 
-## Interruption recovery
+- [x] Existing deterministic tests cover cancellation, stale results, corrections,
+  duplicate writes, and timing races.
+- [x] FDB STT preserves fillers, false starts, and self-corrections.
+- [ ] A real FDB recording proves the latest correction reaches tool arguments.
+- [ ] A real live interruption stops obsolete speech and work.
+- [ ] Multi-step tool chains use returned identifiers rather than guessed values.
+- [ ] No benchmark scenario is hard-coded, memorized, or used for fine-tuning.
+- [ ] No scenario state is cached across conversations.
 
-- [x] Localized slot corrections preserve unrelated state.
-- [x] Intent switches invalidate old work.
-- [x] Superseded calls are canceled promptly.
-- [x] Late stale results are rejected.
-- [x] Stale retries do not reappear.
-- [x] Rapid multiple corrections converge on newest state.
+## Extension use case
 
-## Tool correctness
+- [x] Camera-assisted device troubleshooting is selected.
+- [x] Image observations, embeddings, provenance, and stale-result rejection exist
+  in the retained runtime.
+- [ ] Camera input is connected to the LiveKit voice session.
+- [ ] The extension runs end to end with a real user interruption or correction.
+- [ ] The extension appears in the final demo video.
 
-- [x] Tool manifests are parsed dynamically.
-- [x] Unseen tool test passes.
-- [x] Arguments are schema-validated.
-- [x] Read-only vs state-modifying behavior is respected.
-- [x] Chained calls work.
-- [x] Timeouts/failures do not deadlock.
+## Documentation and submission
 
-## State-changing safety
+- [x] README identifies FDB-v3 as the current benchmark.
+- [x] Exact environment-variable names are documented without secret values.
+- [x] Hosted and local model responsibilities are documented honestly.
+- [ ] Final benchmark scores replace all placeholder or legacy score references.
+- [ ] Demo video is three to five minutes and shows real behavior.
+- [ ] Slide deck is no more than eight slides.
+- [ ] Team identities and submission form are complete.
+- [ ] The last uploaded submission is verified as the intended final version.
 
-- [x] Logical operation keys exist.
-- [x] Duplicate state-changing dispatch count is zero in tests.
-- [x] No blind write retry.
-- [x] Cancellation-after-dispatch is handled explicitly.
-- [x] Uncertain side-effect outcome is not treated as safely repeatable.
-
-## Multimodal
-
-- [x] Audio understanding is asynchronous.
-- [x] Vision understanding is asynchronous.
-- [x] Ambiguous audio/vision can trigger clarification.
-- [x] Multimodal results carry source provenance.
-- [x] Delayed multimodal results cannot overwrite newer state incorrectly.
-- [x] Combined multimodal interruption test passes.
-
-## Concurrency
-
-- [x] No orphan async tasks.
-- [x] All spawned tasks have lifecycle ownership.
-- [x] Cancellation cleanup is tested.
-- [x] Cross-session isolation test passes.
-- [x] Virtual-clock deterministic tests pass.
-- [x] Same-timestamp ordering behavior is deterministic.
-
-## Evaluation
-
-- [x] Unit suite passes.
-- [x] Scenario suite passes.
-- [x] Adversarial timing suite passes.
-- [x] Multimodal mocked suite passes.
-- [x] Protocol validation passes.
-- [ ] Official 9-scenario public suite has been run once available.
-- [ ] Every official-kit failure has a local regression test.
-
-## Observability
-
-- [x] Every event/action is traceable by ID.
-- [x] State version transitions are logged.
-- [x] Call lifecycle is logged.
-- [x] Stale-result rejection is logged.
-- [x] Duplicate-blocking is logged.
-- [x] Latency can be computed from trace.
-
-## Packaging
-
-- [x] Clean setup works on Python 3.10–3.12-compatible target chosen for project.
-- [x] README complete.
-- [x] Docker verified.
-- [x] No secrets in repo.
-- [x] Demo instructions complete.
-- [x] Architecture diagram included.
-- [x] Known limitations included.
-- [ ] <=5 minute demo video ready.
-- [ ] PPT/PDF ready.
-- [ ] Final tag ready:
-  `PRISM_GENAI_HACKATHON_Y2026`
-
-Only mark a box complete when there is evidence.
+Only mark a box complete when a report, trace, test, or recorded run proves it.

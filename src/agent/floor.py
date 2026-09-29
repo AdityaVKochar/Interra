@@ -3,19 +3,32 @@
 
 class FloorManager:
     def __init__(self):
-        self.text_active = False
+        self.count = 0
+        self.used = set()
+
+    def correction(self, slots, changed):
+        details = [f'{name.replace("_", " ")} to {slots[name]}' for name in sorted(changed)
+                   if name in slots and isinstance(slots[name], (str, int, float, bool))]
+        text = ('I updated ' + ', '.join(details[:2]) + '.') if details else "I'll continue from your latest request."
+        if text in self.used:
+            return None
+        self.used.add(text)
+        self.count += 1
+        return text
 
     def acknowledge(self, event):
-        if event.type == "TEXT_CHUNK":
-            first = not self.text_active
-            self.text_active = not event.payload["end_of_turn"]
-            if first:
-                return "I’m checking your request."
-        elif event.type == "INTERRUPTION":
-            self.text_active = False
-            return "I’ve paused the current work. What would you like to change?"
-        elif event.type == "AUDIO_CLIP":
-            return "I’m listening to the audio update."
-        elif event.type == "VIDEO_FRAME":
-            return "I’m checking what’s visible in the frame."
-        return None
+        if event.type == "INTERRUPTION":
+            choices = ("I'll pause and use your update.", "I'll reconsider the request.",
+                       "Let me adjust to that change.", "I'm checking your latest instruction.")
+        elif event.type in {"TEXT_CHUNK", "AUDIO_CLIP"} and event.payload.get("end_of_turn", True):
+            if self.count >= 4:
+                return None
+            choices = ("I'm checking your request.", "Let me consider that update.",
+                       "I'll work from what you just said.", "I'm reviewing the next step.")
+        else:
+            return None  # Partial turns and passive frames do not take the floor.
+        text = next((text for text in choices if text not in self.used), None)
+        if text is not None:
+            self.used.add(text)
+            self.count += 1
+        return text
