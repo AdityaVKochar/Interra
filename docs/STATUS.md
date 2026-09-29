@@ -12,13 +12,19 @@
 - Kaggle's dataset CLI compressed nested source directories separately. The
   worker now accepts one explicit source archive and validates member paths
   before extraction. Two extraction regressions were added.
-- Full suite: **92 tests passed** in 9.457 seconds on Python 3.11.15. No new
-  FDB-v3 inference or score is claimed yet.
+- Kaggle kernel version 5 completed its script-level dependency setup,
+  Qwen3 8B preparation, and pinned benchmark bootstrap. Its report showed all
+  four provider Secret names missing, so no LiveKit check or benchmark ran.
+  The kernel output was slow to process because the virtual environment was in
+  `/kaggle/working`; it now lives in Kaggle's unsaved scratch area. A regression
+  guards the output boundary.
+- Full suite: **93 tests passed in 16.403 seconds** on Python 3.11.15. No new FDB-v3 inference
+  or score is claimed yet.
 - `.gitignore` now excludes `.env.*` (except the example) and `.venv-fdb/` to
   prevent local settings or installed packages entering the source archive.
 
-Next: upload the corrected private source and kernel, inspect its setup report,
-then add the four provider values as Kaggle Secrets and run the first benchmark.
+Next: add the four provider values as Kaggle Secrets, rerun the trimmed setup
+kernel, inspect its report, and run the first benchmark.
 The camera extension, repeated seeded evaluation, video, and release package
 remain open. No architectural contract changed in this recovery phase.
 

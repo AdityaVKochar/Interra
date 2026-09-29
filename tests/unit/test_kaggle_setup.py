@@ -13,6 +13,9 @@ from scripts import kaggle_setup
 
 
 class KaggleSetupTests(unittest.TestCase):
+    def test_virtual_environment_is_outside_saved_outputs(self) -> None:
+        self.assertFalse(kaggle_setup.VENV.is_relative_to(kaggle_setup.WORK))
+
     def test_extracts_explicit_source_archive(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

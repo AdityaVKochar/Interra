@@ -18,9 +18,10 @@ import zipfile
 
 
 WORK = Path("/kaggle/working")
+SCRATCH = Path("/kaggle/temp")
 INPUT_ROOT = Path("/kaggle/input/interra-fdb-v3-private-source")
 PROJECT = WORK / "Interra"
-VENV = WORK / "interra-fdb-venv"
+VENV = SCRATCH / "interra-fdb-venv"
 REPORT = WORK / "interra-setup-report.json"
 RUN_FULL_BENCHMARK = False
 
