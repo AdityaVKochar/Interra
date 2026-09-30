@@ -19,5 +19,5 @@ because PowerPoint has it open. Use the linked submission file above.
 
 Reports: [results](results/).
 
-The demo video is not recorded. Do not replace these figures with the older
+Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). Do not replace these figures with the older
 queue-kit score.

@@ -43,7 +43,8 @@ def main() -> None:
         for name in slides:
             ElementTree.fromstring(deck.read(name))
     print(f"Evidence verified: {len(recordings)} recordings, {pass_report['passed']} strict passes, {len(slides)} slides.")
-    print("Final submission still requires the real demo link and consistent registered team details.")
+    print("Demo: https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a")
+    print("Final submission still requires consistent registered team details.")
 
 
 if __name__ == "__main__":

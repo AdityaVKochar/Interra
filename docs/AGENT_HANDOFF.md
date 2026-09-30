@@ -44,7 +44,7 @@ Official benchmark pin: `DanielLin94144/Full-Duplex-Bench` commit
 4. Finish the extension: wire camera-assisted device troubleshooting through
    the LiveKit session, demonstrate it end-to-end, and include its source and
    limitations in the README/video.
-5. Record a genuine 3–5 minute demo: benchmark interruption plus extension.
+5. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
    Finish the eight-slide-or-fewer deck, disclosure, team details, and release
    package.
 

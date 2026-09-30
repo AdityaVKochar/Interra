@@ -51,7 +51,7 @@ does not substitute for an FDB-v3 run.
 ## Presentation and demo
 
 - Presentation: [docs/Interra_Theme05_submission.pptx](docs/Interra_Theme05_submission.pptx)
-- Demo video: **pending** (required before final submission).
+- Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 
 The recording is three to five minutes: one benchmark interruption or
 self-correction, then the camera troubleshooting session.
@@ -305,5 +305,6 @@ score is claimed yet.
 - [Official reports](docs/results/)
 - [FDB-v3 contract](docs/FDB_V3.md)
 - [Status and run history](docs/STATUS.md)
+- [Demo video](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 - [Demo sequence](docs/DEMO.md)
 - [AI usage disclosure](docs/AI_DISCLOSURE_DRAFT.md)

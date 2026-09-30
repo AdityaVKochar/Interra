@@ -76,7 +76,7 @@
 
 ### Remaining before final submission
 
-- Record and link the real three-to-five-minute benchmark plus camera demo.
+- Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
   Unit tests do not prove live camera behavior or interruption quality.
 - Confirm the registered team name: deck says `smoothOperator`; disclosure
   says `VITV_smoothOperator_T5`. Preserve both until the team resolves it.
@@ -99,7 +99,7 @@
   GPT-4.1 mini run: strict pass 31/100, turn-take 58/100, average response
   latency 4.545 seconds. Official JSON reports are in `docs/results/`.
 - The deck is `docs/Interra_Theme05.pptx`, filled from the organizer template.
-- The demo video is not recorded. A later official run can replace these
+- Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). A later official run can replace these
   numbers if it is better.
 
 ## Completed hosted Kaggle run and measured failure fixes — 2026-09-30
@@ -165,7 +165,7 @@ reasoning errors need fresh measured results. See `docs/KAGGLE_RUN_REVIEW.md`.
 - The camera extension is a separate LiveKit entry point. It keeps only the
   latest camera frame, drops that frame after one turn, and does not expose
   the benchmark tools. `tests.unit.test_extension_livekit`: 5 passed on
-  Python 3.11. A live end-to-end recording is still required.
+  Python 3.11. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 
 ## First completed official FDB-v3 baseline and hosted-model rerun
 
@@ -192,7 +192,7 @@ reasoning errors need fresh measured results. See `docs/KAGGLE_RUN_REVIEW.md`.
   not describe the current speech provider.
 
 Next: check version 9's smoke gate and full report. Improve only from measured
-failures. The extension, real demo recording, team information, and final
+failures. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). Team information and final
 submission verification remain open.
 
 ## LiveKit Inference speech recovery — 2026-09-30
@@ -473,8 +473,8 @@ Evidence: `artifacts/samsung-local-evaluation.json`, `samsung-public-traces.json
   its removal with "blocked by policy". No reset or workaround deletion was performed.
 - Any previously generated 12-slide deck, queue-runtime replay, or review archive
   under `output/submission` is historical and must not be submitted. The updated
-  deck source is limited to eight slides and awaits real FDB-v3 results; the final
-  3–5 minute video must show a live FDB interruption and the working extension.
+  deck source is limited to eight slides and awaits real FDB-v3 results; the demo
+  video is [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - Team identities, the exact presentation template, AI disclosure review/signature,
   and final submission details remain team inputs. The Theme 5 PDF in the supplied
   ZIP is DRM-protected, so it was not independently read. Earlier document summaries

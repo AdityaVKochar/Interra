@@ -319,7 +319,7 @@ Required:
 - architecture diagram,
 - known limitations,
 - PPT/PDF,
-- <=5 min demo video,
+- <=5 min demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a),
 - final Git tag:
   `PRISM_GENAI_HACKATHON_Y2026`
 

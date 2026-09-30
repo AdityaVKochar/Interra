@@ -261,7 +261,7 @@ The overall Samsung hackathon guide states:
   - working prototype code in a public/shared GitHub repository,
   - README with reproducible setup,
   - Docker files / other requirements,
-  - demo video, maximum 5 minutes,
+  - demo video, maximum 5 minutes: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a),
   - PPT or PDF presentation.
 - Final GitHub commit must be tagged:
   - `PRISM_GENAI_HACKATHON_Y2026`

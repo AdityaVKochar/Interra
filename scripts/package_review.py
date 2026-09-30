@@ -61,6 +61,7 @@ def main() -> None:
         ).strip(),
         "includes_uncommitted_work": True,
         "demo_included": args.demo is not None,
+        "demo": "https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a",
         "remaining": [] if args.demo else ["Real benchmark and camera demo video"],
         "sha256": {
             name: hashlib.sha256(path.read_bytes()).hexdigest()

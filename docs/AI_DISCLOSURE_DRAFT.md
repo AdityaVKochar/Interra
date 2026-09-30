@@ -46,7 +46,7 @@ Other: Used to compare this repository with the public FDB-v3 runner. The offici
 
 1. Feature Name: Camera-assisted troubleshooting
 2. Self-Generated/AI-Generated/Both: Both
-3. Description: The extension topic comes from the hackathon requirement. Cursor agents and Codex implemented a separate LiveKit session, `python -m agent.extension_livekit start`, which attaches the linked participant's latest camera frame to the next spoken turn and does not add benchmark tools. Prompts requested the extension and submission audit while the Kaggle notebook kept running. Output was the session module and ten unit tests, including cleanup, participant isolation and stale-image regressions. A live end-to-end recording is still required before this feature is demonstrated.
+3. Description: The extension topic comes from the hackathon requirement. Cursor agents and Codex implemented a separate LiveKit session, `python -m agent.extension_livekit start`, which attaches the linked participant's latest camera frame to the next spoken turn and does not add benchmark tools. Prompts requested the extension and submission audit while the Kaggle notebook kept running. Output was the session module and ten unit tests, including cleanup, participant isolation and stale-image regressions. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 
 ## 5. Ethical & Compliance Confirmation
 

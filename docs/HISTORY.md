@@ -18,7 +18,7 @@ Python 3.11.15 is installed alongside default Python 3.12.5; target is Python 3.
 
 ## Requirements gaps
 Phase gates 1-10 and available local Phases 12-14 have recorded evidence. README, Dockerfile,
-architecture, demo guide and reviewable deck source exist. Official evaluator integration, recorded demo video, exported PPT/PDF and the
+architecture, demo guide and reviewable deck source exist. Official evaluator integration, the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a), exported PPT/PDF and the
 final release tag remain open. Docker Desktop 4.91.0 image build/run is now verified.
 The definition-of-done audit marks only test/build/scan-backed items complete.
 Official public-kit validation awaits Samsung's release (confirmed by the user).
@@ -297,6 +297,5 @@ results remain unverified. HTTP observation interfaces require real implementati
 they are not themselves speech or vision models. Configure reproducible models next,
 then rerun the trace runner and official evaluator. No hidden-test success is claimed.
 Docker engine is stopped, so the updated Dockerfile has not been built in this phase.
-The team must supply identities/links, finish the prescribed deck and genuine demo
-video, and review/sign the AI disclosure. submission.yaml deliberately contains a team
+The team must supply identities/links, finish the prescribed deck, and review/sign the AI disclosure. The demo video is the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). submission.yaml deliberately contains a team
 placeholder. No signatures, release tag, publication, or submission were fabricated.

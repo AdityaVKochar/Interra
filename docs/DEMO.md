@@ -1,5 +1,7 @@
 # Demo guide
 
+Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
+
 The final video must be a three-to-five-minute recording of real system behavior.
 The historical deterministic replay can explain cancellation internals, but it
 cannot replace the required benchmark and extension demonstrations.

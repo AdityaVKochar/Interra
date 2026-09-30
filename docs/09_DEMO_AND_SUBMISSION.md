@@ -1,7 +1,7 @@
 # 09 — Demo and Submission Plan
 
 **Historical queue-runtime plan.** The current official FDB-v3 video sequence
-is in [DEMO.md](DEMO.md). The custom stale-result gate and safety ledger below
+is in [DEMO.md](DEMO.md). The recording is the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). The custom stale-result gate and safety ledger below
 are not integrated into the LiveKit adapter; show them only as labeled local
 engineering evidence. The required video shows real benchmark and camera
 sessions.
@@ -170,7 +170,7 @@ Before 25 Sep 2026 11:59 PM:
 - [ ] Working repository is public/shared as required.
 - [ ] README setup is reproducible from clean environment.
 - [x] Docker build/run verified.
-- [ ] Demo video <=5 min.
+- [ ] Demo video <=5 min: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - [ ] PPT/PDF present.
 - [ ] Referenced docs/assets are in repo.
 - [ ] Known limitations documented.

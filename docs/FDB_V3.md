@@ -28,8 +28,7 @@ The repository must provide:
 2. Exact setup and run steps plus a one-command end-to-end reproduction path.
 3. FDB-v3 results and logs including seeds and model configuration.
 4. One working extension beyond the benchmark domains.
-5. A three-to-five-minute video showing a real benchmark interruption and the
-   extension running end to end.
+5. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 6. A slide deck of no more than eight slides.
 
 Round 1 weighting is 60 percent official normalized benchmark score, 20 percent
