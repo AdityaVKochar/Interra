@@ -5,31 +5,95 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BENCHMARK_KERNEL_ID = "adityavardhankochar/interra-fdb-v3-benchmark"
+BENCHMARK_TITLE = "interra fdb v3 benchmark"
 
 
-def package(destination: Path) -> Path:
-    destination.mkdir(parents=True, exist_ok=True)
-    archive = subprocess.run(
-        ["git", "archive", "--format=zip", "HEAD", "src", "scripts", "pyproject.toml"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-    ).stdout
+def _source_archive() -> bytes:
+    """Zip the working tree, so an uncommitted agent fix is what Kaggle runs."""
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        for relative in ("src", "scripts", "pyproject.toml"):
+            path = ROOT / relative
+            files = [path] if path.is_file() else sorted(item for item in path.rglob("*") if item.is_file())
+            for item in files:
+                if "__pycache__" in item.parts or item.suffix == ".pyc":
+                    continue
+                bundle.write(item, item.relative_to(ROOT).as_posix())
+    return buffer.getvalue()
+
+
+def _worker_source() -> str:
+    archive = _source_archive()
     payload = base64.b64encode(archive).decode("ascii")
     source = (ROOT / "scripts" / "kaggle_setup.py").read_text(encoding="utf-8")
     source = source.replace("RUN_FULL_BENCHMARK = False", "RUN_FULL_BENCHMARK = True", 1)
     source = source.replace('EMBEDDED_SOURCE_B64 = ""', f'EMBEDDED_SOURCE_B64 = "{payload}"', 1)
     if "RUN_FULL_BENCHMARK = True" not in source or f'EMBEDDED_SOURCE_B64 = "{payload}"' not in source:
         raise RuntimeError("Kaggle setup source has changed; packaging substitutions failed")
+    return source
+
+
+def notebook_document(source: str) -> dict[str, object]:
+    """Wrap the worker in a real ipynb so Kaggle's notebook converter can parse it."""
+    return {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {"name": "python"},
+        },
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "# Interra FDB-v3 Kaggle worker\n",
+                    "\n",
+                    "Do **not** attach the private source dataset. This notebook embeds the runtime.\n",
+                    "Attach Secrets named `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`.\n",
+                    "Enable GPU (T4) and Internet, then use **Save Version → Save & Run All**.\n",
+                ],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "id": "interra-fdb-v3-worker",
+                "metadata": {},
+                "outputs": [],
+                "source": source,
+            },
+        ],
+    }
+
+
+def package(destination: Path) -> Path:
+    destination.mkdir(parents=True, exist_ok=True)
+    source = _worker_source()
     (destination / "interra_setup.py").write_text(source, encoding="utf-8")
+    notebook = notebook_document(source)
+    (destination / "interra_setup.ipynb").write_text(
+        json.dumps(notebook, indent=1) + "\n",
+        encoding="utf-8",
+    )
     metadata = json.loads((ROOT / "kaggle" / "kernel-metadata.json").read_text(encoding="utf-8"))
-    metadata["code_file"] = "interra_setup.py"
-    (destination / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    metadata["id"] = BENCHMARK_KERNEL_ID
+    metadata["title"] = BENCHMARK_TITLE
+    metadata["code_file"] = "interra_setup.ipynb"
+    metadata["kernel_type"] = "notebook"
+    metadata["dataset_sources"] = []
+    (destination / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return destination
 
 

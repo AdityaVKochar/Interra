@@ -113,9 +113,16 @@ place an API token in a command history, `.env`, source file, or repository.
 
 The current private resources are:
 
-- Kernel: `adityavardhankochar/interra`
-- Source dataset: `adityavardhankochar/interra-fdb-v3-private-source`
+- Kernel: `adityavardhankochar/interra` (older script kernel; latest run ERROR, missing source)
+- Prepared self-contained benchmark kernel: `adityavardhankochar/interra-fdb-v3-benchmark` (must be a real `.ipynb`, not a raw `.py` uploaded as a notebook)
+- Source dataset: `adityavardhankochar/interra-fdb-v3-private-source` (optional; `maitrishah29` is an ADMIN collaborator; **do not attach it** — it triggers Kaggle's `datasetVersionInfo` editor crash)
 - Accelerator: Nvidia Tesla T4; Internet: enabled
+
+Do **not** use `maitrishah29/notebook67853281`. That tab is Kaggle's empty
+starter notebook. Its Secrets panel is valid, but Failed to save draft /
+`datasetVersionInfo` means the data-source metadata never resolved. Remove
+every Input/data source from that notebook, or start a **new** notebook with
+no data attached, then import the packaged `interra_setup.ipynb`.
 
 Use the following workflow from the PC after every meaningful code change.
 
@@ -133,24 +140,32 @@ Use the following workflow from the PC after every meaningful code change.
    python scripts\kaggle_package.py $upload
    ```
 
+   Confirm `$upload\interra_setup.ipynb` is valid JSON and
+   `$upload\kernel-metadata.json` has `"kernel_type": "notebook"` and
+   `"dataset_sources": []`. Import that notebook in the Kaggle editor; do not
+   upload the raw `.py` as a notebook.
+
 3. A CLI push checks dependencies, but it does **not** carry over Secrets
    attached in the Kaggle editor. The 2026-09-29 CLI runs verified this: even
    after the four Secrets were added, a fresh CLI-pushed run reported all four
    missing. Do not use `kernels push` to start a credentialed evaluation.
-4. Open this kernel in Kaggle's editor. Verify that the script visibly contains
-   `RUN_FULL_BENCHMARK = True` and `EMBEDDED_SOURCE_B64` with a nonempty value.
-   Keep GPU and
+4. Open the **packaged notebook** (`interra_setup.ipynb`), not a blank Kaggle
+   template and not a raw `.py` file uploaded as a notebook. Confirm the first
+   code cell contains `RUN_FULL_BENCHMARK = True` and a nonempty
+   `EMBEDDED_SOURCE_B64`. Do not add the private source dataset. Keep GPU and
    Internet on. In **Add-ons → Secrets**, add and attach `LIVEKIT_URL`,
    `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `ELEVEN_API_KEY` to this exact
    notebook. Choose **Save Version → Save & Run All** in the editor. The worker
-   checks that all four are readable before launching the benchmark.
+   checks that all four are readable before launching the benchmark. If the
+   editor shows `datasetVersionInfo` or Failed to save draft, remove all data
+   sources and save again before running.
 5. Monitor the run with the CLI and download selected reports:
 
    ```powershell
    $env:PYTHONUTF8 = "1"
-   python -m kaggle kernels status adityavardhankochar/interra
-   python -m kaggle kernels logs -f adityavardhankochar/interra
-   python -m kaggle kernels output adityavardhankochar/interra -p .\artifacts\kaggle-output --file-pattern 'interra-setup-report.json|fdb_v3.*\.json|fdb_v3.*\.jsonl'
+   python -m kaggle kernels status adityavardhankochar/interra-fdb-v3-benchmark
+   python -m kaggle kernels logs adityavardhankochar/interra-fdb-v3-benchmark
+   python -m kaggle kernels output adityavardhankochar/interra-fdb-v3-benchmark -p .\artifacts\kaggle-output --file-pattern 'interra-setup-report.json|fdb_v3.*\.json|fdb_v3.*\.jsonl'
    ```
 
 6. Inspect `interra-setup-report.json`. It must show `livekit_ready: true` and

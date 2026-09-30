@@ -27,6 +27,12 @@ Start the agent independently when rehearsing:
 python scripts/fdb_v3.py agent
 ```
 
+Start the camera extension in a separate terminal. It is not the benchmark agent:
+
+```bash
+python -m agent.extension_livekit start
+```
+
 Run and evaluate the released benchmark:
 
 ```bash

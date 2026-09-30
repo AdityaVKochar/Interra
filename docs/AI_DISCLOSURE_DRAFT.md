@@ -1,27 +1,70 @@
-# AI assistance disclosure — team review draft
+# AI Usage Disclosure Form
 
-This records the assistance performed in this workspace. It is not a signed
-declaration and does not replace the organizer's prescribed disclosure form.
+## 1. Team Details
 
-| Field | Draft information |
-| --- | --- |
-| Project | Interra, Theme 05: interruptible real-time agent runtime |
-| Repository | https://github.com/Maitri-shah29/Interra |
-| Team, college, members | To be supplied by the team |
-| Assistant | OpenAI Codex |
-| Purpose | Repository inspection, local model integration, runtime fixes, test development, evaluation, documentation and review materials |
-| User direction | Implement Theme 5, then migrate the repository when the updated FDB-v3 participant guide replaced the earlier queue-based kit |
-| Code assistance | Existing Ollama/Whisper/CLIP runtime work; LiveKit FDB-v3 adapter; ElevenLabs STT/TTS configuration; event-loop-safe official mock tools; benchmark bootstrap and evaluation runner |
-| Verification assistance | Deterministic regression tests, earlier local-provider probes, source comparison against the updated guide and official FDB-v3 repository, dependency and packaging checks |
-| Material assistance | Editable review presentation and captioned replay generated from actual runtime traces; scripts label scripted reasoning and virtual-clock timing |
-| Feature origins | Existing repository coordination design, supplied participant documents, official public FDB-v3 source, and user-approved implementation work; no hidden scenarios used |
-| Model dependencies | FDB profile: ElevenLabs Scribe v2 Realtime, Ollama Qwen 3 8B, ElevenLabs Turbo v2.5; retained extension: Qwen3-VL 2B, faster-whisper base, and CLIP ViT-B/32 |
-| Human modifications/review | Team must inspect code, limitations, test results, identities and final presentation before approval |
+Team Name: VITV_smoothOperator_T5
 
-The assistant's work includes unsuccessful legacy readiness measurements and an
-unverified FDB-v3 migration. The published evidence must retain those limits. A
-deterministic runtime replay is not a successful FDB-v3 or LiveKit demonstration.
+Project / Product Name: Interra — Theme 05 interruptible real-time agent
 
-Before signing, add any earlier AI assistance not covered by this session, check
-the organizer's required fields, and transfer this factual draft to the official
-form. Representative name, approval, declaration date and signature remain blank.
+Organization / Institution: VITV
+
+Submission Date: 30 September 2026
+
+Repository: [https://github.com/Maitri-shah29/Interra](https://github.com/Maitri-shah29/Interra)
+
+## 2. AI Usage Declaration
+
+Did your team use any Artificial Intelligence (AI) in developing this project? Yes
+
+Cursor coding agents and OpenAI Codex were used throughout implementation, testing, documentation, and benchmark diagnosis.
+
+## 3. Purpose of AI Usage
+
+Idea generation / brainstorming: Used to interpret the Theme 05 kit and the later Full-Duplex-Bench v3 guide, and to turn those requirements into an implementation plan. The theme, scoring rules, and official tool list came from the organizers.
+
+Code generation or assistance: Used for the coordination runtime, the LiveKit FDB-v3 agent, speech-provider changes, Kaggle packaging and the camera session.
+
+UI / UX design: Not used. This submission does not include a product interface or an APK.
+
+Content creation: Used for README text, status notes, the demo sequence and the slide outline. Measured scores were copied from official reports, not invented.
+
+Data analysis: Used to read Kaggle logs and the official reports. Best completed run: 31/100 strict pass, 58/100 turn-take, and 4.545 second average response latency, using LiveKit Inference speech and GPT-4.1 mini. An earlier Qwen 3 8B run also scored 31/100 strict pass and 52/100 turn-take.
+
+Testing / debugging: Used to add regression tests and to diagnose silent runs, ElevenLabs HTTP 401, the nested-entrypoint crash, and the recording-window timing failure.
+
+Other: Used to compare this repository with the public FDB-v3 runner and to keep the 12 official mock tools unchanged.
+
+## 4. Feature Origin Classification
+
+1. Feature Name: Interruptible coordination runtime
+2. Self-Generated/AI-Generated/Both: Both
+3. Description: The fast path, slow path, and coordination layer come from the Theme 05 requirements and the existing repository design. Cursor agents implemented and tested cancellation, stale-result rejection, and duplicate protection under team direction. Prompts were task instructions such as implementing the runtime and adding a regression test for each orchestration bug. Output was Python modules and unit tests. The team kept the design constraints: no global session state, schema-validated model output, and explicit tool call IDs.
+
+1. Feature Name: FDB-v3 LiveKit voice agent
+2. Self-Generated/AI-Generated/Both: Both
+3. Description: The evaluation method, 12 tools, and cascaded LiveKit shape come from the official FDB-v3 kit. Cursor agents wrote `agent.fdb_livekit` and the benchmark runner. Speech moved from ElevenLabs to LiveKit Inference Deepgram Nova-3 and Cartesia Sonic-3 after the ElevenLabs key returned HTTP 401. The default tool-calling model is LiveKit Inference GPT-4.1 mini, with Ollama Qwen 3 8B as a fallback. Prompts were directions to fix silence, switch speech providers, and prepare the Kaggle notebook. Output was the adapter, timing changes, and tests. The pinned official evaluator was not modified. The best completed official result is 31/100 strict pass and 58/100 turn-take.
+
+1. Feature Name: Camera-assisted troubleshooting
+2. Self-Generated/AI-Generated/Both: Both
+3. Description: The extension topic comes from the hackathon requirement. Cursor agents implemented a separate LiveKit session, `python -m agent.extension_livekit start`, which attaches only the latest camera frame to the next spoken turn and does not add benchmark tools. Prompt was the request to finish that extension while the Kaggle notebook kept running. Output was the session module and five unit tests. A live end-to-end recording is still required before this feature is demonstrated.
+
+## 5. Ethical & Compliance Confirmation
+
+AI usage complies with guidelines and policies. Yes
+
+No proprietary or copyrighted data misused. I Agree
+
+Official FDB-v3 code was used under the published participant materials. No organizer secrets or API tokens are written into this file. Failed and cancelled runs are not presented as scores. The best completed official result reported here is 31/100 strict pass and 58/100 turn-take.
+
+## 6. Declaration & Sign-Off
+
+Name of Team Representative: Maitri Shah
+
+Role: Primary member
+
+Signature:
+
+![Signature of Maitri Shah](assets/maitri-shah-signature.jpg)
+
+Date: 30 September 2026
+

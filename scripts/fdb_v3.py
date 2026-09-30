@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -61,7 +63,7 @@ def bootstrap(download_data: bool) -> Path:
 def check(v3_root: Path, require_data: bool = True) -> None:
     missing = [
         name
-        for name in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "ELEVEN_API_KEY")
+        for name in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
         if not os.environ.get(name)
     ]
     if not (v3_root / "mock_apis.py").is_file():
@@ -89,6 +91,42 @@ def benchmark(v3_root: Path, force: bool) -> None:
     run(command, cwd=v3_root, env=os.environ.copy())
 
 
+def smoke_benchmark(v3_root: Path) -> None:
+    """Run one released recording and require recognized agent speech."""
+    source = next(
+        (folder for folder in sorted(data_root(v3_root).iterdir()) if (folder / "input.wav").is_file()),
+        None,
+    )
+    if source is None:
+        raise RuntimeError("FDB-v3 smoke test found no released input.wav")
+    with tempfile.TemporaryDirectory(prefix="interra-fdb-smoke-") as temporary:
+        folder = Path(temporary) / source.name
+        folder.mkdir()
+        shutil.copy2(source / "input.wav", folder / "input.wav")
+        if (source / "metadata.json").is_file():
+            shutil.copy2(source / "metadata.json", folder / "metadata.json")
+        command = [
+            sys.executable,
+            "run_tool_benchmark_all_released.py",
+            "--provider",
+            "interra_elevenlabs",
+            "--root_dir",
+            temporary,
+            "--force",
+        ]
+        print("Running one-recording FDB-v3 speech gate.", flush=True)
+        subprocess.run(command, cwd=v3_root, env=os.environ.copy(), check=True, timeout=240)
+        result_path = folder / "result_interra_elevenlabs.json"
+        if not result_path.is_file():
+            raise RuntimeError("FDB-v3 speech gate produced no result file")
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        if result.get("status") != "completed" or not str(result.get("transcript", "")).strip():
+            raise RuntimeError(
+                "FDB-v3 speech gate heard no agent reply; the full run was stopped."
+            )
+        print("FDB-v3 speech gate heard an agent reply.", flush=True)
+
+
 def evaluate(v3_root: Path, use_llm: bool) -> None:
     if use_llm and not os.environ.get("OPENAI_API_KEY"):
         raise SystemExit("OPENAI_API_KEY is required for the optional self-reported LLM-judge evaluation.")
@@ -108,7 +146,16 @@ def evaluate(v3_root: Path, use_llm: bool) -> None:
         command = [sys.executable, script, *shared, "--output", str(REPORT_ROOT / output)]
         if use_llm:
             command.append("--use-llm")
-        run(command, cwd=v3_root)
+        report_path = REPORT_ROOT / output
+        try:
+            run(command, cwd=v3_root)
+        except subprocess.CalledProcessError:
+            if not report_path.is_file():
+                raise
+            print(
+                f"Official {script} exited after writing {report_path.name}; continuing.",
+                flush=True,
+            )
     if use_llm:
         run(
             [
@@ -140,6 +187,7 @@ def all_steps(v3_root: Path, force: bool, use_llm: bool) -> None:
             if agent.poll() is not None:
                 raise RuntimeError(f"LiveKit agent exited during startup with code {agent.returncode}")
             time.sleep(0.5)
+        smoke_benchmark(v3_root)
         benchmark(v3_root, force)
     finally:
         agent.terminate()

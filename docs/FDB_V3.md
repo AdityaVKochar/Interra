@@ -39,17 +39,17 @@ strict pass-rate component. The organizers re-run the submission on one NVIDIA
 
 ## Interra provider profile
 
-The first FDB-v3 profile is a cascaded LiveKit session:
+The current FDB-v3 profile is a cascaded LiveKit session:
 
 - Silero VAD for speech boundaries.
-- ElevenLabs Scribe v2 Realtime for STT with `no_verbatim=False` so corrections
-  and disfluencies are retained.
-- Ollama Qwen 3 8B for tool selection and chained reasoning.
-- ElevenLabs Turbo v2.5 for streaming TTS.
+- LiveKit Inference Deepgram Nova-3 for STT.
+- LiveKit Inference GPT-4.1 mini for tool selection and chained reasoning.
+- LiveKit Inference Cartesia Sonic-3 for TTS.
+- Optional local fallback: Ollama Qwen 3 8B.
 - The official `MockAPIRegistry` loaded from the pinned benchmark checkout.
 
-Required hosted secret names are `LIVEKIT_URL`, `LIVEKIT_API_KEY`,
-`LIVEKIT_API_SECRET`, and `ELEVEN_API_KEY`. `OPENAI_API_KEY` is needed only to
+Required hosted secret names are `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
+`LIVEKIT_API_SECRET`. `OPENAI_API_KEY` is needed only to
 reproduce the optional local LLM-judge reports; the organizers use their pinned
 judge for official scoring.
 
@@ -57,7 +57,7 @@ judge for official scoring.
 
 - No benchmark examples or expected answers are placed in prompts or code.
 - No state is cached across scenarios.
-- Hosted speech APIs are declared; no team-owned server is called at evaluation.
+- Hosted model APIs are declared; no team-owned server is called at evaluation.
 - Tool results, not model memory, ground the final response.
 - Versions, model IDs, benchmark commit, configuration, and reports are recorded.
 - Credentials remain outside Git.

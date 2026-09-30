@@ -1,8 +1,9 @@
 """Prepare a reproducible Interra FDB-v3 worker on Kaggle.
 
-This script is intended to be uploaded as a Kaggle *script* kernel.  It reads
-provider credentials only from Kaggle Secrets and writes no credentials into
-the notebook output or source dataset.
+Upload this as a Kaggle *notebook* or *script* kernel. Do not attach the
+private source dataset; the packaged worker embeds a path-validated archive
+when `EMBEDDED_SOURCE_B64` is set. Read provider credentials only from
+Kaggle Secrets and write no credentials into the notebook output.
 """
 
 from __future__ import annotations
@@ -44,12 +45,7 @@ def read_kaggle_secrets() -> list[str]:
         from kaggle_secrets import UserSecretsClient
 
         client = UserSecretsClient()
-        for name in (
-            "LIVEKIT_URL",
-            "LIVEKIT_API_KEY",
-            "LIVEKIT_API_SECRET",
-            "ELEVEN_API_KEY",
-        ):
+        for name in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"):
             try:
                 os.environ[name] = client.get_secret(name)
             except Exception:
@@ -59,7 +55,6 @@ def read_kaggle_secrets() -> list[str]:
             "LIVEKIT_URL",
             "LIVEKIT_API_KEY",
             "LIVEKIT_API_SECRET",
-            "ELEVEN_API_KEY",
         ]
     return sorted(set(missing))
 
@@ -87,6 +82,37 @@ def source_root() -> Path:
             f"candidates={candidates}"
         )
     return candidates[0].parent
+
+
+def enable_fast_qwen_if_supported() -> None:
+    """Ask Ollama to skip Qwen3 thinking. Keep going with the /no_think prompt if it refuses."""
+    probe = subprocess.run(
+        [
+            "curl",
+            "-fsS",
+            "--max-time",
+            "30",
+            "http://127.0.0.1:11434/v1/chat/completions",
+            "-H",
+            "Content-Type: application/json",
+            "-d",
+            json.dumps(
+                {
+                    "model": "qwen3:8b",
+                    "messages": [{"role": "user", "content": "/no_think Reply with only READY."}],
+                    "think": False,
+                    "stream": False,
+                }
+            ),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode == 0:
+        os.environ["INTERRA_OLLAMA_DISABLE_THINK"] = "1"
+        print("Ollama accepted think:false for qwen3:8b.", flush=True)
+        return
+    print("Ollama did not accept think:false; the prompt uses /no_think.", flush=True)
 
 
 def start_ollama() -> subprocess.Popen[bytes]:
@@ -123,6 +149,10 @@ def stop_ollama(server: subprocess.Popen[bytes]) -> None:
 
 def main() -> None:
     shutil.copytree(source_root(), PROJECT, dirs_exist_ok=True)
+    missing = read_kaggle_secrets()
+    if RUN_FULL_BENCHMARK:
+        if missing:
+            raise RuntimeError("Benchmark Secrets unavailable: " + ", ".join(missing))
     run(["apt-get", "update"])
     run(
         [
@@ -138,15 +168,21 @@ def main() -> None:
     run([python, "-m", "pip", "install", "--upgrade", "pip"])
     run([python, "-m", "pip", "install", "-e", ".[fdb]"], cwd=PROJECT)
 
-    run(["bash", "-lc", "curl -fsSL https://ollama.com/install.sh | sh"])
-    server = start_ollama()
+    llm_provider = os.environ.get("INTERRA_FDB_LLM_PROVIDER", "livekit")
+    if llm_provider not in {"livekit", "ollama"}:
+        raise ValueError(f"Unsupported FDB LLM provider: {llm_provider}")
+    server = None
     try:
-        run(["ollama", "pull", "qwen3:8b"])
-        run(["ollama", "run", "qwen3:8b", "Reply with only READY."])
+        if llm_provider == "ollama":
+            run(["bash", "-lc", "curl -fsSL https://ollama.com/install.sh | sh"])
+            server = start_ollama()
+            model = os.environ.get("INTERRA_OLLAMA_MODEL", "qwen3:8b")
+            run(["ollama", "pull", model])
+            run(["ollama", "run", model, "/no_think Reply with only READY."])
+            enable_fast_qwen_if_supported()
         run(["nvidia-smi"])
 
         run([python, "scripts/fdb_v3.py", "bootstrap", "--download-data"], cwd=PROJECT)
-        missing = read_kaggle_secrets()
         if not missing:
             run([python, "scripts/fdb_v3.py", "check"], cwd=PROJECT)
             if RUN_FULL_BENCHMARK:
@@ -154,10 +190,16 @@ def main() -> None:
         else:
             print("Benchmark deferred; add Kaggle Secrets: " + ", ".join(missing), flush=True)
     finally:
-        stop_ollama(server)
+        if server is not None:
+            stop_ollama(server)
 
     report = {
-        "qwen_model": "qwen3:8b",
+        "llm_provider": llm_provider,
+        "llm_model": (
+            os.environ.get("INTERRA_FDB_LLM_MODEL", "openai/gpt-4.1-mini")
+            if llm_provider == "livekit"
+            else os.environ.get("INTERRA_OLLAMA_MODEL", "qwen3:8b")
+        ),
         "project": str(PROJECT),
         "venv": str(VENV),
         "livekit_ready": not missing,

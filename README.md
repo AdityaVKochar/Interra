@@ -1,15 +1,24 @@
 # Interra
 
-Interra is an interruptible LiveKit voice agent for Samsung PRISM Theme 05. The
-current submission target is **Full-Duplex-Bench v3 (FDB-v3)**: 100 recorded
-conversations, 79 scenarios, 12 mock tools, disfluent speech, multi-step tool
-chains, and latency scoring.
+Interra is a voice agent that stays in the conversation while it works. A person
+can hesitate, interrupt, or correct themselves in the middle of a sentence. The
+agent answers out loud, runs tool calls in the background, and throws away work
+that the latest words made obsolete. It does not announce that a task is
+finished before the tool result exists, and it does not repeat a state-changing
+action.
 
-The updated participant guide supersedes the earlier queue-based development
-kit. That runtime remains in this repository as tested coordination research,
-but the scored entry point is now `agent.fdb_livekit`.
+Most assistants listen, then think, then speak. That falls apart when the
+destination changes while a route is still being looked up, or when a booking
+is corrected before the first change has been committed. Interra is built for
+that kind of overlap.
 
-## Current architecture
+The scored evaluation is Full-Duplex-Bench v3: 100 recorded human
+conversations, 79 scenarios, and 12 mock tools, including fillers, pauses,
+false starts, and self-corrections. Interra runs that benchmark as a LiveKit
+voice agent. A second LiveKit session handles camera-assisted device
+troubleshooting, which is outside those benchmark domains.
+
+Speech and tool calls go through one cascaded LiveKit session:
 
 ```text
 recorded or live speech
@@ -18,93 +27,149 @@ recorded or live speech
 LiveKit room and Silero VAD
         |
         v
-ElevenLabs Scribe v2 Realtime STT
+LiveKit Inference: Deepgram Nova-3
         |
         v
-Ollama Qwen 3 tool-calling LLM
+LiveKit Inference: GPT-4.1 mini
         |
         +----> 12 official FDB-v3 mock tools
-        |              |
-        |              v
-        +------ grounded tool results
         |
         v
-ElevenLabs low-latency TTS
+LiveKit Inference: Cartesia Sonic-3
 ```
 
-The agent keeps Scribe's `no_verbatim` option disabled so false starts,
-hesitations, and self-corrections remain visible to the planner. Tool execution
-runs outside the event loop, every call is recorded with the benchmark's room
-identifier and timestamps, and spoken responses are kept short so LiveKit can
-interrupt them.
+Tool execution runs outside the event loop. Each call is stored with its room
+identifier and timestamps. Results come from the official mock backend, not
+from model memory. Ollama Qwen 3 8B is an optional local fallback
+(`INTERRA_FDB_LLM_PROVIDER=ollama`).
 
-## Requirements
+The earlier queue runtime remains in the repository as coordination research.
+Its retained entry point is `interra_submission:ParticipantAgent`; its evidence
+does not substitute for an FDB-v3 run.
 
-- Python 3.11. The official benchmark recommends 3.10; the repository supports
-  3.11 and will be clean-tested before release.
-- A free LiveKit Cloud project.
-- An ElevenLabs API key for Scribe v2 Realtime and TTS.
-- Ollama with `qwen3:8b` by default. Override the model with
-  `INTERRA_FDB_LLM_MODEL`.
-- `ffmpeg` available on `PATH`.
-- The official Full-Duplex-Bench repository and released v3 audio data.
+## Presentation and demo
 
-Never commit credentials. Copy `.env.fdb.example` to a local ignored file and
-fill the values there, or export them in the shell.
+- Presentation: [docs/Interra_Theme05.pptx](docs/Interra_Theme05.pptx)
+- Demo video:
 
-## Installation
+The recording is three to five minutes: one benchmark interruption or
+self-correction, then the camera troubleshooting session.
+
+## Repository
+
+| Path | Contents |
+| --- | --- |
+| `src/agent/fdb_livekit.py` | FDB-v3 LiveKit agent |
+| `src/agent/extension_livekit.py` | Camera troubleshooting session |
+| `src/agent/` | Coordination runtime, tools, and multimodal code |
+| `scripts/fdb_v3.py` | Benchmark checkout, run, and evaluation |
+| `requirements.txt` | Python dependencies for the FDB profile |
+| `pyproject.toml` | Package metadata and the same dependency ranges |
+| `Dockerfile` | Python 3.11 image with `ffmpeg` |
+| `tests/` | Deterministic runtime and agent tests |
+| `.env.fdb.example` | Environment variable names, with empty secrets |
+| `docs/FDB_V3.md` | Benchmark pin, models, and scoring contract |
+| `docs/AI_DISCLOSURE_DRAFT.md` | AI usage disclosure |
+| `docs/Interra_Theme05.pptx` | Slide deck |
+| `docs/results/` | Official reports from the best completed run |
+| `vendor/samsung_theme05/` | Superseded queue kit |
+
+## Models
+
+| Stage | Model |
+| --- | --- |
+| Voice activity | Silero VAD |
+| Speech recognition | LiveKit Inference `deepgram/nova-3` |
+| Tool calling | LiveKit Inference `openai/gpt-4.1-mini` |
+| Speech synthesis | LiveKit Inference `cartesia/sonic-3`, voice `9626c31c-bec5-4cca-baa8-f8ba9e84c8bc` |
+| Optional local LLM | Ollama `qwen3:8b` |
+
+Benchmark pin: `DanielLin94144/Full-Duplex-Bench` commit
+`3e799c45a045256f47d5f1c9cda90157e2d2ec9e`, directory `v3/`.
+
+Report filenames use the provider id `interra_elevenlabs` because the pinned
+runner requires that name. The speech models in the table above are the ones
+this agent loads.
+
+## Reproducible setup
+
+Use Python 3.11 or 3.12, Git, and `ffmpeg` on `PATH`. The agent calls LiveKit
+Cloud for speech and the default language model, so those calls do not need a
+local GPU. The official 100-recording scorer uses the benchmark ASR stack and
+is meant to run on a CUDA machine.
+
+Create a virtual environment and install the pinned dependencies, then this
+package:
 
 ```bash
 python -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e ".[fdb]"
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -e . --no-deps
 ```
 
-PowerShell uses `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+On Windows PowerShell, use `.venv\Scripts\python.exe` in place of
+`.venv/bin/python`.
 
-Clone the benchmark at the pinned revision:
+Copy the environment template and set the three LiveKit values. `.env` is
+gitignored.
 
 ```bash
-python scripts/fdb_v3.py bootstrap
+cp .env.fdb.example .env
 ```
 
-To download the official released audio through its published Google Drive ID:
+```powershell
+Copy-Item .env.fdb.example .env
+```
+
+Required variables:
+
+```text
+LIVEKIT_URL
+LIVEKIT_API_KEY
+LIVEKIT_API_SECRET
+```
+
+Load them into the shell before any benchmark command.
+
+```bash
+set -a
+source .env
+set +a
+```
+
+```powershell
+Get-Content .env | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object {
+  $name, $value = $_.Split('=', 2)
+  Set-Item -Path "Env:$name" -Value $value
+}
+```
+
+`OPENAI_API_KEY` is used only with `--use-llm` for a local semantic judge. The
+organizers score the run with their own judge.
+
+Check out the pinned benchmark. Add `--download-data` to fetch the released
+audio through the published Google Drive id. Both land under `.runtime/`,
+which is not part of this repository.
 
 ```bash
 python scripts/fdb_v3.py bootstrap --download-data
-```
-
-The benchmark and data are placed under `.runtime/`, which is excluded from Git
-and Docker packaging. Set `INTERRA_FDB_V3_ROOT` and `INTERRA_FDB_DATA_ROOT` if
-you keep them elsewhere.
-
-## Run FDB-v3
-
-Start Ollama and prepare the model before timing:
-
-```bash
-ollama pull qwen3:8b
-ollama serve
-```
-
-Check all required services and paths:
-
-```bash
 python scripts/fdb_v3.py check
 ```
 
-Run the agent and benchmark in one command, then generate the exact-match and
-latency reports:
+Set `INTERRA_FDB_V3_ROOT` and `INTERRA_FDB_DATA_ROOT` when the checkout or the
+audio lives somewhere else. The defaults are in `.env.fdb.example`.
+
+## Run the benchmark
+
+One command starts the LiveKit agent, runs one recording as a speech gate,
+runs the released set, and writes the tool and strict pass-rate reports:
 
 ```bash
 python scripts/fdb_v3.py all --force
 ```
 
-For self-reported semantic argument and response scoring, set `OPENAI_API_KEY`
-and add `--use-llm`. The organizers' pinned judge and official re-run remain the
-scored result.
-
-Individual commands are also available:
+Separate steps:
 
 ```bash
 python scripts/fdb_v3.py agent
@@ -112,49 +177,90 @@ python scripts/fdb_v3.py benchmark --force
 python scripts/fdb_v3.py evaluate
 ```
 
-Reports and Interra's agent trace are written to `artifacts/fdb_v3/`. The runner
-also preserves the official `/tmp/agent_tool_calls.log` telemetry contract.
+Optional local semantic report:
 
-## ElevenLabs
+```bash
+python scripts/fdb_v3.py evaluate --use-llm
+```
 
-ElevenLabs credits are useful for this benchmark. The integration uses:
+Reports are written to `artifacts/fdb_v3/`. The agent also appends the official
+tool telemetry the benchmark reads from `/tmp/agent_tool_calls.log` on Linux.
+On Windows that file is under the temp directory.
 
-- `scribe_v2_realtime` for streaming recognition;
-- `eleven_turbo_v2_5` for low-latency speech generation;
-- `ELEVEN_API_KEY` as the only ElevenLabs secret name.
+Docker builds a Python 3.11 image, installs this package and `ffmpeg`, and
+starts the retained scripted demo:
 
-ElevenLabs does not provide the multi-step reasoning layer in this architecture;
-Ollama handles tool selection and argument generation. The API key name must be
-listed in the submission form, while its value must remain outside the repository.
+```bash
+docker build -t interra .
+docker run --rm interra
+```
 
-## Extension use case
+That default command is `python -m agent.demo`. The FDB-v3 command above is
+the scored run. Pass the LiveKit environment into the container when starting
+`python -m agent.fdb_livekit start` from an image that also has the benchmark
+checkout.
 
-The retained Interra runtime already supports asynchronous PNG observations,
-source-bound CLIP embeddings, correction-aware state, stale-result rejection,
-and tool cancellation. The planned FDB-v3 extension is camera-assisted device
-troubleshooting. It must be connected to the LiveKit wrapper and shown working
-end to end in the demo before submission; the older scripted replay is supporting
-evidence rather than the required extension demo.
+## Camera extension
+
+Device troubleshooting is a second LiveKit session. It subscribes to the
+participant camera, keeps the latest frame, and attaches that frame once to
+the next spoken turn. It does not register the 12 benchmark tools.
+
+```bash
+python -m agent.extension_livekit start
+```
+
+The same `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` variables
+are required. In the LiveKit project, dispatch this worker with the agent
+name `interra-camera-troubleshooter`.
 
 ## Tests
-
-The deterministic runtime suite remains useful for interruption and side-effect
-safety:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The current suite does not substitute for an FDB-v3 run. Submission readiness
-requires the official inference and evaluation reports from all released samples.
+These tests check orchestration, cancellation, and the agent configuration.
+They do not replace the official 100-recording reports.
 
-## Legacy queue runtime
+## Measured result
 
-The previous kit is retained under `vendor/samsung_theme05`, and its adapter is
-still available as `interra_submission:ParticipantAgent`. It is no longer the
-submission contract described by the updated participant guide. Its tests,
-traces, and safety mechanisms remain useful implementation evidence and a source
-for the camera-assisted extension.
+Best completed official run: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini,
+and Cartesia Sonic-3. Reports:
 
-See [FDB-v3 migration](docs/FDB_V3.md), [current status](docs/STATUS.md), and
-[definition of done](docs/10_DEFINITION_OF_DONE.md).
+- [Strict pass report](docs/results/interra_elevenlabs_pass_rate_report.json)
+- [Tool and latency report](docs/results/interra_elevenlabs_evaluation_report.json)
+
+The report filenames use `interra_elevenlabs` because the pinned runner
+requires that provider id. The models above are the ones this run loaded.
+
+| Metric | Result |
+| --- | --- |
+| Strict pass | 31/100 |
+| Turn-take | 58/100 |
+| No response | 42/100 |
+| Wrong tools | 50 |
+| Wrong arguments | 19 |
+| Tool selection, turn-taken | 88.5% |
+| Argument accuracy, turn-taken | 58.6% |
+| Tool selection, all recordings | 51.3% |
+| Argument accuracy, all recordings | 34.0% |
+| Average response latency, excluding interruptions | 4.545 seconds |
+| Early interruptions among turn-taken recordings | 6/58 |
+| Inference failures | 7 |
+| Speech-recognition HTTP 429 rooms, all silent | 35 |
+
+Finance and billing passed 68.0%. Ecommerce passed 37.9%. Housing and location
+passed 11.5%. Travel and identity passed 0%. Hard items passed 23.3%. This run
+did not enable the organizer LLM judge. An earlier local Qwen 3 8B run also
+reached 31/100 strict pass, with turn-take 52/100. The table above is the
+result to use until a later official run is better.
+
+## Documentation
+
+- [Slide deck](docs/Interra_Theme05.pptx)
+- [Official reports](docs/results/)
+- [FDB-v3 contract](docs/FDB_V3.md)
+- [Status and run history](docs/STATUS.md)
+- [Demo sequence](docs/DEMO.md)
+- [AI usage disclosure](docs/AI_DISCLOSURE_DRAFT.md)

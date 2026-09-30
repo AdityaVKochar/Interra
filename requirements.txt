@@ -1,0 +1,13 @@
+# Interra FDB-v3 submission dependencies for Python 3.11 or 3.12.
+# Equivalent to: pip install -e ".[fdb]"
+pydantic>=2.10,<3
+jsonschema>=4.23,<5
+httpx>=0.28,<1
+livekit-agents[openai,silero]>=1.8,<2
+livekit[crypto]>=1.0,<2
+python-dotenv>=1.0,<2
+numpy>=1.26,<3
+pydub>=0.25,<1
+ffmpeg-python>=0.2,<1
+gdown>=5,<6
+nemo_toolkit[asr]>=2.4,<3
