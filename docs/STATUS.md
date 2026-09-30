@@ -16,11 +16,9 @@
 ### Completed
 
 - Compared the repository with `Theme05_Participant_Guide_UPDATED_FBD.docx`.
-  The updated guide's maximum of eight slides takes precedence over the older
-  twelve-slide organizer template. The audited deck is
-  `docs/Interra_Theme05_submission.pptx`. The earlier twelve-slide draft was
-  removed. Its design is retained. Package/layout validation and Artifact Tool
-  import passed; all eight slides were rendered and inspected.
+  The presentation is the twelve-slide organizer deck
+  `docs/Interra_Theme05.pptx`. The eight-slide copy was removed. The deck links
+  the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - Added `python scripts/reproduce.py`: standard-library dotenv loading,
   prerequisite validation, environment creation, dependency installation,
   pinned benchmark/data bootstrap, speech gate, inference and evaluation.
@@ -97,7 +95,7 @@
 - The score in the README, disclosure, and slide deck is the completed
   GPT-4.1 mini run: strict pass 31/100, turn-take 58/100, average response
   latency 4.545 seconds. Official JSON reports are in `docs/results/`.
-- The deck is `docs/Interra_Theme05_submission.pptx`, the only PowerPoint in the repository. It links the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+- The deck is `docs/Interra_Theme05.pptx`, the only PowerPoint in the repository. It links the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). A later official run can replace these
   numbers if it is better.
 
@@ -470,10 +468,8 @@ Evidence: `artifacts/samsung-local-evaluation.json`, `samsung-public-traces.json
 - Docker Compose configuration validates. Actual image build/run remains blocked:
   Docker Desktop startup hits a stale socket, and automatic approval review rejected
   its removal with "blocked by policy". No reset or workaround deletion was performed.
-- Any previously generated 12-slide deck, queue-runtime replay, or review archive
-  under `output/submission` is historical and must not be submitted. The updated
-  deck source is limited to eight slides and awaits real FDB-v3 results; the demo
-  video is [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+- The presentation is the twelve-slide organizer deck `docs/Interra_Theme05.pptx`.
+  The demo video is [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - Team identities, the exact presentation template, AI disclosure review/signature,
   and final submission details remain team inputs. The Theme 5 PDF in the supplied
   ZIP is DRM-protected, so it was not independently read. Earlier document summaries

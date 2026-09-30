@@ -36,10 +36,10 @@ def main() -> None:
             raise SystemExit("Recording evidence count mismatch.")
         if manifest["measured_source_sha256"] != manifest["archive_entries"]["measured-source.zip"]:
             raise SystemExit("Measured source hash mismatch.")
-    with zipfile.ZipFile(ROOT / "docs/Interra_Theme05_submission.pptx") as deck:
+    with zipfile.ZipFile(ROOT / "docs/Interra_Theme05.pptx") as deck:
         slides = [name for name in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)]
-        if not 1 <= len(slides) <= 8:
-            raise SystemExit(f"Official guide permits at most eight slides; found {len(slides)}.")
+        if len(slides) != 12:
+            raise SystemExit(f"Organizer deck must have 12 slides; found {len(slides)}.")
         for name in slides:
             ElementTree.fromstring(deck.read(name))
     print(f"Evidence verified: {len(recordings)} recordings, {pass_report['passed']} strict passes, {len(slides)} slides.")

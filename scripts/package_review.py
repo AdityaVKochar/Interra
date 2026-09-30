@@ -34,7 +34,7 @@ def main() -> None:
         REPORT_DIR / "interra_elevenlabs_pass_rate_report.json",
         REPORT_DIR / "run-manifest.json",
         REPORT_DIR / "best-run-evidence.zip",
-        ROOT / "docs" / "Interra_Theme05_submission.pptx",
+        ROOT / "docs" / "Interra_Theme05.pptx",
     ]
     for path in required:
         if not path.is_file():

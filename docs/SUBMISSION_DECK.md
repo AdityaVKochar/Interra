@@ -1,15 +1,9 @@
 # Theme 05 submission deck
 
-The audited organizer deck is [Interra_Theme05_submission.pptx](Interra_Theme05_submission.pptx).
+The organizer deck is [Interra_Theme05.pptx](Interra_Theme05.pptx).
 Numbers match the best completed official run.
 
-The deck has eight slides. The updated FDB participant guide's eight-slide
-limit takes precedence over the older twelve-slide organizer template; its
-design is retained with redundant sections removed. Claims distinguish the
-LiveKit adapter from the retained custom coordination runtime.
-
-`docs/Interra_Theme05_submission.pptx` is the only deck. The earlier twelve-slide
-draft has been removed.
+The deck has twelve slides. It is the only PowerPoint in the repository.
 
 - Strict pass: 31/100
 - Turn-take: 58/100

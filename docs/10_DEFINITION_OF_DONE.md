@@ -61,7 +61,7 @@ its tests remain useful, but it no longer defines completion.
 - [x] Hosted and local model responsibilities are documented honestly.
 - [ ] Final hosted-LLM scores replace baseline and placeholder references.
 - [ ] Demo video is three to five minutes and shows real behavior: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
-- [x] Slide deck is no more than eight slides (audited package has eight).
+- [x] Slide deck is the twelve-slide organizer file `docs/Interra_Theme05.pptx`.
 - [ ] Team identities and submission form are complete.
 - [ ] The last uploaded submission is verified as the intended final version.
 
