@@ -18,10 +18,9 @@
 - Compared the repository with `Theme05_Participant_Guide_UPDATED_FBD.docx`.
   The updated guide's maximum of eight slides takes precedence over the older
   twelve-slide organizer template. The audited deck is
-  `docs/Interra_Theme05_submission.pptx`; the original is still open in PowerPoint
-  and Windows blocks its replacement. Its design is retained. Package/layout
-  validation and Artifact Tool import passed; all eight slides were rendered
-  and inspected. The old draft is excluded from the review archive.
+  `docs/Interra_Theme05_submission.pptx`. The earlier twelve-slide draft was
+  removed. Its design is retained. Package/layout validation and Artifact Tool
+  import passed; all eight slides were rendered and inspected.
 - Added `python scripts/reproduce.py`: standard-library dotenv loading,
   prerequisite validation, environment creation, dependency installation,
   pinned benchmark/data bootstrap, speech gate, inference and evaluation.
@@ -98,7 +97,7 @@
 - The score in the README, disclosure, and slide deck is the completed
   GPT-4.1 mini run: strict pass 31/100, turn-take 58/100, average response
   latency 4.545 seconds. Official JSON reports are in `docs/results/`.
-- The deck is `docs/Interra_Theme05.pptx`, filled from the organizer template.
+- The deck is `docs/Interra_Theme05_submission.pptx`, the only PowerPoint in the repository. It links the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). A later official run can replace these
   numbers if it is better.
 

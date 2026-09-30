@@ -27,7 +27,6 @@ def main() -> None:
     ).decode("utf-8").split("\0")
     selected = {
         name: ROOT / name for name in names if name and (ROOT / name).is_file()
-        and name != "docs/Interra_Theme05.pptx"
     }
 
     required = [
