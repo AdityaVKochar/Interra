@@ -143,19 +143,23 @@ def evaluate(v3_root: Path, use_llm: bool) -> None:
         ("evaluate_tool_calls.py", "interra_elevenlabs_evaluation_report.json"),
         ("evaluate_pass_rate.py", "interra_elevenlabs_pass_rate_report.json"),
     ):
-        command = [sys.executable, script, *shared, "--output", str(REPORT_ROOT / output)]
-        if use_llm:
-            command.append("--use-llm")
-        report_path = REPORT_ROOT / output
-        try:
-            run(command, cwd=v3_root)
-        except subprocess.CalledProcessError:
-            if not report_path.is_file():
-                raise
-            print(
-                f"Official {script} exited after writing {report_path.name}; continuing.",
-                flush=True,
-            )
+        # The pinned evaluator can exit nonzero after writing its report.
+        # Stage each invocation separately so an old report cannot mask failure.
+        with tempfile.TemporaryDirectory(prefix="interra-evaluation-", dir=REPORT_ROOT) as temporary:
+            report_path = Path(temporary) / output
+            command = [sys.executable, script, *shared, "--output", str(report_path)]
+            if use_llm:
+                command.append("--use-llm")
+            try:
+                run(command, cwd=v3_root)
+            except subprocess.CalledProcessError:
+                if not report_path.is_file():
+                    raise
+                print(f"Official {script} exited after writing a fresh report.", flush=True)
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            if not isinstance(report, dict) or not isinstance(report.get("total_scenarios"), int):
+                raise RuntimeError(f"Invalid official evaluation report: {output}")
+            report_path.replace(REPORT_ROOT / output)
     if use_llm:
         run(
             [

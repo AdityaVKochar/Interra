@@ -12,9 +12,14 @@ dependencies = ["pydantic>=2.10,<3", "jsonschema>=4.23,<5", "httpx>=0.28,<1"]
 
 [project.optional-dependencies]
 local = ["faster-whisper>=1.1,<2", "fastembed>=0.7,<1", "Pillow>=11,<13", "psutil>=6,<8"]
+voice = [
+    "livekit-agents[openai,silero]==1.8.3",
+    "livekit[crypto]==1.1.18",
+    "python-dotenv>=1.0,<2",
+]
 fdb = [
-    "livekit-agents[openai,silero]>=1.8,<2",
-    "livekit[crypto]>=1.0,<2",
+    "livekit-agents[openai,silero]==1.8.3",
+    "livekit[crypto]==1.1.18",
     "python-dotenv>=1.0,<2",
     "numpy>=1.26,<3",
     "pydub>=0.25,<1",

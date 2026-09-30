@@ -20,20 +20,24 @@ its tests remain useful, but it no longer defines completion.
 
 - [x] Official repository revision is pinned.
 - [x] Reproduction runner can bootstrap the benchmark and published data.
-- [x] Runner starts the agent, runs inference, and invokes all three evaluators.
+- [x] Runner starts the agent, runs inference, and invokes the tool and pass evaluators;
+  optional LLM-assisted latency analysis requires `--use-llm`.
 - [x] A baseline run covers all 100 recordings and all result files are archived.
 - [x] Official tool-selection report is saved.
 - [ ] Semantic argument and response report is saved with the LLM judge enabled.
 - [x] Strict pass-rate report is saved (baseline 31/100).
 - [ ] First-response, tool-call, and task-completion latency report is saved.
-- [ ] Seeds, model versions, provider configuration, and run logs are archived.
+- [x] Model versions, provider configuration, measured source, recording results
+  and logs are archived with hashes in `docs/results/`. The original sampling
+  seed was not recorded; the manifest records that limitation explicitly.
 - [ ] Reproduction is verified on a clean machine.
 
 ## Interruption and correction behavior
 
 - [x] Existing deterministic tests cover cancellation, stale results, corrections,
   duplicate writes, and timing races.
-- [x] FDB STT preserves fillers, false starts, and self-corrections.
+- [ ] FDB STT reliably preserves fillers, false starts, and self-corrections.
+  The agent requests this behavior, but measured transcription errors remain.
 - [ ] A real FDB recording proves the latest correction reaches tool arguments.
 - [ ] A real live interruption stops obsolete speech and work.
 - [ ] Multi-step tool chains use returned identifiers rather than guessed values.
@@ -57,7 +61,7 @@ its tests remain useful, but it no longer defines completion.
 - [x] Hosted and local model responsibilities are documented honestly.
 - [ ] Final hosted-LLM scores replace baseline and placeholder references.
 - [ ] Demo video is three to five minutes and shows real behavior.
-- [ ] Slide deck is no more than eight slides.
+- [x] Slide deck is no more than eight slides (audited package has eight).
 - [ ] Team identities and submission form are complete.
 - [ ] The last uploaded submission is verified as the intended final version.
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -13,6 +14,42 @@ from scripts import fdb_v3
 
 
 class FdbSpeechGateTests(unittest.TestCase):
+    def test_failed_evaluator_cannot_reuse_old_report(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "interra_elevenlabs_evaluation_report.json"
+            old.write_text('{"total_scenarios":100}', encoding="utf-8")
+            with patch.object(fdb_v3, "REPORT_ROOT", root), patch.object(
+                fdb_v3, "run", side_effect=subprocess.CalledProcessError(1, "evaluate")
+            ):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    fdb_v3.evaluate(root, False)
+            self.assertEqual(json.loads(old.read_text())["total_scenarios"], 100)
+
+    def test_fresh_report_survives_known_post_report_nonzero_exit(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            def runner(command, **_):
+                output = Path(command[command.index("--output") + 1])
+                output.write_text('{"total_scenarios":93}', encoding="utf-8")
+                raise subprocess.CalledProcessError(1, command)
+            with patch.object(fdb_v3, "REPORT_ROOT", root), patch.object(fdb_v3, "run", side_effect=runner):
+                fdb_v3.evaluate(root, False)
+            for filename in ("interra_elevenlabs_evaluation_report.json", "interra_elevenlabs_pass_rate_report.json"):
+                self.assertEqual(json.loads((root / filename).read_text())["total_scenarios"], 93)
+
+    def test_malformed_new_report_does_not_replace_existing_evidence(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "interra_elevenlabs_evaluation_report.json"
+            old.write_text('{"total_scenarios":100}', encoding="utf-8")
+            def runner(command, **_):
+                Path(command[command.index("--output") + 1]).write_text('{}', encoding="utf-8")
+            with patch.object(fdb_v3, "REPORT_ROOT", root), patch.object(fdb_v3, "run", side_effect=runner):
+                with self.assertRaisesRegex(RuntimeError, "Invalid official"):
+                    fdb_v3.evaluate(root, False)
+            self.assertEqual(json.loads(old.read_text())["total_scenarios"], 100)
+
     def test_readiness_requires_livekit_without_elevenlabs(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

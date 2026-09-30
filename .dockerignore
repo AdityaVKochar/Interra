@@ -1,5 +1,6 @@
 .git
 .venv
+.venv*
 **/__pycache__
 **/*.egg-info
 artifacts
@@ -11,3 +12,4 @@ dist
 .models
 output
 .runtime
+**/~$*

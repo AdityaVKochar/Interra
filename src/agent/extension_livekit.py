@@ -34,6 +34,8 @@ class LatestFrameSource:
         self._reader_task: asyncio.Task[Any] | None = None
         self._tasks: set[asyncio.Task[Any]] = set()
         self._closed = False
+        self._close_task: asyncio.Task[Any] | None = None
+        self._errors: list[BaseException] = []
 
     def attach(self, stream: Any) -> None:
         if self._closed:
@@ -53,23 +55,36 @@ class LatestFrameSource:
         return frame
 
     async def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
+        if self._close_task is None:
+            self._closed = True
+            self._close_task = asyncio.create_task(self._close())
+        await asyncio.shield(self._close_task)
+
+    def detach(self) -> None:
+        """Invalidate a camera immediately, including an unconsumed frame."""
         stream, self._stream = self._stream, None
         self._latest = None
-        if self._reader_task is not None and not self._reader_task.done():
+        if self._reader_task is not None:
             self._reader_task.cancel()
         if stream is not None:
-            await stream.aclose()
-        if self._tasks:
-            results = await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
-            for result in results:
-                if isinstance(result, BaseException) and not isinstance(result, asyncio.CancelledError):
-                    raise result
+            self._own(asyncio.create_task(stream.aclose()))
+
+    async def _close(self) -> None:
+        self._closed = True
+        self.detach()
+        while self._tasks:
+            await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
+        if self._errors:
+            raise self._errors[0]
 
     def _own(self, task: asyncio.Task[Any]) -> None:
         self._tasks.add(task)
+        task.add_done_callback(self._finished)
+
+    def _finished(self, task: asyncio.Task[Any]) -> None:
+        self._tasks.discard(task)
+        if not task.cancelled() and (error := task.exception()) is not None:
+            self._errors.append(error)
 
     async def _read(self, stream: Any) -> None:
         try:
@@ -80,6 +95,17 @@ class LatestFrameSource:
                 self._latest = event.frame
         except asyncio.CancelledError:
             raise
+
+
+def clear_previous_images(turn_ctx: Any, image_type: type) -> None:
+    """Keep conversational text while removing visual evidence from older turns."""
+    for message in turn_ctx.items:
+        if isinstance(getattr(message, "content", None), list):
+            message.content = [item for item in message.content if not isinstance(item, image_type)]
+
+
+def camera_matches(participant: Any, publication: Any, identity: str, camera_source: Any) -> bool:
+    return participant.identity == identity and publication.source == camera_source
 
 
 async def entrypoint(ctx: Any) -> None:
@@ -97,17 +123,24 @@ async def entrypoint(ctx: Any) -> None:
     config = FdbConfig.from_env()
     frames = LatestFrameSource()
     ctx.add_shutdown_callback(frames.close)
+    await ctx.connect()
+    participant = await ctx.wait_for_participant()
+    identity = participant.identity
 
     class CameraTroubleshooter(Agent):
         def __init__(self) -> None:
             super().__init__(instructions=EXTENSION_INSTRUCTIONS)
             self._on_track: Any | None = None
+            self._on_untrack: Any | None = None
+            self._track_sid: str | None = None
 
         async def on_enter(self) -> None:
-            for participant in ctx.room.remote_participants.values():
-                for publication in participant.track_publications.values():
+            for remote in ctx.room.remote_participants.values():
+                for publication in remote.track_publications.values():
                     track = publication.track
-                    if track is not None and track.kind == rtc.TrackKind.KIND_VIDEO:
+                    if (track is not None and track.kind == rtc.TrackKind.KIND_VIDEO
+                            and camera_matches(remote, publication, identity, rtc.TrackSource.SOURCE_CAMERA)):
+                        self._track_sid = publication.sid
                         frames.attach(rtc.VideoStream(track))
                         break
 
@@ -116,15 +149,25 @@ async def entrypoint(ctx: Any) -> None:
                 publication: rtc.RemoteTrackPublication,
                 participant: rtc.RemoteParticipant,
             ) -> None:
-                if track.kind == rtc.TrackKind.KIND_VIDEO:
+                if (track.kind == rtc.TrackKind.KIND_VIDEO
+                        and camera_matches(participant, publication, identity, rtc.TrackSource.SOURCE_CAMERA)):
+                    self._track_sid = publication.sid
                     frames.attach(rtc.VideoStream(track))
+
+            def on_track_unsubscribed(track: Any, publication: Any, participant: Any) -> None:
+                if participant.identity == identity and publication.sid == self._track_sid:
+                    self._track_sid = None
+                    frames.detach()
 
             self._on_track = on_track_subscribed
             ctx.room.on("track_subscribed", on_track_subscribed)
+            self._on_untrack = on_track_unsubscribed
+            ctx.room.on("track_unsubscribed", on_track_unsubscribed)
 
         async def on_user_turn_completed(
             self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
         ) -> None:
+            clear_previous_images(turn_ctx, llm.ImageContent)
             frame = frames.take()
             if frame is not None:
                 content = new_message.content
@@ -132,11 +175,16 @@ async def entrypoint(ctx: Any) -> None:
                     content = [content]
                     new_message.content = content
                 content.append(llm.ImageContent(image=frame))
+            else:
+                new_message.content.append("[No current camera frame is available. Ask for the camera or a clearer view.]")
 
         async def on_exit(self) -> None:
             if self._on_track is not None:
                 ctx.room.off("track_subscribed", self._on_track)
                 self._on_track = None
+            if self._on_untrack is not None:
+                ctx.room.off("track_unsubscribed", self._on_untrack)
+                self._on_untrack = None
             await frames.close()
 
     speech_stt, speech_tts = livekit_speech_models(inference, config)
@@ -149,7 +197,7 @@ async def entrypoint(ctx: Any) -> None:
     await session.start(
         room=ctx.room,
         agent=CameraTroubleshooter(),
-        room_options=room_io.RoomOptions(close_on_disconnect=True),
+        room_options=room_io.RoomOptions(close_on_disconnect=True, participant_identity=identity),
     )
 
 

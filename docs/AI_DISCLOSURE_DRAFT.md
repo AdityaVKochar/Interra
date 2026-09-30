@@ -2,7 +2,7 @@
 
 ## 1. Team Details
 
-Team Name: VITV_smoothOperator_T5
+Team Name: smoothOperator
 
 Project / Product Name: Interra — Theme 05 interruptible real-time agent
 
@@ -32,7 +32,7 @@ Data analysis: Used to read Kaggle logs and the official reports. Best completed
 
 Testing / debugging: Used to add regression tests and to diagnose silent runs, ElevenLabs HTTP 401, the nested-entrypoint crash, and the recording-window timing failure.
 
-Other: Used to compare this repository with the public FDB-v3 runner and to keep the 12 official mock tools unchanged.
+Other: Used to compare this repository with the public FDB-v3 runner. The official mock backend and evaluators are unchanged; adapter wrappers normalize speech arguments and forward supported optional parameters.
 
 ## 4. Feature Origin Classification
 
@@ -46,15 +46,13 @@ Other: Used to compare this repository with the public FDB-v3 runner and to keep
 
 1. Feature Name: Camera-assisted troubleshooting
 2. Self-Generated/AI-Generated/Both: Both
-3. Description: The extension topic comes from the hackathon requirement. Cursor agents implemented a separate LiveKit session, `python -m agent.extension_livekit start`, which attaches only the latest camera frame to the next spoken turn and does not add benchmark tools. Prompt was the request to finish that extension while the Kaggle notebook kept running. Output was the session module and five unit tests. A live end-to-end recording is still required before this feature is demonstrated.
+3. Description: The extension topic comes from the hackathon requirement. Cursor agents and Codex implemented a separate LiveKit session, `python -m agent.extension_livekit start`, which attaches the linked participant's latest camera frame to the next spoken turn and does not add benchmark tools. Prompts requested the extension and submission audit while the Kaggle notebook kept running. Output was the session module and ten unit tests, including cleanup, participant isolation and stale-image regressions. A live end-to-end recording is still required before this feature is demonstrated.
 
 ## 5. Ethical & Compliance Confirmation
 
 AI usage complies with guidelines and policies. Yes
 
 No proprietary or copyrighted data misused. I Agree
-
-Official FDB-v3 code was used under the published participant materials. No organizer secrets or API tokens are written into this file. Failed and cancelled runs are not presented as scores. The best completed official result reported here is 31/100 strict pass and 58/100 turn-take.
 
 ## 6. Declaration & Sign-Off
 

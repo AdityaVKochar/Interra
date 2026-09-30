@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 from pathlib import Path
 import subprocess
@@ -11,10 +12,14 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "submission"
-REPORT_DIR = ROOT / "artifacts" / "fdb_v3"
+REPORT_DIR = ROOT / "docs" / "results"
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--demo", type=Path, help="The actual three-to-five-minute demo video.")
+    parser.add_argument("--allow-missing-demo", action="store_true", help="Build an explicitly incomplete review archive.")
+    args = parser.parse_args()
     OUTPUT.mkdir(parents=True, exist_ok=True)
     names = subprocess.check_output(
         ["git", "ls-files", "-co", "--exclude-standard", "-z"],
@@ -22,26 +27,27 @@ def main() -> None:
     ).decode("utf-8").split("\0")
     selected = {
         name: ROOT / name for name in names if name and (ROOT / name).is_file()
+        and name != "docs/Interra_Theme05.pptx"
     }
 
     required = [
         REPORT_DIR / "interra_elevenlabs_evaluation_report.json",
         REPORT_DIR / "interra_elevenlabs_pass_rate_report.json",
-        REPORT_DIR / "verification-summary.json",
-        OUTPUT / "Interra-Theme5-FDB-v3-final-review.pptx",
-        OUTPUT / "Interra-FDB-v3-demo.mp4",
+        REPORT_DIR / "run-manifest.json",
+        REPORT_DIR / "best-run-evidence.zip",
+        ROOT / "docs" / "Interra_Theme05_submission.pptx",
     ]
     for path in required:
         if not path.is_file():
             raise RuntimeError(f"Missing FDB-v3 review material: {path}")
         selected[path.relative_to(ROOT).as_posix()] = path
 
-    for optional in [
-        REPORT_DIR / "interra_elevenlabs_latency_report.json",
-        REPORT_DIR / "livekit-agent.jsonl",
-    ]:
-        if optional.is_file():
-            selected[optional.relative_to(ROOT).as_posix()] = optional
+    if args.demo:
+        if not args.demo.is_file():
+            parser.error("The supplied demo video does not exist.")
+        selected["demo/" + args.demo.name] = args.demo.resolve()
+    elif not args.allow_missing_demo:
+        parser.error("The real demo is required. Use --allow-missing-demo only for an incomplete review archive.")
 
     manifest = {
         "status": "review only; team approval and official submission outstanding",
@@ -54,6 +60,8 @@ def main() -> None:
             ["git", "branch", "--show-current"], cwd=ROOT, text=True
         ).strip(),
         "includes_uncommitted_work": True,
+        "demo_included": args.demo is not None,
+        "remaining": [] if args.demo else ["Real benchmark and camera demo video"],
         "sha256": {
             name: hashlib.sha256(path.read_bytes()).hexdigest()
             for name, path in sorted(selected.items())

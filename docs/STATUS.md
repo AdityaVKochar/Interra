@@ -1,5 +1,98 @@
 # Current implementation status — 2026-09-30
 
+## Fixed Kaggle worker pushed — 2026-09-30
+
+- The running session was still the retired ElevenLabs agent and failed while
+  saying “Okay.” Local code no longer uses that path.
+- Rebuilt and pushed kernel version 11 of
+  `maitrishah29/interra-fdb-v3-http-tts-smoke`. Its first log line is the
+  LiveKit Inference speech path. The CLI run then stopped because a push does
+  not attach `LIVEKIT_URL`, `LIVEKIT_API_KEY`, or `LIVEKIT_API_SECRET`.
+- The editor must attach those three Secrets and use Save Version → Save & Run All.
+  That run is not scored yet.
+
+## Repository submission audit — 2026-09-30
+
+### Completed
+
+- Compared the repository with `Theme05_Participant_Guide_UPDATED_FBD.docx`.
+  The updated guide's maximum of eight slides takes precedence over the older
+  twelve-slide organizer template. The audited deck is
+  `docs/Interra_Theme05_submission.pptx`; the original is still open in PowerPoint
+  and Windows blocks its replacement. Its design is retained. Package/layout
+  validation and Artifact Tool import passed; all eight slides were rendered
+  and inspected. The old draft is excluded from the review archive.
+- Added `python scripts/reproduce.py`: standard-library dotenv loading,
+  prerequisite validation, environment creation, dependency installation,
+  pinned benchmark/data bootstrap, speech gate, inference and evaluation.
+  Existing shell credentials take precedence. Python hash seed defaults to 0;
+  hosted sampling remains nondeterministic.
+- Pinned Agents 1.8.3 and RTC 1.1.18 to match the measured hosted run. Added a
+  minimal `voice` dependency extra. Docker now installs this profile and starts
+  the FDB worker, with official checkout and trace mount instructions.
+  Virtual environments and PowerPoint lock files are excluded from packaging.
+- Fixed evaluation failure handling: stage a fresh report per invocation,
+  validate it before replacement, and prevent an old report from masking a
+  failed evaluator. A known nonzero exit after a valid new report is tolerated.
+- Fixed camera lifecycle: select only the linked participant's camera, discard
+  unsubscribed frames, remove images from earlier model turns, await concurrent
+  cleanup callers, and await readers even when stream close fails. Completed
+  tasks are removed from ownership instead of accumulating for the session.
+- Archived measured logs, all 100 result files, setup configuration, installed
+  versions and the exact measured source in `docs/results/best-run-evidence.zip`.
+  `run-manifest.json` records SHA-256 hashes and the original unrecorded seed.
+  `scripts/check_submission.py` verifies archive entries, counts, score agreement
+  and the eight-slide limit. The published baseline remains 31/100 strict pass,
+  58/100 turn-take, and 4.545 seconds average response latency.
+- Updated README, architecture, disclosure and alternate deck builder to
+  distinguish the measured LiveKit adapter from retained queue-runtime guarantees.
+  The custom stale-result gate and duplicate-write ledger are not integrated
+  into the LiveKit adapter; this is an explicit remaining architectural limit.
+- Fixed review packaging to use committed evidence and the audited deck. An
+  incomplete archive requires `--allow-missing-demo`; normal packaging requires
+  an actual video through `--demo`. No publication or repository push performed.
+- The final Kaggle CLI check returned `CANCEL_ACKNOWLEDGED`, after an earlier
+  running status. Latest logs end around recording 16/100 with repeated TTS
+  `no audio frames were pushed` errors. The downloaded published notebook embeds
+  the old ElevenLabs/Ollama runtime without cleanup; unsaved editor changes may
+  differ. No cause of cancellation is asserted and this session did not cancel it.
+- Regenerated `artifacts/kaggle-fixed/interra_setup.ipynb` with the current
+  runtime and existing private notebook ID. Verified embedded agent bytes match
+  local source. Embedded source now takes precedence over attached historical
+  datasets. This notebook has not been uploaded or started from this session.
+
+### Verification
+
+- **139 tests passed** on Python 3.11. Added 13 regressions: camera cleanup and
+  isolation (5), fresh evaluation evidence (3), reproduction commands/credentials
+  (3), and Kaggle source precedence/account targeting (2).
+- Fresh Python 3.11 virtual environment successfully installed `.[voice]`;
+  `pip check` found no broken requirements. Against the actual installed SDK,
+  constructed all 12 tool schemas, AgentSession turn settings, participant-bound
+  room options and camera-image history operations without hosted requests.
+- Submission evidence verifier passes: 100 recordings, 31 strict passes and
+  eight slides. Full test log: `artifacts/submission-audit-tests.log`.
+  `git diff --check` passed. Review archive is under `output/submission/`.
+
+### Remaining before final submission
+
+- Record and link the real three-to-five-minute benchmark plus camera demo.
+  Unit tests do not prove live camera behavior or interruption quality.
+- Confirm the registered team name: deck says `smoothOperator`; disclosure
+  says `VITV_smoothOperator_T5`. Preserve both until the team resolves it.
+- Import the corrected Kaggle notebook and attach its three LiveKit Secrets
+  before Save & Run All. Browser control is unavailable in this session because
+  it reports `unsupported Codex auth method: apikey`; CLI reads succeeded.
+- Verify the latest source with a completed official run; update measured
+  evidence only after verifying a better score. The current score measures the
+  archived earlier source. Organizer judging remains distinct from local strict
+  pass; the optional LLM judge was disabled in the archived run.
+- The Docker daemon is unavailable here, so the image build/run is unverified.
+  The clean voice install was verified; the entire CUDA scorer dependency profile
+  and one-command run have not been reproduced on a fresh GPU machine.
+- Commit/push these local fixes, then tag the intended final revision after the
+  demo and score updates. No tag, push or submission is performed by this audit.
+
 ## Submission package using the best completed score — 2026-09-30
 
 - The score in the README, disclosure, and slide deck is the completed

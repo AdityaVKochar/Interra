@@ -16,6 +16,32 @@ from scripts import kaggle_package, kaggle_setup
 
 
 class KaggleSetupTests(unittest.TestCase):
+    def test_embedded_update_takes_precedence_over_old_dataset(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = root / "input"
+            inputs.mkdir()
+            with zipfile.ZipFile(inputs / "interra-source.zip", "w") as bundle:
+                bundle.writestr("pyproject.toml", "old dataset")
+            embedded = io.BytesIO()
+            with zipfile.ZipFile(embedded, "w") as bundle:
+                bundle.writestr("pyproject.toml", "updated notebook")
+            with (
+                patch.object(kaggle_setup, "INPUT_ROOT", inputs),
+                patch.object(kaggle_setup, "WORK", root / "work"),
+                patch.object(kaggle_setup, "EMBEDDED_SOURCE_B64", base64.b64encode(embedded.getvalue()).decode()),
+            ):
+                source = kaggle_setup.source_root()
+            self.assertEqual((source / "pyproject.toml").read_text(), "updated notebook")
+
+    def test_package_can_target_existing_notebook_without_changing_privacy(self) -> None:
+        with TemporaryDirectory() as directory:
+            destination = kaggle_package.package(Path(directory), kernel_id="owner/current", title="Current notebook")
+            metadata = json.loads((destination / "kernel-metadata.json").read_text())
+            self.assertEqual(metadata["id"], "owner/current")
+            self.assertTrue(metadata["is_private"])
+            self.assertEqual(metadata["dataset_sources"], [])
+
     def test_full_run_stops_before_install_when_livekit_secrets_missing(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

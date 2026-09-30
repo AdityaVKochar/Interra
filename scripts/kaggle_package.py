@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import argparse
 import json
 from pathlib import Path
 import sys
@@ -78,7 +79,7 @@ def notebook_document(source: str) -> dict[str, object]:
     }
 
 
-def package(destination: Path) -> Path:
+def package(destination: Path, *, kernel_id: str = BENCHMARK_KERNEL_ID, title: str = BENCHMARK_TITLE) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
     source = _worker_source()
     (destination / "interra_setup.py").write_text(source, encoding="utf-8")
@@ -88,8 +89,8 @@ def package(destination: Path) -> Path:
         encoding="utf-8",
     )
     metadata = json.loads((ROOT / "kaggle" / "kernel-metadata.json").read_text(encoding="utf-8"))
-    metadata["id"] = BENCHMARK_KERNEL_ID
-    metadata["title"] = BENCHMARK_TITLE
+    metadata["id"] = kernel_id
+    metadata["title"] = title
     metadata["code_file"] = "interra_setup.ipynb"
     metadata["kernel_type"] = "notebook"
     metadata["dataset_sources"] = []
@@ -98,4 +99,9 @@ def package(destination: Path) -> Path:
 
 
 if __name__ == "__main__":
-    package(Path(sys.argv[1]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("destination", type=Path)
+    parser.add_argument("--kernel-id", default=BENCHMARK_KERNEL_ID)
+    parser.add_argument("--title", default=BENCHMARK_TITLE)
+    args = parser.parse_args()
+    package(args.destination, kernel_id=args.kernel_id, title=args.title)

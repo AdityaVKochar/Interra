@@ -39,6 +39,15 @@ strict pass-rate component. The organizers re-run the submission on one NVIDIA
 
 ## Interra provider profile
 
+Fresh-checkout install, download, inference and evaluation:
+`python scripts/reproduce.py` after filling `.env` from `.env.fdb.example`.
+Use a CUDA machine for the official recorder/scorer. Agents 1.8.3 and RTC 1.1.18
+match the archived hosted run. Hosted sampling is nondeterministic; that run did
+not record a seed. The reproduction wrapper sets Python hash seed 0.
+`python scripts/check_submission.py` verifies the committed evidence and deck
+without calling model providers. See `results/run-manifest.json` for hashes and
+the distinction between measured source and later unscored fixes.
+
 The current FDB-v3 profile is a cascaded LiveKit session:
 
 - Silero VAD for speech boundaries.

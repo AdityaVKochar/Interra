@@ -14,13 +14,13 @@ COPY vendor ./vendor
 COPY interra_submission.py submission.yaml ./
 COPY scripts ./scripts
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
-    && python -m pip install --no-cache-dir . \
+    && python -m pip install --no-cache-dir '.[voice]' \
     && useradd --create-home --uid 10001 interra \
     && mkdir -p /app/artifacts/traces \
     && chown -R interra:interra /app
 
 USER interra
 
-CMD ["python", "-m", "agent.demo"]
+CMD ["python", "-m", "agent.fdb_livekit", "start"]

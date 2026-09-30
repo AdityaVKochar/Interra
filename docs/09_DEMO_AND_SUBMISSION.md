@@ -1,5 +1,11 @@
 # 09 — Demo and Submission Plan
 
+**Historical queue-runtime plan.** The current official FDB-v3 video sequence
+is in [DEMO.md](DEMO.md). The custom stale-result gate and safety ledger below
+are not integrated into the LiveKit adapter; show them only as labeled local
+engineering evidence. The required video shows real benchmark and camera
+sessions.
+
 ## What the demo must prove
 
 The demo should make the technical contribution visible:

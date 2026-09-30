@@ -1,5 +1,57 @@
 # Architecture
 
+## Submitted LiveKit architecture
+
+```mermaid
+flowchart TD
+    Room[LiveKit room: linked participant] --> VAD[Silero VAD]
+    VAD --> STT[Deepgram Nova-3]
+    STT --> Session[LiveKit AgentSession: turn handling and interruption]
+    Session --> LLM[GPT-4.1 mini]
+    LLM --> Tools[12 typed tool wrappers]
+    Tools --> Executor[asyncio.to_thread: official MockAPIRegistry]
+    Executor --> LLM
+    LLM --> TTS[Cartesia Sonic-3]
+    TTS --> Room
+    Executor --> Telemetry[Per-room tool telemetry and JSONL traces]
+    Session --> Cleanup[Bounded drain, close, end job]
+```
+
+`agent.fdb_livekit` owns one registry and session per job. The official mock
+backend determines results; expected benchmark answers are not loaded into the
+prompt. SDK schemas validate typed arguments. Speech argument normalization
+happens before backend calls. Separate scenarios do not share conversational
+state or cached results. Worker setup preloads VAD and backend code. Disconnect
+cleanup drains pending work for at most 20 seconds, closes the session, awaits
+owned event waiters, removes listeners and ends the job.
+
+### Safety boundary of the measured adapter
+
+LiveKit performs turn detection, interruption and tool scheduling. The custom
+state manager, stale-result gate and SafetyLedger described below are **not
+integrated into this adapter**. Canceling a thread await does not undo an already
+executing backend function. Semantic stale-result rejection and application-level
+duplicate-write prevention under every interruption are therefore not proven
+for the FDB deployment. Its side effects are simulated. Production writes would
+require a shared call ledger and explicit commit reconciliation.
+
+### Camera extension
+
+`agent.extension_livekit` is a separate named worker without benchmark tools.
+Only the linked participant's camera is accepted. One owned reader captures the
+latest frame for one completed voice turn; replacement or unsubscription
+invalidates pending evidence. Older images are removed from model history while
+text and tool results are preserved. Concurrent close callers await the same
+cleanup; even a stream-close error awaits readers. A live end-to-end demo remains
+required.
+
+## Retained queue runtime
+
+The sections below describe `SessionRuntime` and
+`interra_submission:ParticipantAgent`, retained from the earlier queue kit.
+They establish local engineering properties and are not the submitted LiveKit
+control plane or a substitute for official FDB-v3 evidence.
+
 ## Control-plane split
 
 ```mermaid
@@ -72,8 +124,8 @@ vision may complete concurrently.
 
 Core deadlines use an injected `Clock`. `VirtualClock` orders equal deadlines by insertion
 sequence and requires explicit advancement. Protocol validation and serialization are confined
-to `LocalProtocol`; the missing official Samsung adapter can map external field names without
-rewriting domain or concurrency logic.
+to `LocalProtocol`; the retained `SamsungProtocol` maps the superseded queue
+kit's external fields. The current official evaluation uses LiveKit instead.
 
 ## Trace evidence
 

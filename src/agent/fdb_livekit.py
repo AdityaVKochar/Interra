@@ -479,6 +479,11 @@ async def entrypoint(ctx: Any) -> None:
         trace.append("agent_state", room=ctx.room.name, state=str(event.new_state))
 
     trace.append("session_started", room=ctx.room.name)
+    print(
+        "Interra FDB speech:"
+        f" stt={config.stt_model} llm={config.llm_provider}:{config.llm_model} tts={config.tts_model}",
+        flush=True,
+    )
     # Keep playout alive briefly after disconnect, then explicitly release the
     # session. Leaving close_on_disconnect=False without cleanup leaks STT jobs.
     from livekit.agents import room_io

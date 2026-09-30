@@ -64,6 +64,30 @@ answers are inserted into the prompt or runtime.
 
 ## Verification and rerun
 
+### Submission audit follow-up — 2026-09-30
+
+The final CLI check returned `CANCEL_ACKNOWLEDGED` after an earlier running
+status. The log ends around recording 16/100 with repeated TTS
+`no audio frames were pushed` errors. No cause of cancellation is inferred.
+The notebook source downloaded in `artifacts/kaggle-submission-source/` embeds
+the older ElevenLabs/Ollama runtime, without prewarm or explicit session cleanup;
+it is not the corrected runtime described above. CLI source represents the
+published notebook, and may differ from unsaved interactive editor changes.
+
+Regenerated `artifacts/kaggle-fixed/interra_setup.ipynb` from the current working
+tree, with metadata targeting the existing private Maitri Shah notebook. It uses
+LiveKit Inference and the cleanup/argument fixes. An embedded runtime now takes
+precedence over any attached historical source dataset; a regression test proves
+the old dataset cannot silently replace an updated notebook. The package CLI
+also accepts `--kernel-id` so it can target the existing account explicitly.
+This notebook has not been uploaded or started from this session.
+
+To regenerate it after further changes:
+
+```bash
+python scripts/kaggle_package.py artifacts/kaggle-fixed --kernel-id maitrishah29/interra-fdb-v3-http-tts-smoke
+```
+
 126 local tests passed on Python 3.11, including 12 new lifecycle/argument
 regressions. Lifecycle tests assert cleanup traces and no orphaned waiters.
 Checked supported APIs in the exact LiveKit Agents 1.8.3 wheel from PyPI.

@@ -2,10 +2,11 @@
 
 Interra is a voice agent that stays in the conversation while it works. A person
 can hesitate, interrupt, or correct themselves in the middle of a sentence. The
-agent answers out loud, runs tool calls in the background, and throws away work
-that the latest words made obsolete. It does not announce that a task is
-finished before the tool result exists, and it does not repeat a state-changing
-action.
+agent answers out loud and runs tool calls outside the event loop. The deployed
+LiveKit agent uses SDK turn interruption and tool calling; its prompt asks it to
+ground completion claims in tool results. The separate coordination runtime has
+tested stale-result rejection and duplicate-write protection. Those guarantees
+are not yet integrated into the FDB-v3 adapter.
 
 Most assistants listen, then think, then speak. That falls apart when the
 destination changes while a route is still being looked up, or when a booking
@@ -49,8 +50,8 @@ does not substitute for an FDB-v3 run.
 
 ## Presentation and demo
 
-- Presentation: [docs/Interra_Theme05.pptx](docs/Interra_Theme05.pptx)
-- Demo video:
+- Presentation: [docs/Interra_Theme05_submission.pptx](docs/Interra_Theme05_submission.pptx)
+- Demo video: **pending** (required before final submission).
 
 The recording is three to five minutes: one benchmark interruption or
 self-correction, then the camera troubleshooting session.
@@ -64,13 +65,13 @@ self-correction, then the camera troubleshooting session.
 | `src/agent/` | Coordination runtime, tools, and multimodal code |
 | `scripts/fdb_v3.py` | Benchmark checkout, run, and evaluation |
 | `requirements.txt` | Python dependencies for the FDB profile |
-| `pyproject.toml` | Package metadata and the same dependency ranges |
-| `Dockerfile` | Python 3.11 image with `ffmpeg` |
+| `pyproject.toml` | Package metadata; LiveKit Agents 1.8.3 and RTC 1.1.18 pinned |
+| `Dockerfile` | Python 3.11 voice-worker image with `ffmpeg` |
 | `tests/` | Deterministic runtime and agent tests |
 | `.env.fdb.example` | Environment variable names, with empty secrets |
 | `docs/FDB_V3.md` | Benchmark pin, models, and scoring contract |
 | `docs/AI_DISCLOSURE_DRAFT.md` | AI usage disclosure |
-| `docs/Interra_Theme05.pptx` | Slide deck |
+| `docs/Interra_Theme05_submission.pptx` | Audited eight-slide submission deck |
 | `docs/results/` | Official reports from the best completed run |
 | `vendor/samsung_theme05/` | Superseded queue kit |
 
@@ -98,6 +99,22 @@ Cloud for speech and the default language model, so those calls do not need a
 local GPU. The official 100-recording scorer uses the benchmark ASR stack and
 is meant to run on a CUDA machine.
 
+From a fresh checkout, fill `.env` using `.env.fdb.example`, then run:
+
+```bash
+python scripts/reproduce.py
+```
+
+This command reads `.env`, creates `.venv-fdb`, installs dependencies, downloads
+the pinned benchmark and released recordings, starts the agent, runs a speech
+gate and all recordings, and evaluates the results. Existing shell values take
+precedence. Add `--use-llm` and an `OPENAI_API_KEY` for the optional local judge.
+`--seed 0` is the default Python hash seed; hosted models are not deterministic.
+Git and ffmpeg must already be installed, and LiveKit inference quota must be
+available. The best measured run did not record a sampling seed.
+
+The following manual steps are useful when running or debugging each stage.
+
 Create a virtual environment and install the pinned dependencies, then this
 package:
 
@@ -110,6 +127,9 @@ python -m venv .venv
 
 On Windows PowerShell, use `.venv\Scripts\python.exe` in place of
 `.venv/bin/python`.
+
+Activate that environment before the manual `python` commands below:
+`source .venv/bin/activate` in Bash, or `.venv\Scripts\Activate.ps1` in PowerShell.
 
 Copy the environment template and set the three LiveKit values. `.env` is
 gitignored.
@@ -187,24 +207,32 @@ Reports are written to `artifacts/fdb_v3/`. The agent also appends the official
 tool telemetry the benchmark reads from `/tmp/agent_tool_calls.log` on Linux.
 On Windows that file is under the temp directory.
 
-Docker builds a Python 3.11 image, installs this package and `ffmpeg`, and
-starts the retained scripted demo:
+Docker builds the hosted voice worker, with the pinned LiveKit SDK and ffmpeg.
+After bootstrapping the official checkout, start it with the checkout and trace
+directory mounted (Bash example):
 
 ```bash
 docker build -t interra .
-docker run --rm interra
+docker run --rm --env-file .env \
+  -e INTERRA_FDB_V3_ROOT=/bench/v3 \
+  -e INTERRA_FDB_TRACE_DIR=/traces \
+  -v "$PWD/.runtime/Full-Duplex-Bench:/bench:ro" \
+  -v "$PWD/artifacts/fdb_v3:/traces" interra
 ```
 
-That default command is `python -m agent.demo`. The FDB-v3 command above is
-the scored run. Pass the LiveKit environment into the container when starting
-`python -m agent.fdb_livekit start` from an image that also has the benchmark
-checkout.
+The default command is `python -m agent.fdb_livekit start`. Run the official
+CUDA scorer separately with the benchmark commands above. The worker image
+does not include the scorer's GPU stack or benchmark data. Docker build/run
+has not been verified on this workstation because its Docker daemon is offline.
 
 ## Camera extension
 
 Device troubleshooting is a second LiveKit session. It subscribes to the
 participant camera, keeps the latest frame, and attaches that frame once to
-the next spoken turn. It does not register the 12 benchmark tools.
+the next spoken turn. Only the linked participant's camera is accepted;
+disconnect discards its pending frame, and older images are removed from model
+history. It does not register the 12 benchmark tools. Live end-to-end camera
+behavior remains to be demonstrated.
 
 ```bash
 python -m agent.extension_livekit start
@@ -223,6 +251,11 @@ python -m unittest discover -s tests -v
 These tests check orchestration, cancellation, and the agent configuration.
 They do not replace the official 100-recording reports.
 
+Verify the archived evidence and eight-slide limit with
+`python scripts/check_submission.py`. An incomplete review archive can be made
+with `python scripts/package_review.py --allow-missing-demo`; supply `--demo`
+with the actual video for a complete archive.
+
 ## Measured result
 
 Best completed official run: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini,
@@ -230,6 +263,8 @@ and Cartesia Sonic-3. Reports:
 
 - [Strict pass report](docs/results/interra_elevenlabs_pass_rate_report.json)
 - [Tool and latency report](docs/results/interra_elevenlabs_evaluation_report.json)
+- [Run configuration and evidence hashes](docs/results/run-manifest.json)
+- [Logs, all recording results, and measured source](docs/results/best-run-evidence.zip)
 
 The report filenames use `interra_elevenlabs` because the pinned runner
 requires that provider id. The models above are the ones this run loaded.
@@ -256,9 +291,17 @@ did not enable the organizer LLM judge. An earlier local Qwen 3 8B run also
 reached 31/100 strict pass, with turn-take 52/100. The table above is the
 result to use until a later official run is better.
 
+The archive contains the source actually used in that measured run. The current
+source includes later lifecycle and argument fixes, so these results are a
+historical baseline, not a measurement of the latest revision. The latest Kaggle
+attempt reports `CANCEL_ACKNOWLEDGED`; its published source still embeds an older
+runtime. Import the regenerated `artifacts/kaggle-fixed/interra_setup.ipynb`
+before rerunning. See [the run review](docs/KAGGLE_RUN_REVIEW.md). No improved
+score is claimed yet.
+
 ## Documentation
 
-- [Slide deck](docs/Interra_Theme05.pptx)
+- [Slide deck](docs/Interra_Theme05_submission.pptx)
 - [Official reports](docs/results/)
 - [FDB-v3 contract](docs/FDB_V3.md)
 - [Status and run history](docs/STATUS.md)

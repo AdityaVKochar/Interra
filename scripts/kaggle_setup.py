@@ -63,7 +63,8 @@ def source_root() -> Path:
     archive = INPUT_ROOT / "interra-source.zip"
     if archive.is_file() or EMBEDDED_SOURCE_B64:
         destination = WORK / "Interra-source"
-        source = archive if archive.is_file() else io.BytesIO(base64.b64decode(EMBEDDED_SOURCE_B64))
+        # An attached historical dataset must not shadow the notebook's update.
+        source = io.BytesIO(base64.b64decode(EMBEDDED_SOURCE_B64)) if EMBEDDED_SOURCE_B64 else archive
         with zipfile.ZipFile(source) as bundle:
             for member in bundle.infolist():
                 name = member.filename
@@ -147,8 +148,29 @@ def stop_ollama(server: subprocess.Popen[bytes]) -> None:
         server.wait(timeout=5)
 
 
+def require_livekit_inference_agent(project: Path) -> None:
+    """Stop a notebook that still embeds the retired ElevenLabs ack path."""
+    agent = project / "src" / "agent" / "fdb_livekit.py"
+    if not agent.is_file():
+        return
+    source = agent.read_text(encoding="utf-8")
+    if "plugins.elevenlabs" in source or 'say("Okay' in source or "say('Okay" in source:
+        raise RuntimeError(
+            "This notebook still has the ElevenLabs spoken-ack agent. "
+            "Upload the LiveKit Inference worker before running."
+        )
+    if "deepgram/nova-3" not in source or "cartesia/sonic-3" not in source:
+        raise RuntimeError("FDB agent is missing the LiveKit Inference speech models.")
+    print(
+        "Interra worker speech path: LiveKit Inference Deepgram Nova-3, "
+        "GPT-4.1 mini, Cartesia Sonic-3.",
+        flush=True,
+    )
+
+
 def main() -> None:
     shutil.copytree(source_root(), PROJECT, dirs_exist_ok=True)
+    require_livekit_inference_agent(PROJECT)
     missing = read_kaggle_secrets()
     if RUN_FULL_BENCHMARK:
         if missing:

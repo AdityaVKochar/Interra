@@ -1,5 +1,6 @@
 .venv/
 .venv-fdb/
+.venv*/
 __pycache__/
 *.egg-info/
 .env
@@ -12,3 +13,4 @@ dist/
 .models/
 output/
 .runtime/
+~$*

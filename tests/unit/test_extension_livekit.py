@@ -6,7 +6,9 @@ import pickle
 import unittest
 from types import SimpleNamespace
 
-from agent.extension_livekit import EXTENSION_INSTRUCTIONS, LatestFrameSource, entrypoint
+from agent.extension_livekit import (
+    EXTENSION_INSTRUCTIONS, LatestFrameSource, entrypoint, camera_matches, clear_previous_images,
+)
 
 
 class FakeStream:
@@ -89,6 +91,68 @@ class ExtensionLiveKitTests(unittest.IsolatedAsyncioTestCase):
         await frames.close()
         with self.assertRaises(RuntimeError):
             frames.attach(FakeStream())
+
+    async def test_disconnect_discards_unconsumed_frame(self):
+        frames = LatestFrameSource()
+        stream = FakeStream()
+        frames.attach(stream)
+        await stream.queue.put("before camera stopped")
+        await asyncio.sleep(0)
+        frames.detach()
+        self.assertIsNone(frames.take())
+        await frames.close()
+        self.assertTrue(stream.closed)
+
+    async def test_close_failure_still_awaits_reader_and_other_streams(self):
+        class BrokenStream(FakeStream):
+            async def aclose(self):
+                raise RuntimeError("camera close failed")
+        frames = LatestFrameSource()
+        first, second = FakeStream(), BrokenStream()
+        frames.attach(first)
+        frames.attach(second)
+        with self.assertRaisesRegex(RuntimeError, "camera close failed"):
+            await frames.close()
+        self.assertTrue(first.closed)
+        self.assertTrue(frames._reader_task.done())
+        self.assertFalse(frames._tasks)
+
+    async def test_concurrent_close_calls_both_wait_for_cleanup(self):
+        gate = asyncio.Event()
+        class SlowStream(FakeStream):
+            async def aclose(self):
+                await gate.wait()
+                await super().aclose()
+        frames = LatestFrameSource()
+        stream = SlowStream()
+        frames.attach(stream)
+        first = asyncio.create_task(frames.close())
+        second = asyncio.create_task(frames.close())
+        for _ in range(4):
+            await asyncio.sleep(0)
+        self.assertFalse(first.done())
+        self.assertFalse(second.done())
+        gate.set()
+        await asyncio.gather(first, second)
+        self.assertTrue(stream.closed)
+
+    def test_camera_is_limited_to_linked_participant_and_camera_source(self):
+        participant = SimpleNamespace(identity="speaker")
+        camera = SimpleNamespace(source="camera")
+        screen = SimpleNamespace(source="screen")
+        self.assertTrue(camera_matches(participant, camera, "speaker", "camera"))
+        self.assertFalse(camera_matches(participant, camera, "other", "camera"))
+        self.assertFalse(camera_matches(participant, screen, "speaker", "camera"))
+
+    def test_old_visual_evidence_is_removed_but_text_is_preserved(self):
+        class Image:
+            pass
+        message = SimpleNamespace(content=["old words", Image()])
+        tool = SimpleNamespace(output="grounded result")
+        context = SimpleNamespace(items=[message, tool])
+        clear_previous_images(context, Image)
+        self.assertEqual(message.content, ["old words"])
+        self.assertEqual(tool.output, "grounded result")
 
 
 if __name__ == "__main__":
