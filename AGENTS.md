@@ -162,3 +162,17 @@ Update `docs/STATUS.md` after every implementation phase with:
 - architectural decisions that changed.
 
 Do not mark a requirement complete without a test or trace proving it.
+
+## Cursor Cloud specific instructions
+
+The Cloud Agent image provides Python 3.12 as `python3`. Use the project virtualenv, which the environment install creates with Python 3.11:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m agent.demo
+.venv/bin/python scripts/check_submission.py
+```
+
+`python3 -m unittest discover -s tests` can hang on Python 3.12 inside `LatestFrameSource.close` (`test_disconnect_discards_unconsumed_frame`). On 3.12, `asyncio.gather` of already-finished tasks returns without yielding, so that cleanup loop never lets the done callbacks remove the tasks. Python 3.11.16 finishes the same 139 tests.
+
+The environment install is `pip install -e ".[voice]"` (LiveKit Agents 1.8.3 and RTC 1.1.18). The `fdb` extra and `requirements.txt` pull the CUDA scorer (`nemo_toolkit`) and are outside this environment. `ffmpeg` is on `PATH`. Hosted FDB-v3 and the camera worker need `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`. The unit tests and `agent.demo` run without those credentials.
