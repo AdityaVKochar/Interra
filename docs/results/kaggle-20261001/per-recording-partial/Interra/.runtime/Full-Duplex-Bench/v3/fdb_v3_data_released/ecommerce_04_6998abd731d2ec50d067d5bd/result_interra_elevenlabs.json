@@ -1,0 +1,441 @@
+{
+  "pid": "6998abd731d2ec50d067d5bd",
+  "example_id": "ecommerce_04",
+  "category": "ecommerce_support",
+  "title": "Order Tracking with Pause",
+  "provider": "interra_elevenlabs",
+  "evaluated_at": "2026-10-01T08:04:27.992152",
+  "inference_time_s": 48.3,
+  "room_name": "eval-3ce2c3cd",
+  "stream_start_time": 1790841871.57936,
+  "input_transcript": "You know, um, where is my package? Let me find the order number here. Uh, door number is XYZ88. Uh, could you check what's going on with it?",
+  "input_asr_chunks": [
+    {
+      "text": "You",
+      "timestamp": [
+        0.88,
+        1.04
+      ]
+    },
+    {
+      "text": "know,",
+      "timestamp": [
+        1.04,
+        1.2
+      ]
+    },
+    {
+      "text": "um,",
+      "timestamp": [
+        1.36,
+        1.6
+      ]
+    },
+    {
+      "text": "where",
+      "timestamp": [
+        1.76,
+        2.0
+      ]
+    },
+    {
+      "text": "is",
+      "timestamp": [
+        2.0,
+        2.16
+      ]
+    },
+    {
+      "text": "my",
+      "timestamp": [
+        2.16,
+        2.4
+      ]
+    },
+    {
+      "text": "package?",
+      "timestamp": [
+        2.4,
+        2.88
+      ]
+    },
+    {
+      "text": "Let",
+      "timestamp": [
+        3.04,
+        3.2800000000000002
+      ]
+    },
+    {
+      "text": "me",
+      "timestamp": [
+        3.2800000000000002,
+        3.52
+      ]
+    },
+    {
+      "text": "find",
+      "timestamp": [
+        3.52,
+        3.84
+      ]
+    },
+    {
+      "text": "the",
+      "timestamp": [
+        4.0,
+        4.32
+      ]
+    },
+    {
+      "text": "order",
+      "timestamp": [
+        4.32,
+        4.8
+      ]
+    },
+    {
+      "text": "number",
+      "timestamp": [
+        4.8,
+        5.12
+      ]
+    },
+    {
+      "text": "here.",
+      "timestamp": [
+        5.12,
+        5.28
+      ]
+    },
+    {
+      "text": "Uh,",
+      "timestamp": [
+        5.44,
+        5.5200000000000005
+      ]
+    },
+    {
+      "text": "door",
+      "timestamp": [
+        5.6000000000000005,
+        5.92
+      ]
+    },
+    {
+      "text": "number",
+      "timestamp": [
+        5.92,
+        6.16
+      ]
+    },
+    {
+      "text": "is",
+      "timestamp": [
+        6.16,
+        6.48
+      ]
+    },
+    {
+      "text": "XYZ88.",
+      "timestamp": [
+        6.48,
+        7.92
+      ]
+    },
+    {
+      "text": "Uh,",
+      "timestamp": [
+        8.56,
+        8.64
+      ]
+    },
+    {
+      "text": "could",
+      "timestamp": [
+        8.72,
+        8.8
+      ]
+    },
+    {
+      "text": "you",
+      "timestamp": [
+        8.96,
+        9.040000000000001
+      ]
+    },
+    {
+      "text": "check",
+      "timestamp": [
+        9.040000000000001,
+        9.200000000000001
+      ]
+    },
+    {
+      "text": "what's",
+      "timestamp": [
+        9.28,
+        9.6
+      ]
+    },
+    {
+      "text": "going",
+      "timestamp": [
+        9.6,
+        9.84
+      ]
+    },
+    {
+      "text": "on",
+      "timestamp": [
+        9.84,
+        10.08
+      ]
+    },
+    {
+      "text": "with",
+      "timestamp": [
+        10.08,
+        10.32
+      ]
+    },
+    {
+      "text": "it?",
+      "timestamp": [
+        10.32,
+        10.48
+      ]
+    }
+  ],
+  "user_speech_end_rel": 10.48,
+  "latency": {
+    "input_duration_s": 40.773,
+    "output_duration_s": 40.773,
+    "first_speech_s": 13.9
+  },
+  "user_done_unix": 1790841882.05936,
+  "transcript": "I can help track your package, but I need the order number to do so. Could you please provide the order number? The door number alone is not sufficient for tracking.",
+  "asr_chunks": [
+    {
+      "text": "I",
+      "timestamp": [
+        13.68,
+        14.0
+      ]
+    },
+    {
+      "text": "can",
+      "timestamp": [
+        14.0,
+        14.24
+      ]
+    },
+    {
+      "text": "help",
+      "timestamp": [
+        14.24,
+        14.48
+      ]
+    },
+    {
+      "text": "track",
+      "timestamp": [
+        14.48,
+        14.8
+      ]
+    },
+    {
+      "text": "your",
+      "timestamp": [
+        14.8,
+        14.96
+      ]
+    },
+    {
+      "text": "package,",
+      "timestamp": [
+        14.96,
+        15.68
+      ]
+    },
+    {
+      "text": "but",
+      "timestamp": [
+        16.0,
+        16.16
+      ]
+    },
+    {
+      "text": "I",
+      "timestamp": [
+        16.16,
+        16.32
+      ]
+    },
+    {
+      "text": "need",
+      "timestamp": [
+        16.32,
+        16.48
+      ]
+    },
+    {
+      "text": "the",
+      "timestamp": [
+        16.48,
+        16.56
+      ]
+    },
+    {
+      "text": "order",
+      "timestamp": [
+        16.56,
+        16.88
+      ]
+    },
+    {
+      "text": "number",
+      "timestamp": [
+        16.88,
+        17.2
+      ]
+    },
+    {
+      "text": "to",
+      "timestamp": [
+        17.2,
+        17.44
+      ]
+    },
+    {
+      "text": "do",
+      "timestamp": [
+        17.44,
+        17.76
+      ]
+    },
+    {
+      "text": "so.",
+      "timestamp": [
+        17.76,
+        18.080000000000002
+      ]
+    },
+    {
+      "text": "Could",
+      "timestamp": [
+        18.400000000000002,
+        18.64
+      ]
+    },
+    {
+      "text": "you",
+      "timestamp": [
+        18.64,
+        18.8
+      ]
+    },
+    {
+      "text": "please",
+      "timestamp": [
+        18.8,
+        19.04
+      ]
+    },
+    {
+      "text": "provide",
+      "timestamp": [
+        19.04,
+        19.36
+      ]
+    },
+    {
+      "text": "the",
+      "timestamp": [
+        19.36,
+        19.44
+      ]
+    },
+    {
+      "text": "order",
+      "timestamp": [
+        19.44,
+        19.92
+      ]
+    },
+    {
+      "text": "number?",
+      "timestamp": [
+        19.92,
+        20.240000000000002
+      ]
+    },
+    {
+      "text": "The",
+      "timestamp": [
+        20.56,
+        20.72
+      ]
+    },
+    {
+      "text": "door",
+      "timestamp": [
+        20.72,
+        21.04
+      ]
+    },
+    {
+      "text": "number",
+      "timestamp": [
+        21.04,
+        21.28
+      ]
+    },
+    {
+      "text": "alone",
+      "timestamp": [
+        21.28,
+        21.6
+      ]
+    },
+    {
+      "text": "is",
+      "timestamp": [
+        21.6,
+        21.76
+      ]
+    },
+    {
+      "text": "not",
+      "timestamp": [
+        21.76,
+        21.92
+      ]
+    },
+    {
+      "text": "sufficient",
+      "timestamp": [
+        21.92,
+        22.240000000000002
+      ]
+    },
+    {
+      "text": "for",
+      "timestamp": [
+        22.240000000000002,
+        22.48
+      ]
+    },
+    {
+      "text": "tracking.",
+      "timestamp": [
+        22.48,
+        23.36
+      ]
+    }
+  ],
+  "perceived_total_latency": 3.2,
+  "audio_agent_speech_start": 13.68,
+  "actual_tool_calls": [],
+  "status": "completed"
+}

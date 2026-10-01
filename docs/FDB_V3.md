@@ -53,6 +53,8 @@ The current FDB-v3 profile is a cascaded LiveKit session:
 - LiveKit Inference Deepgram Nova-3 for STT.
 - LiveKit Inference GPT-4.1 mini for tool selection and chained reasoning.
 - LiveKit Inference Cartesia Sonic-3 for TTS.
+- Cross-provider STT/TTS failover and a three-second gap after session cleanup
+  to release provider connections before the next recording.
 - Optional local fallback: Ollama Qwen 3 8B.
 - The official `MockAPIRegistry` loaded from the pinned benchmark checkout.
 
@@ -60,6 +62,11 @@ Required hosted secret names are `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and
 `LIVEKIT_API_SECRET`. `OPENAI_API_KEY` is needed only to
 reproduce the optional local LLM-judge reports; the organizers use their pinned
 judge for official scoring.
+
+STT and TTS fallback model IDs and the post-session cooldown can be changed with
+`INTERRA_FDB_STT_FALLBACK_MODELS`, `INTERRA_FDB_TTS_FALLBACK_MODELS`, and
+`INTERRA_FDB_SESSION_COOLDOWN_SECONDS`. The current defaults use AssemblyAI
+Universal-3.5 after Nova-3 fails, and Deepgram Aura-2 after Sonic-3 fails.
 
 ## Rules preserved in implementation
 

@@ -18,6 +18,7 @@ from agent.fdb_livekit import (
     livekit_speech_models,
     load_benchmark_module,
     ollama_llm_kwargs,
+    prewarm,
 )
 
 
@@ -29,6 +30,27 @@ class FdbLiveKitTests(unittest.TestCase):
         self.assertIn("LIVEKIT_URL", missing)
         self.assertNotIn("ELEVEN_API_KEY", missing)
         self.assertTrue(any(item.startswith("INTERRA_FDB_V3_ROOT") for item in missing))
+        self.assertEqual(config.stt_fallback_models, ("assemblyai/universal-3-5-pro",))
+        self.assertEqual(config.tts_fallback_models, ("deepgram/aura-2:athena",))
+        self.assertEqual(config.session_cooldown_seconds, 3.0)
+
+    def test_provider_fallbacks_and_cooldown_are_configurable(self):
+        with patch.dict(
+            os.environ,
+            {
+                "INTERRA_FDB_STT_FALLBACK_MODELS": "deepgram/flux-general-en, assemblyai/universal-streaming",
+                "INTERRA_FDB_TTS_FALLBACK_MODELS": "deepgram/aura-2:athena",
+                "INTERRA_FDB_SESSION_COOLDOWN_SECONDS": "6",
+            },
+            clear=True,
+        ):
+            config = FdbConfig.from_env()
+        self.assertEqual(
+            config.stt_fallback_models,
+            ("deepgram/flux-general-en", "assemblyai/universal-streaming"),
+        )
+        self.assertEqual(config.tts_fallback_models, ("deepgram/aura-2:athena",))
+        self.assertEqual(config.session_cooldown_seconds, 6.0)
 
     def test_loads_official_backend_by_path_without_import_side_effects(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -52,6 +74,22 @@ class FdbLiveKitTests(unittest.TestCase):
         self.assertEqual(entrypoint.__qualname__, "entrypoint")
         self.assertNotIn("<locals>", entrypoint.__qualname__)
         pickle.dumps(entrypoint)
+
+    def test_prewarm_uses_silero_imported_before_worker_thread(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "mock_apis.py").write_text(
+                "class MockAPIRegistry:\n"
+                "    def __init__(self, latency_profile='instant'): pass\n",
+                encoding="utf-8",
+            )
+            process = Mock(userdata={})
+            with patch.dict(os.environ, {"INTERRA_FDB_V3_ROOT": folder}, clear=False):
+                with patch("agent.fdb_livekit.silero.VAD.load", return_value="vad") as load:
+                    prewarm(process)
+            load.assert_called_once_with(min_speech_duration=0.05, min_silence_duration=0.3)
+            self.assertEqual(process.userdata["vad"], "vad")
+            self.assertIn("benchmark", process.userdata)
 
     def test_session_stays_open_after_benchmark_wav_disconnects(self):
         source = inspect.getsource(entrypoint)
@@ -85,8 +123,16 @@ class FdbLiveKitTests(unittest.TestCase):
         inference = Mock()
         config = FdbConfig(fdb_v3_root=Path("."))
         speech_stt, speech_tts = livekit_speech_models(inference, config)
-        inference.STT.assert_called_once_with(model="deepgram/nova-3", language="en")
-        inference.TTS.assert_called_once_with(model="cartesia/sonic-3", voice=config.voice_id)
+        stt_options = inference.STT.call_args.kwargs
+        self.assertEqual(stt_options["model"], "deepgram/nova-3")
+        self.assertEqual(stt_options["language"], "en")
+        self.assertEqual(stt_options["fallback"], ["assemblyai/universal-3-5-pro"])
+        self.assertEqual(stt_options["conn_options"].retry_interval, 4.0)
+        tts_options = inference.TTS.call_args.kwargs
+        self.assertEqual(tts_options["model"], "cartesia/sonic-3")
+        self.assertEqual(tts_options["voice"], config.voice_id)
+        self.assertEqual(tts_options["fallback"], ["deepgram/aura-2:athena"])
+        self.assertEqual(tts_options["conn_options"].retry_interval, 4.0)
         self.assertIs(speech_stt, inference.STT.return_value)
         self.assertIs(speech_tts, inference.TTS.return_value)
 

@@ -21,6 +21,20 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from livekit.plugins import silero
+from livekit.agents.types import APIConnectOptions
+
+# Plugins register themselves with LiveKit Agents during import. LiveKit calls
+# the process setup hook on a worker thread, so import optional providers while
+# this module is being loaded on the process main thread instead.
+if os.environ.get("INTERRA_FDB_LLM_PROVIDER", "livekit") == "ollama":
+    from livekit.plugins import openai as _openai_plugin  # noqa: F401
+
+
+def _model_fallbacks(name: str, default: str) -> tuple[str, ...]:
+    configured = os.environ.get(name, default)
+    return tuple(model.strip() for model in configured.split(",") if model.strip())
+
 
 @dataclass(frozen=True)
 class FdbConfig:
@@ -30,10 +44,17 @@ class FdbConfig:
     ollama_model: str = "qwen3:8b"
     ollama_url: str = "http://localhost:11434/v1"
     stt_model: str = "deepgram/nova-3"
+    stt_fallback_models: tuple[str, ...] = ("assemblyai/universal-3-5-pro",)
     tts_model: str = "cartesia/sonic-3"
+    tts_fallback_models: tuple[str, ...] = ("deepgram/aura-2:athena",)
     voice_id: str = "9626c31c-bec5-4cca-baa8-f8ba9e84c8bc"
     latency_profile: str = "instant"
     trace_dir: Path = Path("artifacts/fdb_v3")
+    session_cooldown_seconds: float = 3.0
+
+    def __post_init__(self) -> None:
+        if self.session_cooldown_seconds < 0:
+            raise ValueError("session_cooldown_seconds must be non-negative")
 
     @classmethod
     def from_env(cls) -> "FdbConfig":
@@ -45,10 +66,19 @@ class FdbConfig:
             ollama_model=os.environ.get("INTERRA_OLLAMA_MODEL", "qwen3:8b"),
             ollama_url=os.environ.get("INTERRA_OLLAMA_OPENAI_URL", "http://localhost:11434/v1"),
             stt_model=os.environ.get("INTERRA_FDB_STT_MODEL", "deepgram/nova-3"),
+            stt_fallback_models=_model_fallbacks(
+                "INTERRA_FDB_STT_FALLBACK_MODELS", "assemblyai/universal-3-5-pro"
+            ),
             tts_model=os.environ.get("INTERRA_FDB_TTS_MODEL", "cartesia/sonic-3"),
+            tts_fallback_models=_model_fallbacks(
+                "INTERRA_FDB_TTS_FALLBACK_MODELS", "deepgram/aura-2:athena"
+            ),
             voice_id=os.environ.get("INTERRA_FDB_VOICE_ID", "9626c31c-bec5-4cca-baa8-f8ba9e84c8bc"),
             latency_profile=os.environ.get("INTERRA_FDB_LATENCY_PROFILE", "instant"),
             trace_dir=Path(os.environ.get("INTERRA_FDB_TRACE_DIR", "artifacts/fdb_v3")),
+            session_cooldown_seconds=float(
+                os.environ.get("INTERRA_FDB_SESSION_COOLDOWN_SECONDS", "3")
+            ),
         )
 
     def missing_requirements(self) -> list[str]:
@@ -161,10 +191,25 @@ def ollama_llm_kwargs(config: FdbConfig) -> dict[str, Any]:
 
 
 def livekit_speech_models(inference: Any, config: FdbConfig) -> tuple[Any, Any]:
-    """Route speech through LiveKit Cloud using the existing project credentials."""
+    """Route speech through LiveKit with cross-provider failover and spaced retries."""
+    retry_options = APIConnectOptions(max_retry=2, retry_interval=4.0, timeout=20.0)
+    stt_options: dict[str, Any] = {
+        "model": config.stt_model,
+        "language": "en",
+        "conn_options": retry_options,
+    }
+    if config.stt_fallback_models:
+        stt_options["fallback"] = list(config.stt_fallback_models)
+    tts_options: dict[str, Any] = {
+        "model": config.tts_model,
+        "voice": config.voice_id,
+        "conn_options": retry_options,
+    }
+    if config.tts_fallback_models:
+        tts_options["fallback"] = list(config.tts_fallback_models)
     return (
-        inference.STT(model=config.stt_model, language="en"),
-        inference.TTS(model=config.tts_model, voice=config.voice_id),
+        inference.STT(**stt_options),
+        inference.TTS(**tts_options),
     )
 
 
@@ -264,15 +309,11 @@ conversational filler. Keep numeric and boolean tool values properly typed.
 
 def prewarm(process: Any) -> None:
     """Load model code and weights before a recording enters the job event loop."""
-    from livekit.plugins import silero
-
     process.userdata["vad"] = silero.VAD.load(
         min_speech_duration=0.05, min_silence_duration=0.3
     )
     config = FdbConfig.from_env()
     process.userdata["benchmark"] = load_benchmark_module(config.fdb_v3_root)
-    if config.llm_provider == "ollama":
-        from livekit.plugins import openai  # noqa: F401
 
 
 async def run_session_lifecycle(
@@ -284,6 +325,7 @@ async def run_session_lifecycle(
     *,
     participant_identity: str,
     drain_timeout: float = 20.0,
+    cooldown_seconds: float = 0.0,
 ) -> None:
     """Own the session until its participant leaves or the session fails.
 
@@ -334,7 +376,19 @@ async def run_session_lifecycle(
             ctx.room.off("participant_disconnected", on_disconnect)
             session.off("close", on_close)
             trace.append("session_cleanup", room=ctx.room.name)
-            ctx.shutdown(reason="Interra session ended")
+            if cooldown_seconds > 0:
+                trace.append(
+                    "provider_cooldown_started",
+                    room=ctx.room.name,
+                    seconds=cooldown_seconds,
+                )
+                try:
+                    await asyncio.sleep(cooldown_seconds)
+                finally:
+                    ctx.shutdown(reason="Interra session ended")
+                trace.append("provider_cooldown_completed", room=ctx.room.name)
+            else:
+                ctx.shutdown(reason="Interra session ended")
 
 
 def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
@@ -495,7 +549,9 @@ async def entrypoint(ctx: Any) -> None:
         room_io.RoomOptions(
             close_on_disconnect=False, participant_identity=participant.identity
         ),
-        trace, participant_identity=participant.identity,
+        trace,
+        participant_identity=participant.identity,
+        cooldown_seconds=config.session_cooldown_seconds,
     )
 
 

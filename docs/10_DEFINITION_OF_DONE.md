@@ -22,10 +22,10 @@ its tests remain useful, but it no longer defines completion.
 - [x] Reproduction runner can bootstrap the benchmark and published data.
 - [x] Runner starts the agent, runs inference, and invokes the tool and pass evaluators;
   optional LLM-assisted latency analysis requires `--use-llm`.
-- [x] A baseline run covers all 100 recordings and all result files are archived.
+- [x] A baseline run covers all 100 recordings; aggregate reports are archived (15 of 100 per-recording JSONs were retrievable for the latest run).
 - [x] Official tool-selection report is saved.
 - [ ] Semantic argument and response report is saved with the LLM judge enabled.
-- [x] Strict pass-rate report is saved (baseline 31/100).
+- [x] Strict pass-rate report is saved for the latest run (43/100; previous main baseline 31/100).
 - [ ] First-response, tool-call, and task-completion latency report is saved.
 - [x] Model versions, provider configuration, measured source, recording results
   and logs are archived with hashes in `docs/results/`. The original sampling
@@ -52,16 +52,16 @@ its tests remain useful, but it no longer defines completion.
 - [x] Camera input is connected to a separate LiveKit voice session
   (`python -m agent.extension_livekit start`). It does not join the benchmark tool set.
 - [ ] The extension runs end to end with a real user interruption or correction.
-- [ ] The extension appears in the final demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+- [ ] The extension appears in the final demo video.
 
 ## Documentation and submission
 
 - [x] README identifies FDB-v3 as the current benchmark.
 - [x] Exact environment-variable names are documented without secret values.
 - [x] Hosted and local model responsibilities are documented honestly.
-- [ ] Final hosted-LLM scores replace baseline and placeholder references.
-- [ ] Demo video is three to five minutes and shows real behavior: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
-- [x] Slide deck is the twelve-slide organizer file `docs/Interra_Theme05.pptx`.
+- [ ] Two additional quota-restored runs and the organizer LLM judge report are still needed for repeatable normalized scores.
+- [ ] Demo video is three to five minutes and shows real behavior.
+- [x] Slide deck is no more than eight slides (audited package has eight).
 - [ ] Team identities and submission form are complete.
 - [ ] The last uploaded submission is verified as the intended final version.
 

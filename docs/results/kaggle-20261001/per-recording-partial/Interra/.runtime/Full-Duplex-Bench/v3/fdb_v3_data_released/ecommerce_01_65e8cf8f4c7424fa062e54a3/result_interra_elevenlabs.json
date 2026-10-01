@@ -1,0 +1,10 @@
+{
+  "pid": "65e8cf8f4c7424fa062e54a3",
+  "example_id": "ecommerce_01",
+  "category": "ecommerce_support",
+  "title": "Simple Order Tracking",
+  "provider": "interra_elevenlabs",
+  "evaluated_at": "2026-10-01T08:01:42.311648",
+  "inference_time_s": 53.71,
+  "status": "inference_failed"
+}

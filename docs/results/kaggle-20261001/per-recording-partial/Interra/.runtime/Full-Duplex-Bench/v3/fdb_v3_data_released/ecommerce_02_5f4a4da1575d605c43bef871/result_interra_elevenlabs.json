@@ -1,0 +1,360 @@
+{
+  "pid": "5f4a4da1575d605c43bef871",
+  "example_id": "ecommerce_02",
+  "category": "ecommerce_support",
+  "title": "Simple Product Search",
+  "provider": "interra_elevenlabs",
+  "evaluated_at": "2026-10-01T08:03:35.779087",
+  "inference_time_s": 51.13,
+  "room_name": "eval-15cbca79",
+  "stream_start_time": 1790841819.4966044,
+  "input_transcript": "I'm looking for a pair of wireless headphones and I'd like um to track it under a hundred dollars if possible. What do you have?",
+  "input_asr_chunks": [
+    {
+      "text": "I'm",
+      "timestamp": [
+        2.88,
+        3.2
+      ]
+    },
+    {
+      "text": "looking",
+      "timestamp": [
+        3.2,
+        3.44
+      ]
+    },
+    {
+      "text": "for",
+      "timestamp": [
+        3.44,
+        3.6
+      ]
+    },
+    {
+      "text": "a",
+      "timestamp": [
+        3.6,
+        3.7600000000000002
+      ]
+    },
+    {
+      "text": "pair",
+      "timestamp": [
+        3.7600000000000002,
+        3.92
+      ]
+    },
+    {
+      "text": "of",
+      "timestamp": [
+        3.92,
+        4.08
+      ]
+    },
+    {
+      "text": "wireless",
+      "timestamp": [
+        4.08,
+        4.72
+      ]
+    },
+    {
+      "text": "headphones",
+      "timestamp": [
+        4.72,
+        5.68
+      ]
+    },
+    {
+      "text": "and",
+      "timestamp": [
+        6.0,
+        6.32
+      ]
+    },
+    {
+      "text": "I'd",
+      "timestamp": [
+        6.32,
+        7.04
+      ]
+    },
+    {
+      "text": "like",
+      "timestamp": [
+        7.04,
+        7.2
+      ]
+    },
+    {
+      "text": "um",
+      "timestamp": [
+        7.36,
+        7.68
+      ]
+    },
+    {
+      "text": "to",
+      "timestamp": [
+        7.84,
+        8.16
+      ]
+    },
+    {
+      "text": "track",
+      "timestamp": [
+        8.16,
+        8.64
+      ]
+    },
+    {
+      "text": "it",
+      "timestamp": [
+        8.64,
+        8.88
+      ]
+    },
+    {
+      "text": "under",
+      "timestamp": [
+        8.88,
+        9.200000000000001
+      ]
+    },
+    {
+      "text": "a",
+      "timestamp": [
+        9.200000000000001,
+        9.36
+      ]
+    },
+    {
+      "text": "hundred",
+      "timestamp": [
+        9.36,
+        9.68
+      ]
+    },
+    {
+      "text": "dollars",
+      "timestamp": [
+        9.68,
+        10.08
+      ]
+    },
+    {
+      "text": "if",
+      "timestamp": [
+        10.16,
+        10.4
+      ]
+    },
+    {
+      "text": "possible.",
+      "timestamp": [
+        10.4,
+        11.120000000000001
+      ]
+    },
+    {
+      "text": "What",
+      "timestamp": [
+        11.44,
+        11.76
+      ]
+    },
+    {
+      "text": "do",
+      "timestamp": [
+        11.76,
+        12.08
+      ]
+    },
+    {
+      "text": "you",
+      "timestamp": [
+        12.08,
+        12.4
+      ]
+    },
+    {
+      "text": "have?",
+      "timestamp": [
+        12.4,
+        12.56
+      ]
+    }
+  ],
+  "user_speech_end_rel": 12.56,
+  "latency": {
+    "input_duration_s": 43.336,
+    "output_duration_s": 43.336,
+    "first_speech_s": 15.85
+  },
+  "user_done_unix": 1790841832.0566044,
+  "transcript": "I found wireless headphones premium for 90.00 USD. Would you like to add this to your cart or need more options?",
+  "asr_chunks": [
+    {
+      "text": "I",
+      "timestamp": [
+        15.68,
+        15.92
+      ]
+    },
+    {
+      "text": "found",
+      "timestamp": [
+        15.92,
+        16.16
+      ]
+    },
+    {
+      "text": "wireless",
+      "timestamp": [
+        16.240000000000002,
+        16.64
+      ]
+    },
+    {
+      "text": "headphones",
+      "timestamp": [
+        16.64,
+        17.2
+      ]
+    },
+    {
+      "text": "premium",
+      "timestamp": [
+        17.2,
+        17.52
+      ]
+    },
+    {
+      "text": "for",
+      "timestamp": [
+        17.52,
+        17.68
+      ]
+    },
+    {
+      "text": "90.00",
+      "timestamp": [
+        17.68,
+        18.72
+      ]
+    },
+    {
+      "text": "USD.",
+      "timestamp": [
+        18.88,
+        19.6
+      ]
+    },
+    {
+      "text": "Would",
+      "timestamp": [
+        20.56,
+        20.8
+      ]
+    },
+    {
+      "text": "you",
+      "timestamp": [
+        20.8,
+        20.96
+      ]
+    },
+    {
+      "text": "like",
+      "timestamp": [
+        20.96,
+        21.12
+      ]
+    },
+    {
+      "text": "to",
+      "timestamp": [
+        21.12,
+        21.28
+      ]
+    },
+    {
+      "text": "add",
+      "timestamp": [
+        21.28,
+        21.52
+      ]
+    },
+    {
+      "text": "this",
+      "timestamp": [
+        21.52,
+        21.68
+      ]
+    },
+    {
+      "text": "to",
+      "timestamp": [
+        21.68,
+        21.84
+      ]
+    },
+    {
+      "text": "your",
+      "timestamp": [
+        21.84,
+        22.0
+      ]
+    },
+    {
+      "text": "cart",
+      "timestamp": [
+        22.0,
+        22.400000000000002
+      ]
+    },
+    {
+      "text": "or",
+      "timestamp": [
+        22.48,
+        22.64
+      ]
+    },
+    {
+      "text": "need",
+      "timestamp": [
+        22.64,
+        22.88
+      ]
+    },
+    {
+      "text": "more",
+      "timestamp": [
+        22.88,
+        23.12
+      ]
+    },
+    {
+      "text": "options?",
+      "timestamp": [
+        23.12,
+        23.84
+      ]
+    }
+  ],
+  "perceived_total_latency": 3.12,
+  "audio_agent_speech_start": 15.68,
+  "actual_tool_calls": [
+    {
+      "function": "search_products",
+      "args": {
+        "query": "wireless headphones",
+        "max_price": 100.0
+      },
+      "timestamp_start": 14.1,
+      "timestamp_end": 14.1
+    }
+  ],
+  "status": "completed"
+}

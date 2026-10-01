@@ -50,7 +50,8 @@ does not substitute for an FDB-v3 run.
 
 ## Presentation and demo
 
-- Presentation: [docs/Interra_Theme05.pptx](docs/Interra_Theme05.pptx)
+- Presentation: [eight-slide submission deck](docs/Interra_Theme05_submission.pptx)
+- Original organizer template: [twelve-slide deck](docs/Interra_Theme05.pptx)
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 
 The recording is three to five minutes: one benchmark interruption or
@@ -71,8 +72,8 @@ self-correction, then the camera troubleshooting session.
 | `.env.fdb.example` | Environment variable names, with empty secrets |
 | `docs/FDB_V3.md` | Benchmark pin, models, and scoring contract |
 | `docs/AI_DISCLOSURE_DRAFT.md` | AI usage disclosure |
-| `docs/Interra_Theme05.pptx` | Twelve-slide submission deck |
-| `docs/results/` | Official reports from the best completed run |
+| `docs/Interra_Theme05_submission.pptx` | Audited eight-slide submission deck |
+| `docs/results/kaggle-20261001/` | Latest reports, logs, trace, source, and run manifest |
 | `vendor/samsung_theme05/` | Superseded queue kit |
 
 ## Models
@@ -149,6 +150,16 @@ LIVEKIT_URL
 LIVEKIT_API_KEY
 LIVEKIT_API_SECRET
 ```
+
+The configured speech models use provider failover: Nova-3 falls back to
+AssemblyAI Universal-3.5, and Cartesia Sonic-3 falls back to Deepgram Aura-2.
+The worker waits three seconds after cleaning up a room before accepting the
+next one, so completed provider connections have time to release. Override the
+fallback IDs or gap with `INTERRA_FDB_STT_FALLBACK_MODELS`,
+`INTERRA_FDB_TTS_FALLBACK_MODELS`, or
+`INTERRA_FDB_SESSION_COOLDOWN_SECONDS`. The language model remains
+`openai/gpt-4.1-mini`, the best measured configuration in the archived report;
+set `INTERRA_FDB_LLM_MODEL` to compare another LiveKit Inference model.
 
 Load them into the shell before any benchmark command.
 
@@ -251,60 +262,54 @@ python -m unittest discover -s tests -v
 These tests check orchestration, cancellation, and the agent configuration.
 They do not replace the official 100-recording reports.
 
-Verify the archived evidence and eight-slide limit with
-`python scripts/check_submission.py`. An incomplete review archive can be made
+Verify both the historical baseline archive, latest run hashes, score comparison,
+and eight-slide deck with `python scripts/check_submission.py`. An incomplete review archive can be made
 with `python scripts/package_review.py --allow-missing-demo`; supply `--demo`
 with the actual video for a complete archive.
 
 ## Measured result
 
-Best completed official run: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini,
-and Cartesia Sonic-3. Reports:
+Latest completed official run: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini,
+and Cartesia Sonic-3. It completed all 100 recordings and improved the main
+baseline from 31 to 43 strict passes.
 
-- [Strict pass report](docs/results/interra_elevenlabs_pass_rate_report.json)
-- [Tool and latency report](docs/results/interra_elevenlabs_evaluation_report.json)
-- [Run configuration and evidence hashes](docs/results/run-manifest.json)
-- [Logs, all recording results, and measured source](docs/results/best-run-evidence.zip)
+- [Latest run summary](docs/results/kaggle-20261001/summary.md)
+- [Strict pass report](docs/results/kaggle-20261001/interra_elevenlabs_pass_rate_report.json)
+- [Tool and latency report](docs/results/kaggle-20261001/interra_elevenlabs_evaluation_report.json)
+- [Run configuration and evidence hashes](docs/results/kaggle-20261001/run-manifest.json)
+- [Trace, logs, worker source, and available recording outputs](docs/results/kaggle-20261001/)
+- [Previous completed run archive](docs/results/best-run-evidence.zip)
 
-The report filenames use `interra_elevenlabs` because the pinned runner
-requires that provider id. The models above are the ones this run loaded.
+The pinned evaluator report filenames use `interra_elevenlabs` as the provider
+id; this run used LiveKit Inference models.
 
-| Metric | Result |
-| --- | --- |
-| Strict pass | 31/100 |
-| Turn-take | 58/100 |
-| No response | 42/100 |
-| Wrong tools | 50 |
-| Wrong arguments | 19 |
-| Tool selection, turn-taken | 88.5% |
-| Argument accuracy, turn-taken | 58.6% |
-| Tool selection, all recordings | 51.3% |
-| Argument accuracy, all recordings | 34.0% |
-| Average response latency, excluding interruptions | 4.545 seconds |
-| Early interruptions among turn-taken recordings | 6/58 |
-| Inference failures | 7 |
-| Speech-recognition HTTP 429 rooms, all silent | 35 |
+| Metric | Latest | Previous main baseline |
+| --- | ---: | ---: |
+| Strict pass | 43/100 | 31/100 |
+| Turn-take | 90/100 | 58/100 |
+| No response | 10/100 | 42/100 |
+| Wrong tools | 28 | 50 |
+| Wrong arguments | 29 | 19 |
+| Tool selection, turn-taken | 85.7% | 88.5% |
+| Argument accuracy, turn-taken | 56.3% | 58.6% |
+| Tool selection, all recordings | 77.2% | 51.3% |
+| Argument accuracy, all recordings | 50.7% | 34.0% |
+| Average response latency, excluding interruptions | 4.175 seconds | 4.545 seconds |
+| Early interruptions among turn-taken recordings | 11/90 | 6/58 |
 
-Finance and billing passed 68.0%. Ecommerce passed 37.9%. Housing and location
-passed 11.5%. Travel and identity passed 0%. Hard items passed 23.3%. This run
-did not enable the organizer LLM judge. An earlier local Qwen 3 8B run also
-reached 31/100 strict pass, with turn-take 52/100. The table above is the
-result to use until a later official run is better.
-
-The archive contains the source actually used in that measured run. The current
-source includes later lifecycle and argument fixes, so these results are a
-historical baseline, not a measurement of the latest revision. The latest Kaggle
-attempt reports `CANCEL_ACKNOWLEDGED`; its published source still embeds an older
-runtime. Import the regenerated `artifacts/kaggle-fixed/interra_setup.ipynb`
-before rerunning. See [the run review](docs/KAGGLE_RUN_REVIEW.md). No improved
-score is claimed yet.
+This is one full run. LiveKit logged LLM credit-quota errors, the organizer LLM
+judge was disabled, and only 15 of 100 per-recording JSONs were retrievable.
+No normalized organizer score is claimed. Turn-taken selection and argument
+accuracy are slightly lower than the previous run. Repeat twice after quota is
+restored; the demo and registered team details also remain outstanding. See
+[the run review](docs/KAGGLE_RUN_REVIEW.md) and
+[remaining completion items](docs/10_DEFINITION_OF_DONE.md).
 
 ## Documentation
 
-- [Slide deck](docs/Interra_Theme05.pptx)
+- [Slide deck](docs/Interra_Theme05_submission.pptx)
 - [Official reports](docs/results/)
 - [FDB-v3 contract](docs/FDB_V3.md)
 - [Status and run history](docs/STATUS.md)
-- [Demo video](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 - [Demo sequence](docs/DEMO.md)
 - [AI usage disclosure](docs/AI_DISCLOSURE_DRAFT.md)

@@ -129,3 +129,62 @@ class FdbLifecycleTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(RuntimeError, "start failed"):
             await self.run_lifecycle()
         self.assert_cleaned()
+
+    async def test_provider_cooldown_finishes_before_worker_shutdown(self):
+        order = []
+        self.ctx.shutdown = Mock(side_effect=lambda **_: order.append("shutdown"))
+
+        async def close_after_start(**_):
+            self.started.set()
+            asyncio.get_running_loop().call_soon(
+                self.session.emit,
+                "close",
+                SimpleNamespace(reason="completed", error=None),
+            )
+
+        self.session.start.side_effect = close_after_start
+
+        async def cooldown(seconds):
+            order.append(("cooldown", seconds))
+
+        with patch("agent.fdb_livekit.asyncio.sleep", side_effect=cooldown) as sleep:
+            await run_session_lifecycle(
+                self.ctx, self.session, object(), object(), self.trace,
+                participant_identity="recorder", cooldown_seconds=3.0,
+            )
+
+        sleep.assert_awaited_once_with(3.0)
+        self.assertEqual(order, [("cooldown", 3.0), "shutdown"])
+        self.assertIn("provider_cooldown_started", self.kinds())
+        self.assertIn("provider_cooldown_completed", self.kinds())
+        self.assert_cleaned()
+
+    async def test_cancellation_during_provider_cooldown_still_shuts_down(self):
+        async def close_after_start(**_):
+            self.started.set()
+            self.session.emit(
+                "close", SimpleNamespace(reason="completed", error=None)
+            )
+
+        self.session.start.side_effect = close_after_start
+        sleep_started = asyncio.Event()
+
+        async def blocked_sleep(_seconds):
+            sleep_started.set()
+            await asyncio.Event().wait()
+
+        with patch("agent.fdb_livekit.asyncio.sleep", side_effect=blocked_sleep):
+            task = asyncio.create_task(
+                run_session_lifecycle(
+                    self.ctx, self.session, object(), object(), self.trace,
+                    participant_identity="recorder", cooldown_seconds=3.0,
+                )
+            )
+            await self.started.wait()
+            await sleep_started.wait()
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
+
+        self.ctx.shutdown.assert_called_once()
+        self.assertIn("session_cleanup", self.kinds())

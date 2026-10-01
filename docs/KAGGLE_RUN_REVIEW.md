@@ -1,4 +1,44 @@
-# Kaggle hosted run review — 2026-09-30
+# Kaggle hosted run review — 2026-10-01
+
+Latest kernel: `adityavardhankochar/interra-fdb-v3-benchmark`, version 3.
+Models: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini, Cartesia Sonic-3.
+Benchmark pin: `3e799c45a045256f47d5f1c9cda90157e2d2ec9e`.
+
+## Latest measured results
+
+| Metric | Result |
+| --- | ---: |
+| Strict pass | 43/100 (previous main baseline 31/100) |
+| Wrong tools | 28 |
+| Wrong arguments | 29 |
+| Turn-taken recordings | 90/100 |
+| Silent recordings | 10 |
+| Completed tool calls | 147/147 |
+| Cleanup / completed cooldown events | 101 / 101 |
+| Tool selection, turn-taken | 85.7% |
+| Argument accuracy, turn-taken | 56.3% |
+| Tool selection, all recordings | 77.2% |
+| Argument accuracy, all recordings | 50.7% |
+| Early interruptions | 11/90 |
+| Average response latency, excluding interruptions | 4.175 seconds |
+
+Evidence, source hashes, and complete caveats are in
+[`results/kaggle-20261001/`](results/kaggle-20261001/). The aggregate official
+reports cover all 100 recordings, but only 15 per-recording JSONs were retrievable.
+This was one run; LiveKit logged LLM credit-quota errors, no STT 429 appeared in
+the agent trace, and the optional organizer LLM judge was disabled. Therefore,
+no normalized overall hackathon score is claimed. Turn-taken selection and
+argument accuracy are lower than the previous run despite the better strict
+pass, turn-take, and latency results. Two repeats after quota restoration remain
+part of the completion criteria.
+
+## Previous run and implementation history
+
+The following 2026-09-30 review is retained as historical evidence. It documents
+the 31/100 main baseline and the earlier canceled-run investigation; those notes
+are superseded by the completed kernel run above where status differs.
+
+# Previous Kaggle hosted run review — 2026-09-30
 
 Notebook: `maitrishah29/interra-fdb-v3-http-tts-smoke`.
 Latest run: COMPLETE. Models: LiveKit Inference Deepgram Nova-3,

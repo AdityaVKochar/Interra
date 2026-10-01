@@ -1,24 +1,45 @@
-# Current implementation status — 2026-09-30
+# Current implementation status — 2026-10-01
 
-## Fixed Kaggle worker pushed — 2026-09-30
+## Latest scored run — 2026-10-01
 
-- The running session was still the retired ElevenLabs agent and failed while
-  saying “Okay.” Local code no longer uses that path.
-- Rebuilt and pushed kernel version 11 of
-  `maitrishah29/interra-fdb-v3-http-tts-smoke`. Its first log line is the
-  LiveKit Inference speech path. The CLI run then stopped because a push does
-  not attach `LIVEKIT_URL`, `LIVEKIT_API_KEY`, or `LIVEKIT_API_SECRET`.
-- The editor must attach those three Secrets and use Save Version → Save & Run All.
-  That run is not scored yet.
+- Kaggle kernel `adityavardhankochar/interra-fdb-v3-benchmark`, version 3,
+  completed the full 100-recording FDB-v3 run using LiveKit Inference
+  Deepgram Nova-3, GPT-4.1 mini, and Cartesia Sonic-3.
+- Official strict passes improved from the current main baseline 31/100 to
+  43/100; turn-takes improved from 58/100 to 90/100; average response latency
+  fell from 4.545 s to 4.175 s.
+- Turn-taken tool selection and argument accuracy were 85.7% and 56.3%, below
+  the previous run's 88.5% and 58.6%. Across all recordings they were 77.2%
+  and 50.7%. The organizer LLM judge was disabled; no normalized score is claimed.
+- Trace evidence records 147/147 completed tool calls and 101 cleanup plus 101
+  cooldown events. No STT 429 appears in the agent trace; LiveKit logged LLM
+  credit-quota errors. Aggregate reports cover all 100; the Kaggle endpoint
+  returned only 15 per-recording result JSONs.
+- Evidence and caveats are in `docs/results/kaggle-20261001/`. This is one run;
+  two quota-restored repeats and an organizer-judge report remain outstanding.
+- The eight-slide audited submission deck now reflects this run and passes
+  package/layout validation. The old twelve-slide organizer template is retained.
+
+## Remaining submission requirements
+
+- Produce two further full runs after restoring LiveKit LLM credits and enable
+  the organizer LLM judge where available.
+- Record and link the real three-to-five-minute benchmark plus camera demo.
+- Confirm registered team name and identities across the deck and disclosure.
+- Verify clean-machine reproduction and CUDA scorer installation; Docker is not
+  available in this environment.
+- Keep the separate camera extension as unverified until it has a live demo.
 
 ## Repository submission audit — 2026-09-30
 
 ### Completed
 
 - Compared the repository with `Theme05_Participant_Guide_UPDATED_FBD.docx`.
-  The presentation is the twelve-slide organizer deck
-  `docs/Interra_Theme05.pptx`. The eight-slide copy was removed. The deck links
-  the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+  The updated guide's maximum of eight slides takes precedence over the older
+  twelve-slide organizer template. The audited submission deck remains
+  `docs/Interra_Theme05_submission.pptx`; its score was refreshed in the
+  2026-10-01 update above. Historical deck replacement had been blocked while
+  PowerPoint held the older file open.
 - Added `python scripts/reproduce.py`: standard-library dotenv loading,
   prerequisite validation, environment creation, dependency installation,
   pinned benchmark/data bootstrap, speech gate, inference and evaluation.
@@ -39,8 +60,8 @@
   versions and the exact measured source in `docs/results/best-run-evidence.zip`.
   `run-manifest.json` records SHA-256 hashes and the original unrecorded seed.
   `scripts/check_submission.py` verifies archive entries, counts, score agreement
-  and the eight-slide limit. The published baseline remains 31/100 strict pass,
-  58/100 turn-take, and 4.545 seconds average response latency.
+  and the eight-slide limit. That archive is the historical main baseline (31/100 strict, 58/100 turn-take,
+  4.545 seconds); the newer run is documented above.
 - Updated README, architecture, disclosure and alternate deck builder to
   distinguish the measured LiveKit adapter from retained queue-runtime guarantees.
   The custom stale-result gate and duplicate-write ledger are not integrated
@@ -48,15 +69,15 @@
 - Fixed review packaging to use committed evidence and the audited deck. An
   incomplete archive requires `--allow-missing-demo`; normal packaging requires
   an actual video through `--demo`. No publication or repository push performed.
-- The final Kaggle CLI check returned `CANCEL_ACKNOWLEDGED`, after an earlier
-  running status. Latest logs end around recording 16/100 with repeated TTS
+- The 2026-09-30 Kaggle CLI check returned `CANCEL_ACKNOWLEDGED`; it is a historical
+  attempt superseded by the completed 2026-10-01 kernel version 3 run. Latest logs end around recording 16/100 with repeated TTS
   `no audio frames were pushed` errors. The downloaded published notebook embeds
   the old ElevenLabs/Ollama runtime without cleanup; unsaved editor changes may
   differ. No cause of cancellation is asserted and this session did not cancel it.
 - Regenerated `artifacts/kaggle-fixed/interra_setup.ipynb` with the current
   runtime and existing private notebook ID. Verified embedded agent bytes match
   local source. Embedded source now takes precedence over attached historical
-  datasets. This notebook has not been uploaded or started from this session.
+  datasets. This notebook had not been uploaded at the time of this historical entry.
 
 ### Verification
 
@@ -67,39 +88,35 @@
   `pip check` found no broken requirements. Against the actual installed SDK,
   constructed all 12 tool schemas, AgentSession turn settings, participant-bound
   room options and camera-image history operations without hosted requests.
-- Submission evidence verifier passes: 100 recordings, 31 strict passes and
-  eight slides. Full test log: `artifacts/submission-audit-tests.log`.
-  `git diff --check` passed. Review archive is under `output/submission/`.
+- At that time, the verifier covered 100 recordings, 31 strict passes and eight
+  slides. The latest verifier now also checks the 43-pass run hashes and deck
+  metrics. `git diff --check` passes; review archive is under `output/submission/`.
 
 ### Remaining before final submission
 
-- Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+- Record and link the real three-to-five-minute benchmark plus camera demo.
   Unit tests do not prove live camera behavior or interruption quality.
 - Confirm the registered team name: deck says `smoothOperator`; disclosure
-  says `VITV_smoothOperator_T5`. Preserve both until the team resolves it.
-- Import the corrected Kaggle notebook and attach its three LiveKit Secrets
-  before Save & Run All. Browser control is unavailable in this session because
-  it reports `unsupported Codex auth method: apikey`; CLI reads succeeded.
-- Verify the latest source with a completed official run; update measured
-  evidence only after verifying a better score. The current score measures the
-  archived earlier source. Organizer judging remains distinct from local strict
-  pass; the optional LLM judge was disabled in the archived run.
+  says `VITV_smoothOperator_T5`.
+- At the time of this historical audit, browser auth was unavailable and the
+  optional LLM judge had not been run. The CLI run completed later, as recorded
+  above; the judge and two repeat runs are still outstanding.
 - The Docker daemon is unavailable here, so the image build/run is unverified.
   The clean voice install was verified; the entire CUDA scorer dependency profile
   and one-command run have not been reproduced on a fresh GPU machine.
 - Commit/push these local fixes, then tag the intended final revision after the
   demo and score updates. No tag, push or submission is performed by this audit.
 
-## Submission package using the best completed score — 2026-09-30
+## Historical submission package — 2026-09-30
 
 - The score in the README, disclosure, and slide deck is the completed
   GPT-4.1 mini run: strict pass 31/100, turn-take 58/100, average response
   latency 4.545 seconds. Official JSON reports are in `docs/results/`.
-- The deck is `docs/Interra_Theme05.pptx`, the only PowerPoint in the repository. It links the [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
-- Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). A later official run can replace these
+- The deck is `docs/Interra_Theme05.pptx`, filled from the organizer template.
+- The demo video is not recorded. A later official run can replace these
   numbers if it is better.
 
-## Completed hosted Kaggle run and measured failure fixes — 2026-09-30
+## Historical hosted run and measured failure fixes — 2026-09-30
 
 - The latest run of `maitrishah29/interra-fdb-v3-http-tts-smoke` is COMPLETE.
   Downloaded its code, setup report, official tool and strict reports, agent
@@ -162,7 +179,7 @@ reasoning errors need fresh measured results. See `docs/KAGGLE_RUN_REVIEW.md`.
 - The camera extension is a separate LiveKit entry point. It keeps only the
   latest camera frame, drops that frame after one turn, and does not expose
   the benchmark tools. `tests.unit.test_extension_livekit`: 5 passed on
-  Python 3.11. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+  Python 3.11. A live end-to-end recording is still required.
 
 ## First completed official FDB-v3 baseline and hosted-model rerun
 
@@ -189,7 +206,7 @@ reasoning errors need fresh measured results. See `docs/KAGGLE_RUN_REVIEW.md`.
   not describe the current speech provider.
 
 Next: check version 9's smoke gate and full report. Improve only from measured
-failures. Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a). Team information and final
+failures. The extension, real demo recording, team information, and final
 submission verification remain open.
 
 ## LiveKit Inference speech recovery — 2026-09-30
@@ -468,8 +485,10 @@ Evidence: `artifacts/samsung-local-evaluation.json`, `samsung-public-traces.json
 - Docker Compose configuration validates. Actual image build/run remains blocked:
   Docker Desktop startup hits a stale socket, and automatic approval review rejected
   its removal with "blocked by policy". No reset or workaround deletion was performed.
-- The presentation is the twelve-slide organizer deck `docs/Interra_Theme05.pptx`.
-  The demo video is [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a).
+- Any previously generated 12-slide deck, queue-runtime replay, or review archive
+  under `output/submission` is historical and must not be submitted. The updated
+  deck source is limited to eight slides and awaits real FDB-v3 results; the final
+  3–5 minute video must show a live FDB interruption and the working extension.
 - Team identities, the exact presentation template, AI disclosure review/signature,
   and final submission details remain team inputs. The Theme 5 PDF in the supplied
   ZIP is DRM-protected, so it was not independently read. Earlier document summaries
