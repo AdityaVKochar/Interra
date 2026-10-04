@@ -80,6 +80,17 @@ class RoomMapTests(unittest.TestCase):
         self.assertFalse(rooms["eval-00000003"].recorder_ok)
         self.assertEqual(len(room_map_from_kernel_logs([{"data": LOG}])), 3)
 
+    def test_retried_recording_keeps_only_its_last_attempt(self):
+        retried = LOG + textwrap.dedent("""\
+            [2/2] Processing Speaker=bbbb2222... Example=trip_01...
+              🚀 Running LiveKit inference with provider=interra_elevenlabs...
+              🔗 Streaming via livekit_inference.py into room: eval-00000004
+              ✅ livekit_inference.py finished successfully.
+        """)
+        rooms = room_map_from_kernel_logs(retried, batch_size=2)
+        self.assertEqual(sorted(rooms), ["eval-00000002", "eval-00000004"])
+        self.assertTrue(rooms["eval-00000004"].recorder_ok)
+
 
 class UserTurnTests(unittest.TestCase):
     def test_long_pause_splits_turns_and_unfinished_text_merges_forward(self):

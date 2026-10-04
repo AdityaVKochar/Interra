@@ -84,14 +84,22 @@ def room_map_from_kernel_logs(
     """Map each room to its recording from the benchmark runner's log lines.
 
     ``batch_size`` keeps only the rooms of an ``[i/N]`` batch of that size, so
-    a one-recording smoke test before the full run is left out.
+    a one-recording smoke test before the full run is left out. A recording
+    the runner retried after a recorder crash appears again in the same batch
+    with a new room; only its last attempt is kept, as in the official results.
     """
     text = logs if isinstance(logs, str) else "".join(entry.get("data", "") for entry in logs)
     mapping: dict[str, RoomRun] = {}
+    latest: dict[tuple[int, str, str], str] = {}
     for match in _ROOM_LINE.finditer(text):
         total = int(match.group("total"))
         if batch_size is not None and total != batch_size:
             continue
+        key = (total, match.group("example"), match.group("speaker"))
+        earlier = latest.get(key)
+        if earlier is not None and earlier != match.group("room"):
+            mapping.pop(earlier, None)
+        latest[key] = match.group("room")
         mapping[match.group("room")] = RoomRun(
             scenario_id=match.group("example"),
             speaker=match.group("speaker"),

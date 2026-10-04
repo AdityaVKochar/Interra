@@ -1,5 +1,34 @@
 # Current implementation status — 2026-10-04
 
+## Scored Kaggle run — 2026-10-04
+
+- Save & Run All from the Kaggle editor (Secrets attached) on the notebook
+  pushed from `a770259`; 16:07–17:57 UTC. Evidence:
+  `docs/results/kaggle-20261004/` (see its `summary.md`).
+- Official strict pass **53/100** (43/100 on 2026-10-01). Turn-take 71/100
+  (90/100 before). Turn-taken tool selection/argument accuracy 92.5%/78.9%
+  (85.7%/56.3% before). Average latency 4.528 s; early interruptions 3 (11 before).
+- Recorder retries: 7 crashes (exit -6), all retried once and completed; none
+  still failed. Trace: 110/110 tool calls completed, 1 duplicate served from
+  cache, 21 mid-sentence turns held, 108 cleanups and cooldowns.
+- Errors: at 81.2 min the free-tier LiveKit project `p_36yq3rs165t` ran out of
+  Inference credits: 23 LLM 429 `MaxGatewayCredits` errors, then 448 STT 429s in
+  28 rooms. All 29 recordings from then on got no response (20 travel, 2 housing,
+  7 retries), which is why travel scores 0.0.
+- Same 71 recordings before the outage: 53 now vs 35 on 2026-10-01 (37 after
+  rescoring with the new normalizers); the offline replay predicted 55. With
+  credits for the remaining 29 the run projects to about 73–75/100 (estimate).
+- `agent.fdb_offline rescore` now keeps only the last attempt of a retried
+  recording and reproduces the official 53/100 exactly (it counted 107
+  recordings before). Regression test added; 209 tests pass.
+- The kernel log printed the LiveKit project URL in LiveKit's worker
+  registration line; the archived copy has it redacted.
+- Next: restore LiveKit Inference credit (or a paid plan) before any further
+  run, rerun the full benchmark, then run the endpointing sweep
+  (`kaggle_package.py --set INTERRA_FDB_ENDPOINTING_MAX_DELAY=1.8`, started
+  from the editor). A full run needs about 100 recordings of LLM and STT
+  usage; offline replays draw from the same allowance.
+
 ## LLM replay and argument fixes — 2026-10-04 (second session)
 
 The LiveKit project and Kaggle Secrets were replaced. A one-call
@@ -52,7 +81,8 @@ the prompt, not a benchmark score.
   recording. This repeats the 2026-09-30 finding: a CLI-pushed version does not
   receive the Secrets attached in the editor. The pushed notebook already holds
   the current code; it must be started with **Save Version -> Save & Run All**
-  in the Kaggle editor with the three Secrets attached. No score is claimed.
+  in the Kaggle editor with the three Secrets attached. That editor run is the
+  scored 2026-10-04 run above.
 - `scripts/kaggle_package.py --set INTERRA_NAME=VALUE` now embeds non-secret
   run settings (for the `INTERRA_FDB_ENDPOINTING_MAX_DELAY` 1.2 vs 1.8 sweep);
   other names are rejected.
@@ -157,7 +187,7 @@ measured them yet: this cloud environment's egress policy blocks
   the `llm` replay has run. Still next: the full Kaggle run, then the
   `INTERRA_FDB_ENDPOINTING_MAX_DELAY` sweep (1.2 vs 1.8) on Kaggle.
 
-## Latest scored run — 2026-10-01
+## Previous scored run — 2026-10-01
 
 - Kaggle kernel `adityavardhankochar/interra-fdb-v3-benchmark`, version 3,
   completed the full 100-recording FDB-v3 run using LiveKit Inference
