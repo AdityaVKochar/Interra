@@ -1057,7 +1057,7 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         ) -> str:
             """
             Args:
-                query: The product words the user used, keeping plurals and qualifiers.
+                query: The product words the user used, keeping plurals and qualifiers. If the user changed their mind, only the product they settled on.
                 max_price: Maximum price as a number, only when the user gives one.
                 category: Product category, only when the user names one.
             """
