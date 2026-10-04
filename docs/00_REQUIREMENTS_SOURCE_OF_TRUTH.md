@@ -2,6 +2,12 @@
 
 This document separates **official Samsung requirements** from the engineering choices in the rest of this pack.
 
+## User presentation override — 2026-10-05
+
+Use the full 12-slide organizer template at `docs/Interra_Theme05.pptx` as the
+only submission presentation, per explicit user instruction. This overrides older
+repository slide-limit guidance. See `docs/STATUS.md` for the conflict resolution.
+
 ## Current authority as of 2026-09-24
 
 `Theme05_Participant_Guide_UPDATED_FBD.docx` is the newest participant guide and

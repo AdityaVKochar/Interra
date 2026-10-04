@@ -27,7 +27,7 @@ def main() -> None:
     ).decode("utf-8").split("\0")
     selected = {
         name: ROOT / name for name in names if name and (ROOT / name).is_file()
-        and name != "docs/Interra_Theme05.pptx"
+        and (not name.lower().endswith(".pptx") or name == "docs/Interra_Theme05.pptx")
     }
 
     required = [
@@ -41,7 +41,7 @@ def main() -> None:
         REPORT_DIR / "kaggle-20261001" / "livekit-agent.jsonl",
         REPORT_DIR / "kaggle-20261001" / "tool-calls.jsonl",
         REPORT_DIR / "kaggle-20261001" / "summary.md",
-        ROOT / "docs" / "Interra_Theme05_submission.pptx",
+        ROOT / "docs" / "Interra_Theme05.pptx",
     ]
     for path in required:
         if not path.is_file():

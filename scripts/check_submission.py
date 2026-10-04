@@ -1,4 +1,4 @@
-"""Verify historical and latest FDB-v3 evidence plus the eight-slide deck."""
+"""Verify historical and latest FDB-v3 evidence plus the 12-slide deck."""
 from __future__ import annotations
 
 import hashlib
@@ -66,10 +66,10 @@ def main() -> None:
     if len(partial) != manifest["per_recording_result_jsons_retrieved"]:
         raise SystemExit("Retrieved per-recording file count disagrees with the run manifest.")
 
-    with zipfile.ZipFile(ROOT / "docs/Interra_Theme05_submission.pptx") as deck:
+    with zipfile.ZipFile(ROOT / "docs/Interra_Theme05.pptx") as deck:
         slides = [name for name in deck.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", name)]
-        if not 1 <= len(slides) <= 8:
-            raise SystemExit(f"Official guide permits at most eight slides; found {len(slides)}.")
+        if len(slides) != 12:
+            raise SystemExit(f"User submission policy requires exactly 12 slides; found {len(slides)}.")
         slide_text = "\\n".join(deck.read(name).decode("utf-8") for name in slides)
         if "43/100" not in slide_text or "90/100" not in slide_text:
             raise SystemExit("Submission deck does not include the latest strict-pass and turn-take results.")

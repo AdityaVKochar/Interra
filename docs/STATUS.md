@@ -1,3 +1,24 @@
+# Presentation refresh — 2026-10-05
+
+- Discarded prior tracked and untracked local changes at the user's request.
+  Pulled branch `codex/fdb-v3-livekit-kaggle-handoff` at `3e1e3d3`.
+- Sole submission presentation: `docs/Interra_Theme05.pptx`, exactly 12 slides.
+  User explicitly overrides older repository slide-limit guidance. Updated README,
+  handoff, FDB documentation, submission outline, packaging and deck checker links.
+  Retired the alternate presentation builder in favor of validation only.
+- Updated results and next-steps slides from the 2026-10-01 official reports:
+  43/100 strict pass, 90/100 turn-take, 10 no-response, 4.175 seconds mean response
+  latency excluding 11 interruptions. Retained one-run and disabled-judge limits.
+- PPTX integrity, layout and Artifact Tool import checks pass (12 slides).
+  Rendered all slides and inspected changed slides. Focused content checks pass.
+  No runtime implementation changes or new runtime tests in this phase.
+- Existing full evidence checker fails on the pushed manifest's hashes for
+  `kernel-metadata.json`, `summary.md`, and `uploaded-worker.py`. Both Git blobs
+  and working-tree files differ from the declared hashes. Official aggregate
+  pass/evaluation reports match their hashes. Do not rewrite evidence hashes to
+  conceal this discrepancy. Next: reconcile the pushed ancillary evidence manifest.
+- Historical status below describes earlier versions and cannot override this policy.
+
 # Current implementation status — 2026-10-01
 
 ## Latest scored run — 2026-10-01
