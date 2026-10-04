@@ -43,11 +43,25 @@ the prompt, not a benchmark score.
   `PD52` instead of `P52` in this run only, which is model variance at
   temperature 0, not a prompt effect.
 
+### Kaggle run attempt
+
+- `kaggle kernels push` created version 4 of
+  `adityavardhankochar/interra-fdb-v3-benchmark` at 15:44 UTC from `a770259`.
+  It failed after 10 seconds with `Benchmark Secrets unavailable:
+  LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL`, before any install or
+  recording. This repeats the 2026-09-30 finding: a CLI-pushed version does not
+  receive the Secrets attached in the editor. The pushed notebook already holds
+  the current code; it must be started with **Save Version -> Save & Run All**
+  in the Kaggle editor with the three Secrets attached. No score is claimed.
+- `scripts/kaggle_package.py --set INTERRA_NAME=VALUE` now embeds non-secret
+  run settings (for the `INTERRA_FDB_ENDPOINTING_MAX_DELAY` 1.2 vs 1.8 sweep);
+  other names are rejected.
+
 ### Tests
 
-- 205 tests pass on Python 3.11 (199 before). New tests cover spelled address
+- 208 tests pass on Python 3.11 (199 before). New tests cover spelled address
   numbers, lone number words, compound ordinals, filter-name mapping and the
-  commute and filter wrappers.
+  commute and filter wrappers, and packaged Kaggle run settings.
 
 ## Score-improvement phase — 2026-10-04 (unscored live)
 
