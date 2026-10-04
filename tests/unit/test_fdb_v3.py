@@ -144,7 +144,90 @@ class SeedResultsTests(unittest.TestCase):
         ) as seed, patch.object(fdb_v3, "benchmark") as benchmark, patch.object(fdb_v3, "evaluate"):
             fdb_v3.all_steps(Path("/v3"), force=True, use_llm=False)
         seed.assert_called_once_with(Path("/v3"), (fdb_v3.PROJECT_ROOT / "fdb-seed").resolve())
-        benchmark.assert_called_once_with(Path("/v3"), False)
+        self.assertEqual(benchmark.call_args.args, (Path("/v3"), False))
+        self.assertIn("on_stall", benchmark.call_args.kwargs)
+
+
+class FakeRunner:
+    """A runner process whose results appear when the test clock says so."""
+
+    def __init__(self, data: Path, results: list[tuple[float, str]], clock, finish_at: float | None,
+                 exit_code: int = 0):
+        self.data, self.results, self.clock, self.finish_at = data, list(results), clock, finish_at
+        self.exit_code = exit_code
+        self.pid = 4242
+        self.returncode = None
+
+    def poll(self):
+        while self.results and self.results[0][0] <= self.clock.now:
+            _, name = self.results.pop(0)
+            (self.data / name).mkdir(exist_ok=True)
+            (self.data / name / fdb_v3.RESULT_NAME).write_text('{"status": "completed"}')
+        if self.finish_at is not None and self.clock.now >= self.finish_at:
+            self.returncode = self.exit_code
+        return self.returncode
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 0.0
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+class StallGuardTests(unittest.TestCase):
+    def guard(self, data, runners, clock, on_stall, max_restarts=2):
+        queue = list(runners)
+        with patch.object(fdb_v3, "_stop_tree") as stop:
+            restarts = fdb_v3.run_with_stall_guard(
+                ["runner"], cwd=data, env={}, results_dir=data, on_stall=on_stall,
+                stall_seconds=600, max_restarts=max_restarts, popen=lambda *a, **k: queue.pop(0),
+                clock=clock, sleep=clock.sleep, poll_seconds=60,
+            )
+        return restarts, stop
+
+    def test_steady_progress_never_restarts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, clock = Path(temporary), FakeClock()
+            runner = FakeRunner(data, [(300, "a"), (800, "b"), (1300, "c")], clock, finish_at=1500)
+            on_stall = unittest.mock.Mock()
+            restarts, stop = self.guard(data, [runner], clock, on_stall)
+        self.assertEqual(restarts, [])
+        on_stall.assert_not_called()
+        stop.assert_not_called()
+
+    def test_stall_restarts_agent_discards_partial_audio_and_resumes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, clock = Path(temporary), FakeClock()
+            (data / "stuck").mkdir()
+            (data / "stuck" / fdb_v3.OUTPUT_NAME).write_bytes(b"RIFF")
+            hung = FakeRunner(data, [(60, "a")], clock, finish_at=None)
+            resumed = FakeRunner(data, [(900, "stuck")], clock, finish_at=1000)
+            on_stall = unittest.mock.Mock()
+            restarts, stop = self.guard(data, [hung, resumed], clock, on_stall)
+            self.assertFalse((data / "stuck" / fdb_v3.OUTPUT_NAME).exists())
+        on_stall.assert_called_once()
+        stop.assert_called_once_with(hung)
+        self.assertEqual(restarts, [{"restart": 1, "results_before_stall": 1,
+                                     "discarded_partial_outputs": ["stuck"]}])
+
+    def test_repeated_stalls_stop_the_run(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, clock = Path(temporary), FakeClock()
+            runners = [FakeRunner(data, [], clock, finish_at=None) for _ in range(3)]
+            with self.assertRaises(RuntimeError):
+                self.guard(data, runners, clock, unittest.mock.Mock(), max_restarts=2)
+
+    def test_runner_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data, clock = Path(temporary), FakeClock()
+            runner = FakeRunner(data, [], clock, finish_at=60, exit_code=2)
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.guard(data, [runner], clock, unittest.mock.Mock())
 
 
 class RecorderRetryTests(unittest.TestCase):
