@@ -1,4 +1,91 @@
-# Current implementation status — 2026-10-01
+# Current implementation status — 2026-10-04
+
+## Score-improvement phase — 2026-10-04 (unscored live)
+
+Changes target the 57 failures in the 2026-10-01 run. No full Kaggle run has
+measured them yet: this cloud environment's egress policy blocks
+`www.kaggle.com`, `agent-gateway.livekit.cloud`, the LiveKit project host,
+`api.openai.com` and `huggingface.co`.
+
+### Findings that changed the plan
+
+- The 43/100 run scored arguments by **exact match** (organizer LLM judge off).
+  The judge treats `2026-08-20` as equal to `August 20`; exact match does not.
+  The agent now sends the spoken `Month Day` form, which passes both.
+- The 10 "no response" recordings were not quota or late replies. In all 10
+  the pinned recorder `livekit_inference.py` exited with code -6 (SIGABRT)
+  before writing a result, so they scored zero regardless of the agent.
+  Agent state at disconnect does not differ between crashed and normal rooms.
+  The agent's own calls would have passed in 6 of them.
+- LiveKit Agents 1.8.3 already uses its hosted semantic `inference.TurnDetector`
+  when `turn_detection` is unset, and it executes tools only after a turn is
+  committed, so preemptive generation did not cause early tool calls.
+  Early calls came from turns committed in mid-sentence pauses and from
+  repeated identical calls.
+
+### Completed
+
+- Tool descriptions and argument docs follow the pinned reference agent
+  (`v3/lk_agent_tool.py`) and `v3/mock_apis.py` signatures, with neutral
+  examples only. `search_products` accepts the backend's optional `category`.
+- Normalizers: spoken dates to `Month D` (ISO, ordinals, day-first, years);
+  identifiers joined across spaces, hyphens, dots, "dash" and double/triple
+  for `order_id`, `product_id`, `doc_number` and `flight_id`; `doc_type`
+  (`driver's license` to `driver_license`, unique prefix such as `pass`);
+  currency names to ISO codes; bill/account/card nouns removed; commute modes;
+  spelled ordinals in places written as digits; snake_case filter names.
+- Prompt: never ask for clarification, wait for corrections, keep the user's
+  place/product wording, no ISO dates, no repeated calls, no extra steps.
+- `ToolExecutor` returns the first result for an identical call in the same
+  room instead of running and logging it again. Cancelled attempts are retried.
+- `UnfinishedTurnHold`: a committed turn that ends mid-sentence ("..., then",
+  "I'm looking for") skips its reply and is prepended to the next turn; after
+  `INTERRA_FDB_UNFINISHED_TURN_HOLD_SECONDS` (default 1.0) of silence, or when
+  the participant leaves, the held text is answered as a normal turn.
+- Trace adds `conversation_item` (what each side said), `session_error`,
+  `turn_held`, `turn_released` and `tool_call_deduplicated`.
+- New configuration: `INTERRA_FDB_LLM_TEMPERATURE` (default now 0),
+  `INTERRA_FDB_ENDPOINTING_MIN_DELAY`/`MAX_DELAY` (defaults unchanged, 0.7/1.2),
+  `INTERRA_FDB_UNFINISHED_TURN_HOLD_SECONDS`, `INTERRA_FDB_RECORDER_RETRIES`.
+- `scripts/fdb_v3.py benchmark` re-runs recordings whose recorder crashed once
+  (new rooms, completed recordings untouched) and writes
+  `artifacts/fdb_v3/recorder-retries.json`. This retries benchmark
+  infrastructure only; an organizer re-run does not get it.
+- `scripts/kaggle_setup.py` zips every per-recording result JSON, the reports,
+  the agent trace and the tool log into `/kaggle/working/interra-fdb-results.zip`.
+- `python -m agent.fdb_offline rescore --run docs/results/kaggle-20261001`
+  maps rooms to recordings from the kernel log and scores with the official
+  `evaluate_pass_rate.py`. `... llm --provider livekit|openai` replays archived
+  transcripts through the current prompt and tools.
+
+### Measured offline
+
+- `rescore` reproduces the official 43/100 exactly from the archived trace.
+- The same archived calls through the current normalizers and duplicate
+  protection score **56/100** (13 fixed, 0 broken); 62/100 if the recorder had
+  not crashed. Prompt, turn-hold and temperature effects need the `llm` replay
+  or a live run; neither can reach its provider from this environment.
+
+### Tests
+
+- 199 tests pass on Python 3.11 (143 before this phase). New:
+  `test_fdb_normalizers.py`, `test_fdb_turns.py`, `test_fdb_offline.py`,
+  recorder-retry tests in `test_fdb_v3.py`, the results-archive test in
+  `test_kaggle_setup.py`.
+- Changed: `a-b-c` is now joined to `ABC` (hyphen-spelled identifiers were a
+  measured failure); `SKU-42`-style codes still keep punctuation. The
+  missing-checkout config test no longer depends on whether `.runtime` exists.
+- `scripts/check_submission.py` reports a `kernel-metadata.json` evidence hash
+  mismatch on the base commit as well; it is not caused by this phase.
+
+### Known limitations and next tasks
+
+- Lexical end-of-turn checks miss verbs that need an object ("I converted").
+- ASR confusions (`BOB`/`BOP`, `PO999`/`P0999`) and the mislabeled travel_02
+  expected value (`P9-9-9-90011` for spoken `P-8-8-9-9-0-0-1-1`) remain.
+- Next: allow `www.kaggle.com` (and the LiveKit hosts for the offline `llm`
+  replay), run `llm` replay, then a full Kaggle run; then sweep
+  `INTERRA_FDB_ENDPOINTING_MAX_DELAY` (1.2 vs 1.8) on Kaggle.
 
 ## Latest scored run — 2026-10-01
 

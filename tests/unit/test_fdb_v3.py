@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+import tempfile
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -98,6 +99,51 @@ class FdbSpeechGateTests(unittest.TestCase):
         self.assertIn("run_tool_benchmark_all_released.py", command)
         self.assertIn("--root_dir", command)
         self.assertIn("--force", command)
+
+
+class RecorderRetryTests(unittest.TestCase):
+    def test_only_crashed_recordings_are_rerun_and_logged(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            data = root / "released"
+            statuses = {"ok_one": "completed", "crashed": "inference_failed"}
+            for name, status in statuses.items():
+                (data / name).mkdir(parents=True)
+                (data / name / fdb_v3.RESULT_NAME).write_text(json.dumps({"status": status}))
+                (data / name / fdb_v3.OUTPUT_NAME).write_bytes(b"RIFF")
+            runs: list[list[str]] = []
+
+            def runner(command, **_):
+                runs.append(command)
+                if len(runs) == 2:  # the retry re-creates only the deleted result
+                    self.assertFalse((data / "crashed" / fdb_v3.RESULT_NAME).exists())
+                    self.assertFalse((data / "crashed" / fdb_v3.OUTPUT_NAME).exists())
+                    self.assertTrue((data / "ok_one" / fdb_v3.OUTPUT_NAME).exists())
+                    (data / "crashed" / fdb_v3.RESULT_NAME).write_text('{"status": "completed"}')
+
+            with patch.object(fdb_v3, "data_root", return_value=data), patch.object(
+                fdb_v3, "run", side_effect=runner
+            ), patch.object(fdb_v3, "REPORT_ROOT", root / "reports"):
+                fdb_v3.benchmark(root, force=True, recorder_retries=2)
+            self.assertEqual(len(runs), 2)
+            self.assertIn("--force", runs[0])
+            self.assertNotIn("--force", runs[1])
+            log = json.loads((root / "reports" / "recorder-retries.json").read_text())
+            self.assertEqual(log["retried"], [{"attempt": 1, "recording": "crashed"}])
+            self.assertEqual(log["still_failed"], [])
+
+    def test_retries_can_be_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "released" / "crashed").mkdir(parents=True)
+            (root / "released" / "crashed" / fdb_v3.RESULT_NAME).write_text('{"status": "inference_error"}')
+            with patch.object(fdb_v3, "data_root", return_value=root / "released"), patch.object(
+                fdb_v3, "run"
+            ) as runner, patch.object(fdb_v3, "REPORT_ROOT", root / "reports"):
+                fdb_v3.benchmark(root, force=False, recorder_retries=0)
+            runner.assert_called_once()
+            log = json.loads((root / "reports" / "recorder-retries.json").read_text())
+            self.assertEqual(log["still_failed"], ["crashed"])
 
 
 if __name__ == "__main__":

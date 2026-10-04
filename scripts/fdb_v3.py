@@ -77,18 +77,62 @@ def check(v3_root: Path, require_data: bool = True) -> None:
     print("FDB-v3 configuration is ready.")
 
 
-def benchmark(v3_root: Path, force: bool) -> None:
+RESULT_NAME = "result_interra_elevenlabs.json"
+OUTPUT_NAME = "output_interra_elevenlabs.wav"
+RECORDER_FAILURES = {"inference_failed", "inference_error"}
+
+
+def recorder_failures(results_dir: Path) -> list[Path]:
+    """Result files the official runner wrote after its recorder subprocess crashed."""
+    failed = []
+    for path in sorted(results_dir.rglob(RESULT_NAME)):
+        try:
+            status = json.loads(path.read_text(encoding="utf-8")).get("status")
+        except (OSError, json.JSONDecodeError):
+            continue
+        if status in RECORDER_FAILURES:
+            failed.append(path)
+    return failed
+
+
+def benchmark(v3_root: Path, force: bool, recorder_retries: int | None = None) -> None:
+    """Run every released recording, then re-run recordings whose recorder crashed.
+
+    In the 2026-10-01 run the pinned ``livekit_inference.py`` recorder aborted
+    (exit -6) on 10 of 100 recordings before writing any result, so those
+    recordings scored zero whatever the agent did. The runner skips finished
+    recordings, so deleting only the crashed results re-runs just those in new
+    rooms. Each retry is logged to ``recorder-retries.json``.
+    """
+    if recorder_retries is None:
+        recorder_retries = int(os.environ.get("INTERRA_FDB_RECORDER_RETRIES", "1"))
+    results_dir = data_root(v3_root)
     command = [
         sys.executable,
         "run_tool_benchmark_all_released.py",
         "--provider",
         "interra_elevenlabs",
         "--root_dir",
-        str(data_root(v3_root)),
+        str(results_dir),
     ]
-    if force:
-        command.append("--force")
-    run(command, cwd=v3_root, env=os.environ.copy())
+    run(command + (["--force"] if force else []), cwd=v3_root, env=os.environ.copy())
+    retries: list[dict[str, object]] = []
+    for attempt in range(1, recorder_retries + 1):
+        failed = recorder_failures(results_dir)
+        if not failed:
+            break
+        for path in failed:
+            retries.append({"attempt": attempt, "recording": path.parent.name})
+            path.unlink()
+            (path.parent / OUTPUT_NAME).unlink(missing_ok=True)
+        print(f"Re-running {len(failed)} recordings whose recorder crashed (attempt {attempt}).", flush=True)
+        run(command, cwd=v3_root, env=os.environ.copy())
+    REPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    (REPORT_ROOT / "recorder-retries.json").write_text(json.dumps({
+        "retries_allowed": recorder_retries,
+        "retried": retries,
+        "still_failed": [path.parent.name for path in recorder_failures(results_dir)],
+    }, indent=2), encoding="utf-8")
 
 
 def smoke_benchmark(v3_root: Path) -> None:

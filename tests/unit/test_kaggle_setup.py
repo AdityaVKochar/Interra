@@ -57,6 +57,31 @@ class KaggleSetupTests(unittest.TestCase):
                     kaggle_setup.main()
             run.assert_not_called()
 
+    def test_results_archive_holds_every_recording_and_report_without_audio(self) -> None:
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            data = root / "project" / ".runtime" / "Full-Duplex-Bench" / "v3" / "fdb_v3_data_released"
+            for index in range(3):
+                folder = data / f"example_{index}"
+                folder.mkdir(parents=True)
+                (folder / "result_interra_elevenlabs.json").write_text("{}")
+                (folder / "output_interra_elevenlabs.wav").write_bytes(b"RIFF")
+            reports = root / "project" / "artifacts" / "fdb_v3"
+            reports.mkdir(parents=True)
+            (reports / "livekit-agent.jsonl").write_text("{}\n")
+            (reports / "interra_elevenlabs_pass_rate_report.json").write_text("{}")
+            tool_log = root / "agent_tool_calls.log"
+            tool_log.write_text("{}\n")
+            archive = root / "results.zip"
+            count = kaggle_setup.archive_results(root / "project", archive, tool_log)
+            with zipfile.ZipFile(archive) as bundle:
+                names = sorted(bundle.namelist())
+        self.assertEqual(count, 3)
+        self.assertEqual(len([name for name in names if name.startswith("per-recording/")]), 3)
+        self.assertIn("reports/livekit-agent.jsonl", names)
+        self.assertIn("reports/agent_tool_calls.log", names)
+        self.assertFalse(any(name.endswith(".wav") for name in names))
+
     def test_stops_running_ollama_process(self) -> None:
         server = Mock()
         server.poll.return_value = None
