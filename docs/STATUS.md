@@ -1,5 +1,54 @@
 # Current implementation status — 2026-10-04
 
+## LLM replay and argument fixes — 2026-10-04 (second session)
+
+The LiveKit project and Kaggle Secrets were replaced. A one-call
+`inference.LLM("openai/gpt-4.1-mini")` probe now succeeds, and
+`www.kaggle.com` is reachable from this environment. The new project is on the
+free tier: replays at `--concurrency 2` hit 429 `MaxConcurrentGatewayLLMRpm`
+(about 100 requests/min), so replays now use `--concurrency 1` (0 errors).
+
+### Offline LLM replay (`agent.fdb_offline llm`, 2026-10-01 transcripts)
+
+| Prompt/tools | Strict pass | Provider errors |
+| --- | --- | --- |
+| Archived run calls (old prompt, recorder assumed to survive) | 47/100 | – |
+| `0b58a33` (previous phase) | 66/100 | 4 (rate limit) |
+| `d8b494b` (this phase) | **77/100** | 0 |
+
+Reports: `docs/results/llm-replay-20261004/`. The rescore of archived calls is unchanged at 56/100 (62/100 with every
+recording captured). Replay assumes the recorder never crashes and that
+STT/turn segmentation matches the archived trace, so it is an upper bound for
+the prompt, not a benchmark score.
+
+### Regressions found in the `0b58a33` replay and fixed generally
+
+- Spelled house numbers stayed as words ("one zero one Main Street",
+  "five hundred Central Ave"). `normalize_place` now writes runs of two or
+  more number words as digits (`101`, `500`, `123` for "one twenty three") and
+  compound ordinals ("twenty first" -> `21st`); a lone "one" is kept.
+- The `update_search_filter` doc gave `max_rent` as its example, so "max
+  price" was sent as `max_rent`. Filter names now follow the
+  `search_apartments` parameters (`max_price`, `bedrooms`, `pets_allowed`) via
+  `normalize_filter_name`; other names stay in the user's words.
+- A spoken product code was searched before `add_to_cart`; the doc now says to
+  use a code the user gives directly.
+- Instructions now cover a correction later in the same message, misheard
+  words in a transcript, conditional requests (only the branch that applies)
+  and requests no tool fits (no substitute tool). `search_apartments` is scoped
+  to long-term rentals; filter updates are only for filters the user asks to
+  change, not for search criteria.
+- `search_products.query` keeps only the product the user settled on.
+  Ecommerce replay after this change: 24/29 (23/29 before). ecommerce_14 sent
+  `PD52` instead of `P52` in this run only, which is model variance at
+  temperature 0, not a prompt effect.
+
+### Tests
+
+- 205 tests pass on Python 3.11 (199 before). New tests cover spelled address
+  numbers, lone number words, compound ordinals, filter-name mapping and the
+  commute and filter wrappers.
+
 ## Score-improvement phase — 2026-10-04 (unscored live)
 
 Changes target the 57 failures in the 2026-10-01 run. No full Kaggle run has
@@ -90,9 +139,9 @@ measured them yet: this cloud environment's egress policy blocks
   `llm` replay or Kaggle run has used the current prompt yet. LiveKit
   Inference is the only LLM route; the `openai` replay provider was removed
   because no `OPENAI_API_KEY` is available.
-- Next: allow `www.kaggle.com` (and the LiveKit hosts for the offline `llm`
-  replay), run `llm` replay, then a full Kaggle run; then sweep
-  `INTERRA_FDB_ENDPOINTING_MAX_DELAY` (1.2 vs 1.8) on Kaggle.
+- Superseded by the second-session section above: the probe now succeeds and
+  the `llm` replay has run. Still next: the full Kaggle run, then the
+  `INTERRA_FDB_ENDPOINTING_MAX_DELAY` sweep (1.2 vs 1.8) on Kaggle.
 
 ## Latest scored run — 2026-10-01
 
