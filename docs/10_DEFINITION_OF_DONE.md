@@ -61,7 +61,7 @@ its tests remain useful, but it no longer defines completion.
 - [x] Hosted and local model responsibilities are documented honestly.
 - [ ] Two additional quota-restored runs and the organizer LLM judge report are still needed for repeatable normalized scores.
 - [ ] Demo video is three to five minutes and shows real behavior.
-- [x] Slide deck is no more than eight slides (audited package has eight).
+- [x] Slide deck contains exactly 12 slides, per user instruction.
 - [ ] Team identities and submission form are complete.
 - [ ] The last uploaded submission is verified as the intended final version.
 

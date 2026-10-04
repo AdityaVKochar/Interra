@@ -50,8 +50,7 @@ does not substitute for an FDB-v3 run.
 
 ## Presentation and demo
 
-- Presentation: [eight-slide submission deck](docs/Interra_Theme05_submission.pptx)
-- Original organizer template: [twelve-slide deck](docs/Interra_Theme05.pptx)
+- Presentation: [12-slide submission deck](docs/Interra_Theme05.pptx)
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 
 The recording is three to five minutes: one benchmark interruption or
@@ -72,7 +71,7 @@ self-correction, then the camera troubleshooting session.
 | `.env.fdb.example` | Environment variable names, with empty secrets |
 | `docs/FDB_V3.md` | Benchmark pin, models, and scoring contract |
 | `docs/AI_DISCLOSURE_DRAFT.md` | AI usage disclosure |
-| `docs/Interra_Theme05_submission.pptx` | Audited eight-slide submission deck |
+| `docs/Interra_Theme05.pptx` | Audited 12-slide submission deck |
 | `docs/results/kaggle-20261001/` | Latest reports, logs, trace, source, and run manifest |
 | `vendor/samsung_theme05/` | Superseded queue kit |
 
@@ -263,7 +262,7 @@ These tests check orchestration, cancellation, and the agent configuration.
 They do not replace the official 100-recording reports.
 
 Verify both the historical baseline archive, latest run hashes, score comparison,
-and eight-slide deck with `python scripts/check_submission.py`. An incomplete review archive can be made
+and 12-slide deck with `python scripts/check_submission.py`. An incomplete review archive can be made
 with `python scripts/package_review.py --allow-missing-demo`; supply `--demo`
 with the actual video for a complete archive.
 
@@ -307,7 +306,7 @@ restored; the demo and registered team details also remain outstanding. See
 
 ## Documentation
 
-- [Slide deck](docs/Interra_Theme05_submission.pptx)
+- [Slide deck](docs/Interra_Theme05.pptx)
 - [Official reports](docs/results/)
 - [FDB-v3 contract](docs/FDB_V3.md)
 - [Status and run history](docs/STATUS.md)
