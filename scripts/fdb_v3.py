@@ -135,6 +135,31 @@ def benchmark(v3_root: Path, force: bool, recorder_retries: int | None = None) -
     }, indent=2), encoding="utf-8")
 
 
+def seed_results(v3_root: Path, seed_dir: Path) -> dict[str, object]:
+    """Place results kept from an earlier run before the benchmark starts.
+
+    The official runner skips a recording whose result file exists, so only
+    the recordings without a seed are recorded. ``seed-manifest.json`` (from
+    ``agent.fdb_offline outage-seed``) says why each recording was kept or
+    re-run; it is copied to ``artifacts/fdb_v3/seeded-results.json``.
+    """
+    results_dir = data_root(v3_root)
+    manifest_path = seed_dir / "seed-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
+    seeded = []
+    for source in sorted(seed_dir.glob(f"*/{RESULT_NAME}")):
+        target = results_dir / source.parent.name
+        if not (target / "input.wav").is_file():
+            raise RuntimeError(f"Seed {source.parent.name} has no released recording in {results_dir}")
+        shutil.copy2(source, target / RESULT_NAME)
+        seeded.append(source.parent.name)
+    print(f"Seeded {len(seeded)} results from {seed_dir}; the rest will be recorded.", flush=True)
+    report = {**manifest, "seeded_into_run": seeded}
+    REPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    (REPORT_ROOT / "seeded-results.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report
+
+
 def smoke_benchmark(v3_root: Path) -> None:
     """Run one released recording and require recognized agent speech."""
     source = next(
@@ -236,6 +261,10 @@ def all_steps(v3_root: Path, force: bool, use_llm: bool) -> None:
                 raise RuntimeError(f"LiveKit agent exited during startup with code {agent.returncode}")
             time.sleep(0.5)
         smoke_benchmark(v3_root)
+        seed = os.environ.get("INTERRA_FDB_SEED_RESULTS")
+        if seed:
+            seed_results(v3_root, (PROJECT_ROOT / seed).resolve())
+            force = False  # --force would overwrite the seeded results
         benchmark(v3_root, force)
     finally:
         agent.terminate()

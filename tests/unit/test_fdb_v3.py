@@ -9,6 +9,7 @@ from pathlib import Path
 import tempfile
 from tempfile import TemporaryDirectory
 import unittest
+import unittest.mock
 from unittest.mock import patch
 
 from scripts import fdb_v3
@@ -99,6 +100,51 @@ class FdbSpeechGateTests(unittest.TestCase):
         self.assertIn("run_tool_benchmark_all_released.py", command)
         self.assertIn("--root_dir", command)
         self.assertIn("--force", command)
+
+
+class SeedResultsTests(unittest.TestCase):
+    def test_seeds_are_placed_and_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            data, seed = root / "released", root / "seed"
+            for name in ("kept", "rerun"):
+                (data / name).mkdir(parents=True)
+                (data / name / "input.wav").write_bytes(b"RIFF")
+            (seed / "kept").mkdir(parents=True)
+            (seed / "kept" / fdb_v3.RESULT_NAME).write_text('{"status": "completed"}')
+            (seed / "seed-manifest.json").write_text(json.dumps({"rerun": ["rerun"]}))
+            with patch.object(fdb_v3, "data_root", return_value=data), patch.object(
+                fdb_v3, "REPORT_ROOT", root / "reports"
+            ):
+                report = fdb_v3.seed_results(root, seed)
+            self.assertTrue((data / "kept" / fdb_v3.RESULT_NAME).is_file())
+            self.assertFalse((data / "rerun" / fdb_v3.RESULT_NAME).exists())
+            self.assertEqual(report["seeded_into_run"], ["kept"])
+            saved = json.loads((root / "reports" / "seeded-results.json").read_text())
+            self.assertEqual(saved["rerun"], ["rerun"])
+
+    def test_seed_without_released_recording_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "released").mkdir()
+            (root / "seed" / "unknown").mkdir(parents=True)
+            (root / "seed" / "unknown" / fdb_v3.RESULT_NAME).write_text("{}")
+            with patch.object(fdb_v3, "data_root", return_value=root / "released"), patch.object(
+                fdb_v3, "REPORT_ROOT", root / "reports"
+            ), self.assertRaises(RuntimeError):
+                fdb_v3.seed_results(root, root / "seed")
+
+    def test_seeded_run_never_forces_over_seeds(self) -> None:
+        agent = unittest.mock.Mock()
+        agent.poll.return_value = None
+        with patch.dict(os.environ, {"INTERRA_FDB_SEED_RESULTS": "fdb-seed"}), patch.object(
+            fdb_v3.subprocess, "Popen", return_value=agent
+        ), patch.object(fdb_v3.time, "sleep"), patch.object(fdb_v3, "smoke_benchmark"), patch.object(
+            fdb_v3, "seed_results"
+        ) as seed, patch.object(fdb_v3, "benchmark") as benchmark, patch.object(fdb_v3, "evaluate"):
+            fdb_v3.all_steps(Path("/v3"), force=True, use_llm=False)
+        seed.assert_called_once_with(Path("/v3"), (fdb_v3.PROJECT_ROOT / "fdb-seed").resolve())
+        benchmark.assert_called_once_with(Path("/v3"), False)
 
 
 class RecorderRetryTests(unittest.TestCase):

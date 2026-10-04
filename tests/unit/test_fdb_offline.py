@@ -4,12 +4,15 @@ import json
 import tempfile
 import textwrap
 import unittest
+import zipfile
 from pathlib import Path
 
 from livekit.agents import llm
 
 from agent.fdb_offline import (
+    build_outage_seed,
     load_recordings,
+    outage_rooms,
     renormalize_calls,
     replay_llm,
     rescore,
@@ -90,6 +93,57 @@ class RoomMapTests(unittest.TestCase):
         rooms = room_map_from_kernel_logs(retried, batch_size=2)
         self.assertEqual(sorted(rooms), ["eval-00000002", "eval-00000004"])
         self.assertTrue(rooms["eval-00000004"].recorder_ok)
+
+
+QUOTA_ERROR = "Error code: 429 - {'type': 'inference_quota_exceeded', 'category': 'MaxGatewayCredits'}"
+
+
+class OutageSeedTests(unittest.TestCase):
+    def write_run(self, root: Path) -> Path:
+        run = root / "run"
+        run.mkdir()
+        trace = [
+            event("eval-a", "session_started", 10.0),
+            event("eval-a", "session_error", 11.0, source="STT", error="429 Too Many Requests"),
+            event("eval-b", "session_started", 20.0),
+            event("eval-c", "session_started", 30.0),
+            event("eval-c", "session_error", 31.0, source="LLM", error=QUOTA_ERROR),
+            event("eval-d", "session_started", 40.0),
+        ]
+        (run / "livekit-agent.jsonl").write_text("\n".join(json.dumps(item) for item in trace) + "\n")
+        with zipfile.ZipFile(run / "interra-fdb-results.zip", "w") as bundle:
+            for folder, room in [("shop_01_a", "eval-a"), ("shop_02_b", "eval-b"),
+                                 ("trip_01_c", "eval-c"), ("trip_02_d", "eval-d")]:
+                bundle.writestr(f"per-recording/{folder}/result_interra_elevenlabs.json",
+                                json.dumps({"room_name": room, "status": "completed"}))
+            bundle.writestr("reports/agent_tool_calls.log", "")
+        return run
+
+    def test_cut_starts_at_first_quota_error_by_start_time(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run = self.write_run(Path(directory))
+            cutoff, rooms = outage_rooms(run / "livekit-agent.jsonl")
+        self.assertEqual(cutoff, "eval-c")
+        self.assertEqual(rooms, {"eval-c", "eval-d"})  # a plain STT 429 is not an outage
+
+    def test_seed_keeps_results_before_the_outage_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run = self.write_run(Path(directory))
+            seed = Path(directory) / "seed"
+            manifest = build_outage_seed(run, seed)
+            kept = sorted(path.parent.name for path in seed.glob("*/result_interra_elevenlabs.json"))
+            saved = json.loads((seed / "seed-manifest.json").read_text())
+        self.assertEqual(kept, ["shop_01_a", "shop_02_b"])
+        self.assertEqual(manifest["rerun"], ["trip_01_c", "trip_02_d"])
+        self.assertEqual(saved["cutoff_room"], "eval-c")
+
+    def test_run_without_outage_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run = Path(directory) / "run"
+            run.mkdir()
+            (run / "livekit-agent.jsonl").write_text(json.dumps(event("eval-a", "session_started", 1.0)) + "\n")
+            with self.assertRaises(ValueError):
+                build_outage_seed(run, Path(directory) / "seed")
 
 
 class UserTurnTests(unittest.TestCase):

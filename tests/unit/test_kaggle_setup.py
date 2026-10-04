@@ -244,6 +244,21 @@ class KaggleSetupTests(unittest.TestCase):
             'RUN_ENVIRONMENT: dict[str, str] = {"INTERRA_FDB_ENDPOINTING_MAX_DELAY": "1.8"}', source
         )
 
+    def test_package_embeds_seed_results_and_points_the_worker_at_them(self) -> None:
+        with TemporaryDirectory() as directory:
+            seed = Path(directory) / "seed"
+            (seed / "shop_01_a").mkdir(parents=True)
+            (seed / "shop_01_a" / "result_interra_elevenlabs.json").write_text("{}")
+            (seed / "seed-manifest.json").write_text("{}")
+            destination = kaggle_package.package(Path(directory) / "upload", seed=seed)
+            source = (destination / "interra_setup.py").read_text(encoding="utf-8")
+        self.assertIn('"INTERRA_FDB_SEED_RESULTS": "fdb-seed"', source)
+        payload = source.split('EMBEDDED_SOURCE_B64 = "', 1)[1].split('"', 1)[0]
+        with zipfile.ZipFile(io.BytesIO(base64.b64decode(payload))) as bundle:
+            names = bundle.namelist()
+        self.assertIn("fdb-seed/shop_01_a/result_interra_elevenlabs.json", names)
+        self.assertIn("fdb-seed/seed-manifest.json", names)
+
     def test_package_rejects_non_interra_settings(self) -> None:
         for pair in ("LIVEKIT_API_SECRET=x", "INTERRA_FDB_ENDPOINTING_MAX_DELAY"):
             with self.subTest(pair=pair), self.assertRaises(ValueError):

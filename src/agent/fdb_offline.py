@@ -6,13 +6,18 @@
              rules. Deterministic; needs no network.
 ``llm``      Replay the archived final transcripts through the current prompt,
              tools and an LLM, then score the calls the same way. Needs LiveKit
-             Inference (``LIVEKIT_*``) or an OpenAI key.
+             Inference (``LIVEKIT_*``).
+``outage-seed``
+             Split an archived run at the first provider quota outage. Results
+             of recordings that started earlier are written as seeds, so a new
+             run re-records only the recordings the outage hit.
 
 Both read the scenario labels from the pinned benchmark checkout. The labels are
 used only for scoring; nothing from them reaches the prompt or the tools.
 
     python -m agent.fdb_offline rescore --run docs/results/kaggle-20261001
     python -m agent.fdb_offline llm --run docs/results/kaggle-20261001 --provider livekit
+    python -m agent.fdb_offline outage-seed --run docs/results/kaggle-20261004 --output fdb-seed
 """
 
 from __future__ import annotations
@@ -23,7 +28,9 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import sys
+import zipfile
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -214,6 +221,80 @@ async def rescore(run_dir: Path, v3_root: Path, *, batch_size: int = 100) -> dic
     }
 
 
+# Provider errors that mean the account ran out of quota, not that the agent failed.
+OUTAGE_MARKERS = ("inference_quota_exceeded", "MaxGatewayCredits")
+RESULT_NAME = "result_interra_elevenlabs.json"
+
+
+def outage_rooms(trace_path: Path, markers: Iterable[str] = OUTAGE_MARKERS) -> tuple[str | None, set[str]]:
+    """Rooms that started at or after the first room that hit a quota outage.
+
+    The cut is made by start time, never by score: every recording from the
+    first quota error on is selected, whatever it scored.
+    """
+    started: dict[str, float] = {}
+    first: tuple[float, str] | None = None
+    with trace_path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            event = json.loads(line)
+            room = event.get("room")
+            if not room:
+                continue
+            if event.get("kind") == "session_started":
+                started.setdefault(room, float(event["time"]))
+            elif event.get("kind") == "session_error" and first is None:
+                if any(marker in str(event.get("error", "")) for marker in markers):
+                    first = (float(event["time"]), room)
+    if first is None:
+        return None, set()
+    cutoff_room = first[1]
+    cutoff = started.get(cutoff_room, first[0])
+    return cutoff_room, {room for room, time in started.items() if time >= cutoff}
+
+
+def build_outage_seed(run_dir: Path, destination: Path) -> dict[str, Any]:
+    """Write the run's results that predate the outage as seeds for a re-run.
+
+    ``interra-fdb-results.zip`` holds every final per-recording result. Seeds
+    keep their original files; the official runner skips a recording whose
+    result exists, so only the outage recordings are recorded again.
+    """
+    cutoff_room, affected = outage_rooms(run_dir / "livekit-agent.jsonl")
+    if cutoff_room is None:
+        raise ValueError(f"No provider quota outage found in {run_dir}")
+    seeded: list[str] = []
+    rerun: list[str] = []
+    if destination.exists():
+        shutil.rmtree(destination)
+    destination.mkdir(parents=True)
+    with zipfile.ZipFile(run_dir / "interra-fdb-results.zip") as bundle:
+        for name in sorted(bundle.namelist()):
+            parts = Path(name).parts
+            if len(parts) != 3 or parts[0] != "per-recording" or parts[2] != RESULT_NAME:
+                continue
+            folder = parts[1]
+            data = bundle.read(name)
+            if json.loads(data).get("room_name") in affected:
+                rerun.append(folder)
+                continue
+            (destination / folder).mkdir()
+            (destination / folder / RESULT_NAME).write_bytes(data)
+            seeded.append(folder)
+    manifest = {
+        "source_run": run_dir.as_posix(),
+        "rule": "re-record every recording whose room started at or after the "
+                "first room with a provider quota error",
+        "markers": list(OUTAGE_MARKERS),
+        "cutoff_room": cutoff_room,
+        "seeded": seeded,
+        "rerun": rerun,
+    }
+    (destination / "seed-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return manifest
+
+
 def user_turns(events: list[dict[str, Any]], pause_s: float = 1.2) -> list[str]:
     """Split a room's final transcripts into the turns endpointing would commit.
 
@@ -378,8 +459,17 @@ def main(argv: list[str] | None = None) -> None:
     llm_command.add_argument("--pause", type=float, default=1.2,
                              help="Silence in seconds that ends a replayed turn")
     llm_command.add_argument("--scenario", action="append", help="Replay only these scenario IDs")
+    seed_command = sub.add_parser("outage-seed")
+    seed_command.add_argument("--run", type=Path, required=True,
+                              help="Archived run folder with livekit-agent.jsonl and interra-fdb-results.zip")
+    seed_command.add_argument("--output", type=Path, required=True, help="Seed folder to write")
     args = parser.parse_args(argv)
 
+    if args.mode == "outage-seed":
+        manifest = build_outage_seed(args.run, args.output)
+        print(f"outage-seed: {len(manifest['seeded'])} seeded, {len(manifest['rerun'])} to re-record"
+              f" (cut at {manifest['cutoff_room']})")
+        return
     if args.mode == "rescore":
         report = asyncio.run(rescore(args.run, args.v3_root))
     else:
