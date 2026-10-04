@@ -12,6 +12,7 @@ from agent.fdb_livekit import (
     normalize_commute_mode,
     normalize_currency,
     normalize_doc_type,
+    normalize_filter_name,
     normalize_identifier,
     normalize_place,
     normalize_spoken_date,
@@ -109,6 +110,44 @@ class EnumTests(unittest.TestCase):
         self.assertEqual(normalize_place("my  house"), "my house")
         self.assertEqual(normalize_place("the bakery on ninth"), "the bakery on 9th")
         self.assertEqual(normalize_place("Eleventh Avenue"), "11th Avenue")
+        self.assertEqual(normalize_place("twenty first street"), "21st street")
+
+    def test_spelled_address_numbers_become_digits(self):
+        # Observed in the 2026-10-04 LLM replay: house numbers stayed as words.
+        for spoken, expected in [
+            ("one zero one Main Street", "101 Main Street"),
+            ("five hundred Central Ave", "500 Central Ave"),
+            ("one twenty three Elm Road", "123 Elm Road"),
+            ("forty-two Pine Lane", "42 Pine Lane"),
+            ("twelve hundred Oak Street", "1200 Oak Street"),
+        ]:
+            with self.subTest(spoken=spoken):
+                self.assertEqual(normalize_place(spoken), expected)
+
+    def test_lone_number_words_keep_their_meaning(self):
+        self.assertEqual(normalize_place("the one on Main"), "the one on Main")
+        self.assertEqual(normalize_place("One Market Plaza"), "One Market Plaza")
+
+
+class FilterNameTests(unittest.TestCase):
+    def test_rent_and_budget_bounds_use_the_search_parameter(self):
+        # Observed in the 2026-10-04 LLM replay: "max price" was sent as max_rent.
+        for spoken, expected in [
+            ("max_rent", "max_price"), ("Max Rent", "max_price"),
+            ("maximum budget", "max_price"), ("budget", "max_price"),
+            ("min-rent", "min_price"), ("max_price", "max_price"),
+        ]:
+            with self.subTest(spoken=spoken):
+                self.assertEqual(normalize_filter_name(spoken), expected)
+
+    def test_pet_and_bedroom_synonyms_use_the_search_parameter(self):
+        self.assertEqual(normalize_filter_name("pet friendly"), "pets_allowed")
+        self.assertEqual(normalize_filter_name("number of bedrooms"), "bedrooms")
+
+    def test_other_filters_stay_in_the_users_words(self):
+        self.assertEqual(normalize_filter_name("Min Bedrooms"), "min_bedrooms")
+        self.assertEqual(normalize_filter_name("preferred neighborhood"), "preferred_neighborhood")
+        self.assertEqual(normalize_filter_name("parking"), "parking")
 
 
 class ToolWrapperNormalizationTests(unittest.IsolatedAsyncioTestCase):
@@ -155,9 +194,18 @@ class ToolWrapperNormalizationTests(unittest.IsolatedAsyncioTestCase):
             "mode": "biking",
         })
 
-    async def test_filter_name_is_snake_case(self):
+    async def test_filter_name_matches_search_parameters(self):
         await self.tools.update_search_filter("Max Rent", "1900")
-        self.assertEqual(self.sent().kwargs, {"filter_name": "max_rent", "value": 1900})
+        self.assertEqual(self.sent().kwargs, {"filter_name": "max_price", "value": 1900})
+        await self.tools.update_search_filter("Has Parking", "yes")
+        self.assertEqual(self.sent().kwargs, {"filter_name": "has_parking", "value": "yes"})
+
+    async def test_commute_writes_spoken_house_numbers_as_digits(self):
+        await self.tools.calculate_commute("one zero one Main Street", "the office", "drive")
+        self.assertEqual(self.sent().kwargs, {
+            "origin_address": "101 Main Street", "destination_address": "the office",
+            "mode": "driving",
+        })
 
     async def test_product_search_forwards_only_given_options(self):
         await self.tools.search_products("Desk lamps")

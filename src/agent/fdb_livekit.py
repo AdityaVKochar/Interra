@@ -548,20 +548,99 @@ def normalize_commute_mode(value: str) -> str:
 
 
 _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
+_TEEN_WORDS = {
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+    "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_TENS_WORDS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+}
+_NUMBER_WORDS = (
+    set(_DIGIT_WORDS) | set(_TEEN_WORDS) | set(_TENS_WORDS) | {"hundred", "thousand"}
+)
+
+
+def spoken_number_run(words: list[str]) -> str:
+    """Write a spoken house or street number as digits.
+
+    ``"five hundred"`` is read as a quantity (500). Without a scale word each
+    spoken group is a run of digits, as in addresses: ``"one zero one"`` is
+    101 and ``"one twenty three"`` is 123.
+    """
+    lowered = [word.lower() for word in words]
+    if {"hundred", "thousand"} & set(lowered):
+        return str(int(_as_float(" ".join(lowered))))
+    groups: list[str] = []
+    index = 0
+    while index < len(lowered):
+        word = lowered[index]
+        if word in _TENS_WORDS:
+            value = _TENS_WORDS[word]
+            following = lowered[index + 1] if index + 1 < len(lowered) else ""
+            if following in _DIGIT_WORDS and following != "zero":
+                value += int(_DIGIT_WORDS[following])
+                index += 1
+            groups.append(str(value))
+        elif word in _TEEN_WORDS:
+            groups.append(str(_TEEN_WORDS[word]))
+        else:
+            groups.append(_DIGIT_WORDS[word])
+        index += 1
+    return "".join(groups)
 
 
 def normalize_place(value: str) -> str:
-    """Keep the user's place wording; only write spelled ordinals as digits."""
+    """Keep the user's place wording; write spelled numbers and ordinals as digits.
+
+    Only runs of two or more number words are rewritten, so a lone word such
+    as "the one on Main" keeps its meaning.
+    """
     if not isinstance(value, str):
         return value
 
     def digits(match: re.Match[str]) -> str:
-        number = _ORDINAL_WORDS[match.group(0).lower()]
+        tens = _TENS_WORDS.get((match.group(1) or "").lower(), 0)
+        number = tens + _ORDINAL_WORDS[match.group(2).lower()]
         suffix = "th" if 10 <= number % 100 <= 20 else _ORDINAL_SUFFIX.get(number % 10, "th")
         return f"{number}{suffix}"
 
-    pattern = r"\b(?:" + "|".join(_ORDINAL_WORDS) + r")\b"
-    return re.sub(pattern, digits, re.sub(r"\s+", " ", value.strip()), flags=re.IGNORECASE)
+    def number(match: re.Match[str]) -> str:
+        return spoken_number_run(re.split(r"[\s\-]+", match.group(0)))
+
+    text = re.sub(r"\s+", " ", value.strip())
+    ordinal = r"\b(?:(" + "|".join(_TENS_WORDS) + r")[\s\-]+)?(" + "|".join(_ORDINAL_WORDS) + r")\b"
+    text = re.sub(ordinal, digits, text, flags=re.IGNORECASE)
+    word = r"(?:" + "|".join(sorted(_NUMBER_WORDS, key=len, reverse=True)) + r")"
+    run = rf"\b{word}(?:[\s\-]+{word})+\b"
+    return re.sub(run, number, text, flags=re.IGNORECASE)
+
+
+_PRICE_WORDS = ("price", "rent", "budget", "cost", "monthly_rent", "rent_price", "monthly_budget")
+_FILTER_ALIASES = {
+    "budget": "max_price", "rent": "max_price", "price": "max_price",
+    "pets": "pets_allowed", "pet_friendly": "pets_allowed", "allow_pets": "pets_allowed",
+    "allows_pets": "pets_allowed", "pets_ok": "pets_allowed",
+    "bedroom": "bedrooms", "num_bedrooms": "bedrooms", "bedroom_count": "bedrooms",
+    "number_of_bedrooms": "bedrooms",
+}
+
+
+def normalize_filter_name(value: str) -> str:
+    """Name a saved filter after the matching ``search_apartments`` parameter.
+
+    The backend's search takes ``max_price``, ``bedrooms`` and ``pets_allowed``,
+    so a rent or budget bound is ``max_price``/``min_price`` and pet or bedroom
+    synonyms use those keys. Any other name is kept in snake_case.
+    """
+    if not isinstance(value, str):
+        return value
+    text = re.sub(r"[\s\-]+", "_", value.strip().lower()).strip("_")
+    text = re.sub(r"^(max|min)(?:imum)?_", r"\1_", text)
+    bound = re.fullmatch(r"(max|min)_(.+)", text)
+    if bound and bound.group(2) in _PRICE_WORDS:
+        return f"{bound.group(1)}_price"
+    return _FILTER_ALIASES.get(text, text)
 
 
 def normalize_filter_value(value: str | float | bool) -> str | float | bool:
@@ -588,7 +667,15 @@ When to act:
   said and fill an optional value with its documented default.
 - Wait for the complete request. If the user corrects themselves ("no wait",
   "actually", "make it ... instead"), use only the final values and never call
-  a tool with a value the user replaced.
+  a tool with a value the user replaced. Read the whole message before the
+  first call: a value corrected later in the same message is never sent.
+- The text is a speech transcript and may contain misheard words. Read it by
+  context: a code given while asking about an order is the order number even
+  if a word around it came out wrong.
+- For a conditional request ("if ..., do A; otherwise do B"), check the
+  condition with the tool results and do only the branch that applies.
+- If no tool fits part of the request, say so briefly. Never use a tool built
+  for something else as a substitute.
 - A greeting or background with no concrete request gets one short friendly
   sentence and no tool call.
 - Call every tool needed to finish the request, in order, using identifiers
@@ -903,7 +990,7 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
                 source_account=strip_trailing_noun(source_account, "account").lower(),
             )
 
-        @function_tool(description="Search for rental apartments in a city.")
+        @function_tool(description="Search for long-term rental apartments in a city. Not for hotels or short stays.")
         async def search_apartments(
             self, city: str, bedrooms: int | str, max_price: float | str,
             pets_allowed: bool | None = None,
@@ -940,17 +1027,19 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
             )
 
         @function_tool(description=(
-            "Update one apartment-search filter immediately. Call once per filter the user changes."
+            "Update one saved apartment-search filter immediately. Call once per filter the user "
+            "explicitly asks to update, change or set. Criteria given for a search (\"search for a "
+            "one bedroom\") go to search_apartments and are not filter updates."
         ))
         async def update_search_filter(self, filter_name: str, value: str | float | bool) -> str:
             """
             Args:
-                filter_name: snake_case filter key. Prefix bounds with min_ or max_ (e.g. "max_rent", "min_bathrooms"); name other filters with a plain noun (e.g. "parking").
+                filter_name: snake_case filter key. Use the search_apartments parameter name when the filter is one of them ("max_price" for any rent or budget limit, "bedrooms", "pets_allowed"); otherwise the user's words with min_/max_ for bounds (e.g. "min_bathrooms") or a plain noun (e.g. "parking").
                 value: The new value: a number for bounds and counts, true/false for yes/no filters, otherwise text.
             """
             return await self.executor.call(
                 "update_search_filter",
-                filter_name=re.sub(r"[\s\-]+", "_", filter_name.strip().lower()),
+                filter_name=normalize_filter_name(filter_name),
                 value=normalize_filter_value(value),
             )
 
@@ -983,7 +1072,7 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         async def add_to_cart(self, product_id: str, quantity: int | str = 1) -> str:
             """
             Args:
-                product_id: product_id from search_products, or the code the user spelled.
+                product_id: The product code the user gave (e.g. "item b seven" is "B7"), used directly without searching; otherwise product_id from search_products.
                 quantity: How many to add, as a number.
             """
             return await self.executor.call(
