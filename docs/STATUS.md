@@ -55,7 +55,7 @@ measured them yet: this cloud environment's egress policy blocks
   the agent trace and the tool log into `/kaggle/working/interra-fdb-results.zip`.
 - `python -m agent.fdb_offline rescore --run docs/results/kaggle-20261001`
   maps rooms to recordings from the kernel log and scores with the official
-  `evaluate_pass_rate.py`. `... llm --provider livekit|openai` replays archived
+  `evaluate_pass_rate.py`. `... llm --provider livekit` replays archived
   transcripts through the current prompt and tools.
 
 ### Measured offline
@@ -83,6 +83,13 @@ measured them yet: this cloud environment's egress policy blocks
 - Lexical end-of-turn checks miss verbs that need an object ("I converted").
 - ASR confusions (`BOB`/`BOP`, `PO999`/`P0999`) and the mislabeled travel_02
   expected value (`P9-9-9-90011` for spoken `P-8-8-9-9-0-0-1-1`) remain.
+- 2026-10-04 re-check: the patch applies cleanly, 199 tests pass and
+  `rescore` still gives 43 -> 56/100 (62/100 with every recording captured).
+  A single `inference.LLM("openai/gpt-4.1-mini")` probe still returns 429
+  `inference_quota_exceeded` (`MaxGatewayCredits`, `max_allowed: 0`), so no
+  `llm` replay or Kaggle run has used the current prompt yet. LiveKit
+  Inference is the only LLM route; the `openai` replay provider was removed
+  because no `OPENAI_API_KEY` is available.
 - Next: allow `www.kaggle.com` (and the LiveKit hosts for the offline `llm`
   replay), run `llm` replay, then a full Kaggle run; then sweep
   `INTERRA_FDB_ENDPOINTING_MAX_DELAY` (1.2 vs 1.8) on Kaggle.

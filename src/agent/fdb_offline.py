@@ -286,10 +286,6 @@ def make_model(provider: str, model_name: str, temperature: float) -> Any:
         from livekit.agents import inference
 
         return inference.LLM(model=model_name, extra_kwargs=options)
-    if provider == "openai":
-        from livekit.plugins import openai
-
-        return openai.LLM(model=model_name.removeprefix("openai/"), **options)
     raise ValueError(f"Unsupported provider: {provider}")
 
 
@@ -366,7 +362,7 @@ def main(argv: list[str] | None = None) -> None:
                              default=Path(os.environ.get("INTERRA_FDB_V3_ROOT", DEFAULT_V3_ROOT)))
         command.add_argument("--output", type=Path, help="Write the full JSON report here")
     llm_command = sub.choices["llm"]
-    llm_command.add_argument("--provider", choices=("livekit", "openai"), default="livekit")
+    llm_command.add_argument("--provider", choices=("livekit",), default="livekit")
     llm_command.add_argument("--model", default=os.environ.get("INTERRA_FDB_LLM_MODEL", "openai/gpt-4.1-mini"))
     llm_command.add_argument("--temperature", type=float,
                              default=float(os.environ.get("INTERRA_FDB_LLM_TEMPERATURE", "0")))
