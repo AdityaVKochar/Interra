@@ -31,13 +31,30 @@ def _source_archive() -> bytes:
     return buffer.getvalue()
 
 
-def _worker_source() -> str:
+def parse_settings(pairs: list[str]) -> dict[str, str]:
+    """Parse ``NAME=VALUE`` experiment settings; only non-secret INTERRA_* names."""
+    settings: dict[str, str] = {}
+    for pair in pairs:
+        name, separator, value = pair.partition("=")
+        if not separator or not name.startswith("INTERRA_"):
+            raise ValueError(f"Expected INTERRA_NAME=VALUE, got {pair!r}")
+        settings[name] = value
+    return settings
+
+
+def _worker_source(settings: dict[str, str] | None = None) -> str:
     archive = _source_archive()
     payload = base64.b64encode(archive).decode("ascii")
     source = (ROOT / "scripts" / "kaggle_setup.py").read_text(encoding="utf-8")
     source = source.replace("RUN_FULL_BENCHMARK = False", "RUN_FULL_BENCHMARK = True", 1)
     source = source.replace('EMBEDDED_SOURCE_B64 = ""', f'EMBEDDED_SOURCE_B64 = "{payload}"', 1)
-    if "RUN_FULL_BENCHMARK = True" not in source or f'EMBEDDED_SOURCE_B64 = "{payload}"' not in source:
+    environment = f"RUN_ENVIRONMENT: dict[str, str] = {json.dumps(settings or {}, sort_keys=True)}"
+    source = source.replace("RUN_ENVIRONMENT: dict[str, str] = {}", environment, 1)
+    if (
+        "RUN_FULL_BENCHMARK = True" not in source
+        or f'EMBEDDED_SOURCE_B64 = "{payload}"' not in source
+        or environment not in source
+    ):
         raise RuntimeError("Kaggle setup source has changed; packaging substitutions failed")
     return source
 
@@ -79,9 +96,12 @@ def notebook_document(source: str) -> dict[str, object]:
     }
 
 
-def package(destination: Path, *, kernel_id: str = BENCHMARK_KERNEL_ID, title: str = BENCHMARK_TITLE) -> Path:
+def package(
+    destination: Path, *, kernel_id: str = BENCHMARK_KERNEL_ID, title: str = BENCHMARK_TITLE,
+    settings: dict[str, str] | None = None,
+) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
-    source = _worker_source()
+    source = _worker_source(settings)
     (destination / "interra_setup.py").write_text(source, encoding="utf-8")
     notebook = notebook_document(source)
     (destination / "interra_setup.ipynb").write_text(
@@ -103,5 +123,8 @@ if __name__ == "__main__":
     parser.add_argument("destination", type=Path)
     parser.add_argument("--kernel-id", default=BENCHMARK_KERNEL_ID)
     parser.add_argument("--title", default=BENCHMARK_TITLE)
+    parser.add_argument("--set", dest="settings", action="append", default=[],
+                        metavar="INTERRA_NAME=VALUE", help="Non-secret setting exported for this run")
     args = parser.parse_args()
-    package(args.destination, kernel_id=args.kernel_id, title=args.title)
+    package(args.destination, kernel_id=args.kernel_id, title=args.title,
+            settings=parse_settings(args.settings))

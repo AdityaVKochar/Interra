@@ -233,6 +233,28 @@ class KaggleSetupTests(unittest.TestCase):
             self.assertNotIn("main.<locals>.entrypoint", agent)
             self.assertIn("close_on_disconnect=False", agent)
             self.assertIn('"preemptive_tts": True', agent)
+            self.assertIn("RUN_ENVIRONMENT: dict[str, str] = {}", source)
+
+    def test_package_embeds_experiment_settings(self) -> None:
+        settings = kaggle_package.parse_settings(["INTERRA_FDB_ENDPOINTING_MAX_DELAY=1.8"])
+        with TemporaryDirectory() as directory:
+            destination = kaggle_package.package(Path(directory), settings=settings)
+            source = (destination / "interra_setup.py").read_text(encoding="utf-8")
+        self.assertIn(
+            'RUN_ENVIRONMENT: dict[str, str] = {"INTERRA_FDB_ENDPOINTING_MAX_DELAY": "1.8"}', source
+        )
+
+    def test_package_rejects_non_interra_settings(self) -> None:
+        for pair in ("LIVEKIT_API_SECRET=x", "INTERRA_FDB_ENDPOINTING_MAX_DELAY"):
+            with self.subTest(pair=pair), self.assertRaises(ValueError):
+                kaggle_package.parse_settings([pair])
+
+    def test_run_environment_exports_only_interra_settings(self) -> None:
+        with patch.dict(os.environ, {}, clear=False):
+            kaggle_setup.apply_run_environment({"INTERRA_FDB_ENDPOINTING_MAX_DELAY": "1.8"})
+            self.assertEqual(os.environ["INTERRA_FDB_ENDPOINTING_MAX_DELAY"], "1.8")
+            with self.assertRaises(ValueError):
+                kaggle_setup.apply_run_environment({"LIVEKIT_URL": "wss://example.invalid"})
 
 
 if __name__ == "__main__":

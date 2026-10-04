@@ -29,6 +29,8 @@ REPORT = WORK / "interra-setup-report.json"
 RESULTS_ARCHIVE = WORK / "interra-fdb-results.zip"
 RUN_FULL_BENCHMARK = False
 EMBEDDED_SOURCE_B64 = ""
+# Non-secret INTERRA_* settings for one experiment run, set by kaggle_package.
+RUN_ENVIRONMENT: dict[str, str] = {}
 
 
 def run(command: list[str], *, cwd: Path | None = None) -> None:
@@ -193,7 +195,17 @@ def archive_results(project: Path, destination: Path, tool_log: Path | None = No
     return len(results)
 
 
+def apply_run_environment(settings: dict[str, str]) -> None:
+    """Export packaged experiment settings before the benchmark starts."""
+    for name, value in settings.items():
+        if not name.startswith("INTERRA_"):
+            raise ValueError(f"Only INTERRA_* settings can be packaged: {name}")
+        os.environ[name] = value
+        print(f"Run setting {name}={value}", flush=True)
+
+
 def main() -> None:
+    apply_run_environment(RUN_ENVIRONMENT)
     shutil.copytree(source_root(), PROJECT, dirs_exist_ok=True)
     require_livekit_inference_agent(PROJECT)
     missing = read_kaggle_secrets()
@@ -255,6 +267,7 @@ def main() -> None:
         "livekit_ready": not missing,
         "missing_secret_names": missing,
         "full_benchmark_run": RUN_FULL_BENCHMARK,
+        "run_environment": RUN_ENVIRONMENT,
         "next_command": "python scripts/fdb_v3.py all --force",
     }
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
