@@ -1,3 +1,20 @@
+# Demo recording support — 2026-10-05
+
+- `scripts/demo_room.py`: `list` shows released recordings with self-corrections
+  or rollbacks; `benchmark <recording>` prints a hidden, listen-only Meet link,
+  then streams that recording into a fresh room with the official
+  `livekit_inference.py` recorder and prints the agent's tool calls for that
+  room from the trace; `camera` dispatches `interra-camera-troubleshooter` into a
+  fresh room and prints a camera-and-microphone join link. Tokens last two hours
+  and are only printed. `docs/DEMO.md` has the step-by-step recording guide.
+- Verified against the LiveKit project: tokens carry the intended grants (the
+  watch link is hidden, so the benchmark agent cannot link to it), dispatch
+  creates the named job, and the extension worker registers and receives it.
+  Media could not connect from this cloud sandbox (`wait_pc_connection timed
+  out`: no UDP/WebRTC), so a live camera session is still to be run and recorded
+  on a local machine.
+- Tests: `tests/unit/test_demo_room.py` (5). 227 tests pass on Python 3.11.
+
 # Merge with Maitri-shah29/Interra and participant-guide check — 2026-10-05
 
 - Merged `Maitri-shah29/Interra` `main` (`0b00de5`, 12-slide presentation policy).

@@ -261,8 +261,10 @@ python -m agent.extension_livekit start
 ```
 
 The same `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` variables
-are required. In the LiveKit project, dispatch this worker with the agent
-name `interra-camera-troubleshooter`.
+are required. The worker uses the agent name `interra-camera-troubleshooter`;
+`python scripts/demo_room.py camera` dispatches it into a new room and prints a
+browser link that joins with camera and microphone. Step-by-step recording
+instructions for both demo parts are in [docs/DEMO.md](docs/DEMO.md).
 
 ## Tests
 
