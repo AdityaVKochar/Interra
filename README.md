@@ -50,8 +50,7 @@ does not substitute for an FDB-v3 run.
 
 ## Presentation and demo
 
-- Presentation: [eight-slide submission deck](docs/Interra_Theme05_submission.pptx)
-- Original organizer template: [twelve-slide deck](docs/Interra_Theme05.pptx)
+- Presentation: [12-slide submission deck](docs/Interra_Theme05.pptx)
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
 
 The recording is three to five minutes: one benchmark interruption or
@@ -72,8 +71,8 @@ self-correction, then the camera troubleshooting session.
 | `.env.fdb.example` | Environment variable names, with empty secrets |
 | `docs/FDB_V3.md` | Benchmark pin, models, and scoring contract |
 | `docs/AI_DISCLOSURE_DRAFT.md` | AI usage disclosure |
-| `docs/Interra_Theme05_submission.pptx` | Audited eight-slide submission deck |
-| `docs/results/kaggle-20261001/` | Latest reports, logs, trace, source, and run manifest |
+| `docs/Interra_Theme05.pptx` | Audited 12-slide submission deck |
+| `docs/results/kaggle-20261004/` | Latest reports, logs, traces, per-recording results, and run manifest |
 | `vendor/samsung_theme05/` | Superseded queue kit |
 
 ## Models
@@ -200,6 +199,14 @@ runs the released set, and writes the tool and strict pass-rate reports:
 python scripts/fdb_v3.py all --force
 ```
 
+LiveKit credit: every recording uses LiveKit Inference for speech-to-text, the
+LLM and text-to-speech, under the LiveKit project named by `LIVEKIT_*`. On
+2026-10-04 a free-tier project ran out of Inference credit after 71 of 100
+recordings (HTTP 429 `inference_quota_exceeded`), so use a project with enough
+credit for a full run. The runner retries a recording whose official recorder
+crashes, and restarts the agent if no result appears for
+`INTERRA_FDB_STALL_SECONDS` (default 600).
+
 Separate steps:
 
 ```bash
@@ -208,7 +215,8 @@ python scripts/fdb_v3.py benchmark --force
 python scripts/fdb_v3.py evaluate
 ```
 
-Optional local semantic report:
+Optional local semantic report (needs `OPENAI_API_KEY`; the organizers run the
+benchmark's pinned LLM judge themselves, so this is only a self-check):
 
 ```bash
 python scripts/fdb_v3.py evaluate --use-llm
@@ -266,7 +274,7 @@ These tests check orchestration, cancellation, and the agent configuration.
 They do not replace the official 100-recording reports.
 
 Verify both the historical baseline archive, latest run hashes, score comparison,
-and eight-slide deck with `python scripts/check_submission.py`. An incomplete review archive can be made
+and 12-slide deck with `python scripts/check_submission.py`. An incomplete review archive can be made
 with `python scripts/package_review.py --allow-missing-demo`; supply `--demo`
 with the actual video for a complete archive.
 
@@ -310,7 +318,7 @@ judge was disabled, so no normalized organizer score is claimed. See
 
 ## Documentation
 
-- [Slide deck](docs/Interra_Theme05_submission.pptx)
+- [Slide deck](docs/Interra_Theme05.pptx)
 - [Official reports](docs/results/)
 - [FDB-v3 contract](docs/FDB_V3.md)
 - [Status and run history](docs/STATUS.md)

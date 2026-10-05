@@ -1,3 +1,55 @@
+# Merge with Maitri-shah29/Interra and participant-guide check — 2026-10-05
+
+- Merged `Maitri-shah29/Interra` `main` (`0b00de5`, 12-slide presentation policy).
+  Conflicts in `STATUS.md` and `SUBMISSION_DECK.md` kept both sides. The 12-slide
+  `docs/Interra_Theme05.pptx` stays the sole presentation, per the user; slides 8
+  and 9 and their notes now report the 2026-10-04 run (70/100 strict pass,
+  100/100 turn-take). `check_submission.py` checks 12 slides and the run manifest's
+  numbers and passes; `package_review.py` packages the 2026-10-04 evidence.
+- Docker: `Dockerfile` and `Dockerfile.local` build from a clean checkout; the
+  worker image runs as `interra` with Python 3.11, ffmpeg and the pinned LiveKit
+  SDKs, and all unit tests pass inside it (the image now includes `kaggle/`).
+- Participant guide (`Theme05_Participant_Guide_UPDATED_FBD.docx`) check:
+  - Met: LiveKit voice agent; FDB-v3 pinned; README with architecture diagram,
+    setup, run steps and the marked camera extension; one-command
+    `scripts/reproduce.py` declaring LiveKit Inference models; results, logs and
+    configuration in `docs/results/kaggle-20261004/`; key names documented in
+    `.env.fdb.example` without values; demo link; hosted APIs cited; no
+    team-owned server at evaluation time; tool deduplication is per room only.
+  - No hard-coded test items: `tests/unit/test_no_benchmark_answers.py` scans the
+    prompt and tool docs for every expected argument value.
+  - Deviates: the guide allows at most 8 slides; the 12-slide deck is kept by user
+    instruction (the 8-slide deck carries the same results).
+  - Open: seeds are not pinned for hosted sampling (temperature 0,
+    `PYTHONHASHSEED` only); the organizers' re-run needs a LiveKit project with
+    enough Inference credit (README notes this); reproduction on a machine that
+    is not ours; confirming the demo is 3 to 5 minutes and shows a benchmark
+    interruption and the extension; the Google Form.
+  - The organizers run the pinned LLM judge themselves. `--use-llm` stays as an
+    optional self-check that needs `OPENAI_API_KEY`; it is off by default.
+- 222 tests pass on Python 3.11.
+
+# Presentation refresh — 2026-10-05
+
+- Discarded prior tracked and untracked local changes at the user's request.
+  Pulled branch `codex/fdb-v3-livekit-kaggle-handoff` at `3e1e3d3`.
+- Sole submission presentation: `docs/Interra_Theme05.pptx`, exactly 12 slides.
+  User explicitly overrides older repository slide-limit guidance. Updated README,
+  handoff, FDB documentation, submission outline, packaging and deck checker links.
+  Retired the alternate presentation builder in favor of validation only.
+- Updated results and next-steps slides from the 2026-10-01 official reports:
+  43/100 strict pass, 90/100 turn-take, 10 no-response, 4.175 seconds mean response
+  latency excluding 11 interruptions. Retained one-run and disabled-judge limits.
+- PPTX integrity, layout and Artifact Tool import checks pass (12 slides).
+  Rendered all slides and inspected changed slides. Focused content checks pass.
+  No runtime implementation changes or new runtime tests in this phase.
+- Existing full evidence checker fails on the pushed manifest's hashes for
+  `kernel-metadata.json`, `summary.md`, and `uploaded-worker.py`. Both Git blobs
+  and working-tree files differ from the declared hashes. Official aggregate
+  pass/evaluation reports match their hashes. Do not rewrite evidence hashes to
+  conceal this discrepancy. Next: reconcile the pushed ancillary evidence manifest.
+- Historical status below describes earlier versions and cannot override this policy.
+
 # Current implementation status — 2026-10-05
 
 ## Scored Kaggle run — 2026-10-04
