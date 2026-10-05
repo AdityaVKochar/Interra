@@ -20,6 +20,12 @@
   `evaluate_pass_rate.py` reproduces it from `interra-fdb-results.zip`,
   identical per recording.
 
+- Submission package now reports this run: the eight-slide deck (slides 6–8
+  and every slide's notes), `docs/SUBMISSION_DECK.md`, `docs/KAGGLE_RUN_REVIEW.md`,
+  README, definition of done and AI disclosure. `docs/results/kaggle-20261004/run-manifest.json`
+  records the result summary and evidence hashes; `scripts/check_submission.py`
+  verifies that run and the deck's 70/100 and 100/100, and passes.
+
 ### Run infrastructure added for this run
 
 - `agent.fdb_offline outage-seed` splits a run at the first room with a

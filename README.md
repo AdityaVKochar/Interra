@@ -276,6 +276,7 @@ pinned official evaluator: **70/100 strict passes** and 100/100 turn-takes.
 - [Run summary and verification commands](docs/results/kaggle-20261004/summary.md)
 - [Strict pass report](docs/results/kaggle-20261004/interra_elevenlabs_pass_rate_report.json)
 - [Tool and latency report](docs/results/kaggle-20261004/interra_elevenlabs_evaluation_report.json)
+- [Run configuration and evidence hashes](docs/results/kaggle-20261004/run-manifest.json)
 - [Per-recording results, traces and logs](docs/results/kaggle-20261004/)
 - [2026-10-01 run](docs/results/kaggle-20261001/) and
   [previous completed run archive](docs/results/best-run-evidence.zip)
