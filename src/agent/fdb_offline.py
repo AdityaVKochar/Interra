@@ -32,7 +32,7 @@ import shutil
 import sys
 import zipfile
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Iterable
@@ -116,14 +116,15 @@ def room_map_from_kernel_logs(
     return mapping
 
 
-def load_recordings(trace_path: Path, room_map: dict[str, RoomRun]) -> list[Recording]:
+def load_recordings(trace_paths: Path | Iterable[Path], room_map: dict[str, RoomRun]) -> list[Recording]:
     rooms: OrderedDict[str, list[dict[str, Any]]] = OrderedDict()
-    with trace_path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip():
-                event = json.loads(line)
-                if event.get("room"):
-                    rooms.setdefault(event["room"], []).append(event)
+    for trace_path in [trace_paths] if isinstance(trace_paths, Path) else trace_paths:
+        with trace_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    event = json.loads(line)
+                    if event.get("room"):
+                        rooms.setdefault(event["room"], []).append(event)
     recordings = []
     for room, run in room_map.items():
         recordings.append(Recording(
@@ -179,12 +180,43 @@ def summarize(rows: list[dict[str, Any]], key: str) -> dict[str, Any]:
     return {"passed": passed, "total": len(rows), "pass_rate": round(passed / len(rows), 3) if rows else 0.0}
 
 
+RECORDER_FAILURES = {"inference_failed", "inference_error"}
+
+
+def final_result_statuses(run_dir: Path) -> dict[str, str]:
+    """Room name to result status from ``interra-fdb-results.zip``, if archived."""
+    archive = run_dir / "interra-fdb-results.zip"
+    if not archive.is_file():
+        return {}
+    statuses = {}
+    with zipfile.ZipFile(archive) as bundle:
+        for name in bundle.namelist():
+            if name.startswith("per-recording/") and name.endswith(RESULT_NAME):
+                result = json.loads(bundle.read(name))
+                if result.get("room_name"):
+                    statuses[result["room_name"]] = str(result.get("status"))
+    return statuses
+
+
 def archived_recordings(run_dir: Path, batch_size: int) -> list[Recording]:
-    room_map = room_map_from_kernel_logs(
-        json.loads((run_dir / "kaggle-kernel-logs.json").read_text(encoding="utf-8")),
-        batch_size=batch_size,
-    )
-    return load_recordings(run_dir / "livekit-agent.jsonl", room_map)
+    """Load a run, including a ``-resume`` session that re-recorded part of it.
+
+    The resume session's log comes after the original, so a re-recorded
+    recording maps to its newest room, as in the merged official results.
+    """
+    logs: list[dict[str, Any]] = []
+    for name in ("kaggle-kernel-logs.json", "kaggle-kernel-logs-resume.json"):
+        if (run_dir / name).is_file():
+            logs.extend(json.loads((run_dir / name).read_text(encoding="utf-8")))
+    room_map = room_map_from_kernel_logs(logs, batch_size=batch_size)
+    # Unbuffered logs interleave the recorder's outcome line with other output;
+    # the final result files record the outcome for their rooms exactly.
+    for room, status in final_result_statuses(run_dir).items():
+        if room in room_map:
+            room_map[room] = replace(room_map[room], recorder_ok=status not in RECORDER_FAILURES)
+    traces = [run_dir / name for name in ("livekit-agent.jsonl", "livekit-agent-resume.jsonl")
+              if (run_dir / name).is_file()]
+    return load_recordings(traces, room_map)
 
 
 async def rescore(run_dir: Path, v3_root: Path, *, batch_size: int = 100) -> dict[str, Any]:

@@ -1,19 +1,19 @@
 {
   "mode": "rescore",
   "archived": {
-    "passed": 53,
+    "passed": 70,
     "total": 100,
-    "pass_rate": 0.53
+    "pass_rate": 0.7
   },
   "current": {
-    "passed": 53,
+    "passed": 70,
     "total": 100,
-    "pass_rate": 0.53
+    "pass_rate": 0.7
   },
   "current_if_recorded": {
-    "passed": 53,
+    "passed": 70,
     "total": 100,
-    "pass_rate": 0.53
+    "pass_rate": 0.7
   },
   "recorder_failures": 0,
   "recordings": [
@@ -3002,584 +3002,1390 @@
       ]
     },
     {
-      "room": "eval-ca19458a",
+      "room": "eval-1ec964a0",
+      "scenario_id": "ecommerce_10",
+      "speaker": "6998abd7",
+      "recorder_ok": true,
+      "archived": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current_if_recorded": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "archived_calls": [
+        {
+          "function": "track_order",
+          "args": {
+            "order_id": "123ABC"
+          }
+        },
+        {
+          "function": "search_products",
+          "args": {
+            "query": "winter jackets",
+            "max_price": 150.0
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "track_order",
+          "args": {
+            "order_id": "123ABC"
+          }
+        },
+        {
+          "function": "search_products",
+          "args": {
+            "query": "winter jackets",
+            "max_price": 150.0
+          }
+        }
+      ]
+    },
+    {
+      "room": "eval-68e3452e",
+      "scenario_id": "housing_15",
+      "speaker": "5ff07b5e",
+      "recorder_ok": true,
+      "archived": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current_if_recorded": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "archived_calls": [
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Atlanta",
+            "bedrooms": 3,
+            "max_price": 999999.0,
+            "pets_allowed": true
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Atlanta",
+            "bedrooms": 3,
+            "max_price": 999999.0,
+            "pets_allowed": true
+          }
+        }
+      ]
+    },
+    {
+      "room": "eval-67aa5dc4",
+      "scenario_id": "housing_15",
+      "speaker": "61517db6",
+      "recorder_ok": true,
+      "archived": {
+        "passed": false,
+        "failure_reason": "Wrong arguments for: ['search_apartments']"
+      },
+      "current": {
+        "passed": false,
+        "failure_reason": "Wrong arguments for: ['search_apartments']"
+      },
+      "current_if_recorded": {
+        "passed": false,
+        "failure_reason": "Wrong arguments for: ['search_apartments']"
+      },
+      "archived_calls": [
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Atlanta",
+            "bedrooms": 3,
+            "max_price": 9999999.0
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Atlanta",
+            "bedrooms": 3,
+            "max_price": 9999999.0
+          }
+        }
+      ]
+    },
+    {
+      "room": "eval-48480bae",
       "scenario_id": "housing_24",
       "speaker": "69a9cf80",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'search_apartments', 'calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'search_apartments', 'calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'search_apartments', 'calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 1500.0
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Dallas",
+            "bedrooms": 1,
+            "max_price": 1500.0
+          }
+        },
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "Dallas apartment",
+            "destination_address": "the grocery store",
+            "mode": "walking"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 1500.0
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Dallas",
+            "bedrooms": 1,
+            "max_price": 1500.0
+          }
+        },
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "Dallas apartment",
+            "destination_address": "the grocery store",
+            "mode": "walking"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-fe97dee2",
+      "room": "eval-a3132ac7",
       "scenario_id": "housing_25",
       "speaker": "66f59c76",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'update_search_filter', 'search_apartments']"
+        "failure_reason": "Unexpected tools: ['update_search_filter']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'update_search_filter', 'search_apartments']"
+        "failure_reason": "Unexpected tools: ['update_search_filter']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_search_filter', 'update_search_filter', 'search_apartments']"
+        "failure_reason": "Unexpected tools: ['update_search_filter']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "pets_allowed",
+            "value": true
+          }
+        },
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 3000.0
+          }
+        },
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 3500.0
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "San Francisco",
+            "bedrooms": 0,
+            "max_price": 3500.0,
+            "pets_allowed": true
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "pets_allowed",
+            "value": true
+          }
+        },
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 3000.0
+          }
+        },
+        {
+          "function": "update_search_filter",
+          "args": {
+            "filter_name": "max_price",
+            "value": 3500.0
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "San Francisco",
+            "bedrooms": 0,
+            "max_price": 3500.0,
+            "pets_allowed": true
+          }
+        }
+      ]
     },
     {
-      "room": "eval-853d7c0a",
+      "room": "eval-d660142c",
       "scenario_id": "travel_01",
       "speaker": "62a885d5",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Tokyo",
+            "date": "July 15"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Tokyo",
+            "date": "July 15"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-9109ae98",
+      "room": "eval-a9bfcac1",
       "scenario_id": "travel_02",
       "speaker": "5e3c1fbe",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['update_identity_doc']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['update_identity_doc']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['update_identity_doc']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P88990011"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P88990011"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-655b3961",
+      "room": "eval-0864e0bf",
       "scenario_id": "travel_03",
       "speaker": "5ff07b5e",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "London",
+            "date": "August 20"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "London",
+            "date": "August 20"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-388909cc",
+      "room": "eval-b558f91d",
       "scenario_id": "travel_03",
       "speaker": "61517db6",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "London",
+            "date": "August 20"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "London",
+            "date": "August 20"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-e3402cc8",
-      "scenario_id": "travel_05",
-      "speaker": "6998abd7",
-      "recorder_ok": true,
-      "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
-      },
-      "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
-      },
-      "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
-      },
-      "archived_calls": [],
-      "current_calls": []
-    },
-    {
-      "room": "eval-e49f7166",
+      "room": "eval-05ccce44",
       "scenario_id": "travel_07",
       "speaker": "5ff07b5e",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL555"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL555"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-758de165",
+      "room": "eval-5306e19a",
       "scenario_id": "travel_07",
       "speaker": "61517db6",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL555"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL555"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-82d4ef6e",
+      "room": "eval-5054e6e3",
       "scenario_id": "travel_08",
       "speaker": "695bd157",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Seattle",
+            "date": "November 1"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Seattle",
+            "date": "November 1"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-0b921ff6",
+      "room": "eval-ea33ea35",
       "scenario_id": "travel_10",
       "speaker": "5f4a4da1",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Miami",
+            "date": "October 5"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Miami",
+            "date": "October 7"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Miami",
+            "date": "October 5"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Miami",
+            "date": "October 7"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-dbd8d10c",
+      "room": "eval-cac36c8d",
       "scenario_id": "travel_11",
       "speaker": "66c4f3cb",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Austin",
+            "date": "February 2"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Morgan Smith",
+            "flight_id": "FL123"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Austin",
+            "date": "February 2"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Morgan Smith",
+            "flight_id": "FL123"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-d40af08f",
+      "room": "eval-f7d7446d",
       "scenario_id": "travel_14",
       "speaker": "66c4f3cb",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Sewell",
+            "date": "March 22"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Sewell",
+            "date": "March 22"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-d84d7b38",
+      "room": "eval-7001b881",
       "scenario_id": "travel_16",
       "speaker": "66f59c76",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-fde7cf32",
-      "scenario_id": "travel_18",
-      "speaker": "66f59c76",
-      "recorder_ok": true,
-      "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
-      },
-      "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
-      },
-      "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
-      },
-      "archived_calls": [],
-      "current_calls": []
-    },
-    {
-      "room": "eval-fce8d05f",
+      "room": "eval-80671f41",
       "scenario_id": "travel_19",
       "speaker": "695bd157",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights', 'search_flights']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights', 'search_flights']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights']"
+        "failure_reason": "Unexpected tools: ['search_flights', 'search_flights']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "today"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "June 1"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "June 3"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "today"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "June 1"
+          }
+        },
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Milan",
+            "date": "June 3"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-a60ad5f4",
+      "room": "eval-0e0839c8",
       "scenario_id": "travel_20",
       "speaker": "62a885d5",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Missing tools: ['book_flight']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Missing tools: ['book_flight']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Missing tools: ['book_flight']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Toronto",
+            "date": "July 20"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL88"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Toronto",
+            "date": "July 20"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL88"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-e26eb1ec",
+      "room": "eval-05892f28",
       "scenario_id": "travel_21",
       "speaker": "65e8cf8f",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights', 'update_identity_doc']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights', 'update_identity_doc']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights', 'update_identity_doc']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Quinn Davis",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V7"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Quinn Davis",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V7"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-c49245d2",
+      "room": "eval-91e2b87e",
       "scenario_id": "travel_21",
       "speaker": "69a9cf80",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Wrong arguments for: ['search_flights']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Quinn Davis",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V77"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vegas",
+            "date": "August 8"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Quinn Davis",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V77"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-d92bd57f",
+      "room": "eval-a454dbbb",
       "scenario_id": "travel_23",
       "speaker": "65e8cf8f",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P1122"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL9090"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P1122"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL9090"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-432c5a76",
+      "room": "eval-2122ae74",
       "scenario_id": "travel_23",
       "speaker": "69a9cf80",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['update_identity_doc', 'update_identity_doc']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P1122"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL9090"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "P1122"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "driver_license",
+            "doc_number": "DL9090"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-d8e9c689",
+      "room": "eval-b5cfc2f8",
       "scenario_id": "travel_24",
       "speaker": "695bd157",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Unexpected tools: ['search_apartments']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Unexpected tools: ['search_apartments']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['search_flights', 'book_flight', 'update_identity_doc']"
+        "failure_reason": "Unexpected tools: ['search_apartments']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vancouver",
+            "date": "November 5"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Skyler",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Vancouver",
+            "bedrooms": 1,
+            "max_price": 1000.0
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V44"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Vancouver",
+            "date": "November 5"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Skyler",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "search_apartments",
+          "args": {
+            "city": "Vancouver",
+            "bedrooms": 1,
+            "max_price": 1000.0
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "visa",
+            "doc_number": "V44"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-899962d2",
-      "scenario_id": "ecommerce_10",
-      "speaker": "6998abd7",
-      "recorder_ok": true,
-      "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order', 'search_products']"
-      },
-      "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order', 'search_products']"
-      },
-      "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order', 'search_products']"
-      },
-      "archived_calls": [],
-      "current_calls": []
-    },
-    {
-      "room": "eval-24814629",
+      "room": "eval-8f7f919e",
       "scenario_id": "ecommerce_17",
       "speaker": "5f4a4da1",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['track_order']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "track_order",
+          "args": {
+            "order_id": "GG5"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "track_order",
+          "args": {
+            "order_id": "GG5"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-d91c9c91",
+      "room": "eval-3f502273",
       "scenario_id": "finance_14",
       "speaker": "5f4a4da1",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['get_exchange_rate', 'get_exchange_rate']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['get_exchange_rate', 'get_exchange_rate']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['get_exchange_rate', 'get_exchange_rate']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "get_exchange_rate",
+          "args": {
+            "amount": 50.0,
+            "from_currency": "USD",
+            "to_currency": "EUR"
+          }
+        },
+        {
+          "function": "get_exchange_rate",
+          "args": {
+            "amount": 100.0,
+            "from_currency": "CAD",
+            "to_currency": "USD"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "get_exchange_rate",
+          "args": {
+            "amount": 50.0,
+            "from_currency": "USD",
+            "to_currency": "EUR"
+          }
+        },
+        {
+          "function": "get_exchange_rate",
+          "args": {
+            "amount": 100.0,
+            "from_currency": "CAD",
+            "to_currency": "USD"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-6cad215b",
+      "room": "eval-f6af6352",
       "scenario_id": "housing_06",
       "speaker": "5f4a4da1",
       "recorder_ok": true,
       "archived": {
         "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "failure_reason": "Wrong arguments for: ['calculate_commute']"
       },
       "current": {
         "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "failure_reason": "Wrong arguments for: ['calculate_commute']"
       },
       "current_if_recorded": {
         "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "failure_reason": "Wrong arguments for: ['calculate_commute']"
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "Oak Street",
+            "destination_address": "the gym",
+            "mode": "walking"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "Oak Street",
+            "destination_address": "the gym",
+            "mode": "walking"
+          }
+        }
+      ]
     },
     {
-      "room": "eval-e369db75",
-      "scenario_id": "housing_15",
-      "speaker": "5ff07b5e",
-      "recorder_ok": true,
-      "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "archived_calls": [],
-      "current_calls": []
-    },
-    {
-      "room": "eval-54f28f40",
-      "scenario_id": "housing_15",
-      "speaker": "61517db6",
-      "recorder_ok": true,
-      "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['search_apartments']"
-      },
-      "archived_calls": [],
-      "current_calls": []
-    },
-    {
-      "room": "eval-32fd17e1",
+      "room": "eval-0d858938",
       "scenario_id": "housing_17",
       "speaker": "69a9cf80",
       "recorder_ok": true,
       "archived": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
       "current_if_recorded": {
-        "passed": false,
-        "failure_reason": "Missing tools: ['calculate_commute']"
+        "passed": true,
+        "failure_reason": ""
       },
-      "archived_calls": [],
-      "current_calls": []
+      "archived_calls": [
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "my house",
+            "destination_address": "the office",
+            "mode": "driving"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "calculate_commute",
+          "args": {
+            "origin_address": "my house",
+            "destination_address": "the office",
+            "mode": "driving"
+          }
+        }
+      ]
+    },
+    {
+      "room": "eval-caf24258",
+      "scenario_id": "travel_05",
+      "speaker": "6998abd7",
+      "recorder_ok": true,
+      "archived": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current_if_recorded": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Chicago",
+            "date": "December 12"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Chicago",
+            "date": "December 12"
+          }
+        }
+      ]
+    },
+    {
+      "room": "eval-d945b463",
+      "scenario_id": "travel_18",
+      "speaker": "66f59c76",
+      "recorder_ok": true,
+      "archived": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "current_if_recorded": {
+        "passed": true,
+        "failure_reason": ""
+      },
+      "archived_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Dubai",
+            "date": "April 10"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Casey Lee",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "E772211"
+          }
+        }
+      ],
+      "current_calls": [
+        {
+          "function": "search_flights",
+          "args": {
+            "destination": "Dubai",
+            "date": "April 10"
+          }
+        },
+        {
+          "function": "book_flight",
+          "args": {
+            "passenger_name": "Casey Lee",
+            "flight_id": "FL123"
+          }
+        },
+        {
+          "function": "update_identity_doc",
+          "args": {
+            "doc_type": "passport",
+            "doc_number": "E772211"
+          }
+        }
+      ]
     }
   ]
 }

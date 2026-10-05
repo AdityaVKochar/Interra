@@ -221,6 +221,29 @@ class RescoreTests(OfflineRunFixture):
         ], registry, "room")
         self.assertEqual(calls, [{"function": "track_order", "args": {"order_id": "AB1"}}])
 
+    async def test_resume_session_replaces_rerecorded_room_and_result_status_wins(self):
+        # The crashed trip_01 recording was re-recorded in a resume session whose
+        # interleaved log has no outcome line next to the room line.
+        resume_log = textwrap.dedent("""\
+            [2/2] Processing Speaker=bbbb2222... Example=trip_01...
+              🚀 Running LiveKit inference with provider=interra_elevenlabs...
+              🔗 Streaming via livekit_inference.py into room: eval-00000009
+            {"message": "received job request", "room": "eval-00000009"}
+              ✅ livekit_inference.py finished successfully.
+        """)
+        (self.run_dir / "kaggle-kernel-logs-resume.json").write_text(json.dumps([{"data": resume_log}]))
+        (self.run_dir / "livekit-agent-resume.jsonl").write_text(json.dumps(tool_event(
+            "eval-00000009", 5.0, "search_flights", {"destination": "Example City", "date": "October 14"}
+        )) + "\n")
+        with zipfile.ZipFile(self.run_dir / "interra-fdb-results.zip", "w") as bundle:
+            for folder, room in [("shop_01_aaaa", "eval-00000002"), ("trip_01_bbbb", "eval-00000009")]:
+                bundle.writestr(f"per-recording/{folder}/result_interra_elevenlabs.json",
+                                json.dumps({"room_name": room, "status": "completed"}))
+        report = await rescore(self.run_dir, self.v3, batch_size=2)
+        self.assertEqual([row["room"] for row in report["recordings"]], ["eval-00000002", "eval-00000009"])
+        self.assertEqual(report["recorder_failures"], 0)
+        self.assertEqual(report["current"]["passed"], 2)
+
     def test_rooms_without_trace_events_are_kept_as_empty_recordings(self):
         rooms = room_map_from_kernel_logs(LOG, batch_size=2)
         empty = self.run_dir / "empty.jsonl"

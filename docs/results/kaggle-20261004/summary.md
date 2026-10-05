@@ -1,51 +1,62 @@
 # Kaggle run — 2026-10-04
 
 - Kernel: `adityavardhankochar/interra-fdb-v3-benchmark`, started from the Kaggle
-  editor with Save & Run All at 16:07 UTC, completed 17:57 UTC (108.6 min).
-  Source: the notebook pushed from `a770259` (version 4 of the CLI push).
-- Models: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini (temperature 0),
-  Cartesia Sonic-3. LiveKit project `p_36yq3rs165t` (free tier).
+  editor with Save & Run All. Agent code from `a770259` (unchanged through
+  `515b315`). Models: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini
+  (temperature 0), Cartesia Sonic-3.
 - Benchmark: pinned Full-Duplex-Bench v3 commit
   `3e799c45a045256f47d5f1c9cda90157e2d2ec9e`; 100 recordings; organizer LLM
   judge off (exact-match arguments).
-- Official strict passes: **53/100** (43/100 on 2026-10-01).
-  Turn-take: 71/100; no response: 29.
-- Turn-taken tool selection/argument accuracy: 92.5%/78.9% (85.7%/56.3% before).
-  All-recording accuracy: 65.7%/56.0%.
-- Average response latency: 4.528 s (excluding interruptions); 3 early
-  interruptions (11 before).
-- Recorder crashes: 7, all retried once and completed (`recorder-retries.json`).
-- Trace: 110 tool calls, all completed; 1 duplicate call returned from cache;
-  21 turns held mid-sentence; 108 session cleanups and cooldowns.
-- `python -m agent.fdb_offline rescore --run docs/results/kaggle-20261004`
-  reproduces 53/100 exactly.
+- Method: the run's LiveKit project ran out of Inference credits partway
+  through. The 29 recordings from the first quota error onward were re-recorded
+  with the same code (`agent.fdb_offline outage-seed`, cut by start time, not by
+  score); the other 71 results were kept unchanged. The official evaluator
+  scored all 100.
 
-## LLM credits ran out at minute 81
+## Results (official evaluator, all 100 recordings)
 
-At 81.2 min the project's Inference allowance was exhausted: GPT-4.1 mini
-returned 429 `inference_quota_exceeded` (`MaxGatewayCredits`), and Deepgram STT
-returned 429 from one minute later (448 STT errors in 28 rooms). Every recording
-from that point got no response: all 20 travel recordings, the last two housing
-recordings, and the 7 recorder retries, which run at the end. Travel's 0.0 domain
-score is this outage, not a travel regression.
+| Metric | Value |
+| --- | --- |
+| Strict pass | **70/100** |
+| Turn-take | 100/100 (no response: 0) |
+| Tool selection accuracy | 93.4% |
+| Argument accuracy | 76.3% |
+| Average response latency | 4.452 s (std 3.002 s) |
+| Early interruptions | 3 |
 
-| Subset | 2026-10-01 live | 2026-10-01 rescored | LLM replay (`d8b494b`) | 2026-10-04 live |
-| --- | --- | --- | --- | --- |
-| 71 recordings run before the outage | 35 | 37 | 55 | **53** |
-| 29 recordings after the outage | 8 | 19 | 22 | 0 |
+By domain (tool selection / argument accuracy): ecommerce 98.3% / 80.5%,
+finance 89.3% / 84.7%, housing 91.2% / 69.9%, travel 94.1% / 68.3%.
+Failures: 13 wrong tools, 17 wrong arguments.
 
-The replay predicted the 71 live results within 2 passes, so with enough credits
-the whole run projects to about 73–75/100. That is an estimate, not a score.
+## Trace health (final 100 rooms)
 
-The offline replays in this session used the same free-tier project
-before the run (about 280 replayed conversations), which drew from the same
-credit allowance.
+- 152 tool calls, all completed; 1 duplicate call returned from cache;
+  22 turns held mid-sentence; 100 session cleanups and 100 provider cooldowns;
+  0 session errors.
+- Recorder crashes (exit -6 in the pinned `livekit_inference.py`): 6 in the
+  re-recording session, each retried once and completed; none still failed.
+- No stall restarts were needed.
+
+## Verification
+
+```bash
+python -m agent.fdb_offline rescore --run docs/results/kaggle-20261004   # 70/100 from the agent traces
+unzip -q docs/results/kaggle-20261004/interra-fdb-results.zip -d /tmp/verify
+cd .runtime/Full-Duplex-Bench/v3 && python evaluate_pass_rate.py \
+  --benchmark benchmark_data_v2.json --results-dir /tmp/verify/per-recording \
+  --provider interra_elevenlabs --output /tmp/verify/pass_rate.json       # 70/100, identical per recording
+```
 
 ## Files
 
-`kaggle-kernel-logs.json` (the project URL is redacted), `livekit-agent.jsonl`,
-`tool-calls.jsonl` (tool-call events from the trace), the two official
-evaluator reports, `recorder-retries.json`, `interra-setup-report.json`,
-`interra-fdb-results.zip` (per-recording results and reports, no audio),
-`rescore.json` and `kernel-metadata.json`. No audio, credentials or model
-weights are included.
+- `interra_elevenlabs_pass_rate_report.json`, `interra_elevenlabs_evaluation_report.json`:
+  official evaluator reports over all 100 recordings.
+- `interra-fdb-results.zip`: the 100 final per-recording results (no audio).
+- `seeded-results.json`: which 71 results were kept and which 29 re-recorded, and why.
+- `kaggle-kernel-logs.json`, `livekit-agent.jsonl`, `recorder-retries.json`,
+  `interra-setup-report.json`: first session. The `-resume` files: the
+  re-recording session. The LiveKit project URL is redacted in both logs.
+- `tool-calls.jsonl`: tool-call events of the final 100 rooms. `rescore.json`:
+  the offline rescore.
+
+No audio, credentials or model weights are included.
