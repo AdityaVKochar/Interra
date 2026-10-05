@@ -269,40 +269,39 @@ with the actual video for a complete archive.
 
 ## Measured result
 
-Latest completed official run: LiveKit Inference Deepgram Nova-3, GPT-4.1 mini,
-and Cartesia Sonic-3. It completed all 100 recordings and improved the main
-baseline from 31 to 43 strict passes.
+Latest official run (2026-10-04): LiveKit Inference Deepgram Nova-3, GPT-4.1 mini
+(temperature 0), and Cartesia Sonic-3 on all 100 FDB-v3 recordings, scored by the
+pinned official evaluator: **70/100 strict passes** and 100/100 turn-takes.
 
-- [Latest run summary](docs/results/kaggle-20261001/summary.md)
-- [Strict pass report](docs/results/kaggle-20261001/interra_elevenlabs_pass_rate_report.json)
-- [Tool and latency report](docs/results/kaggle-20261001/interra_elevenlabs_evaluation_report.json)
-- [Run configuration and evidence hashes](docs/results/kaggle-20261001/run-manifest.json)
-- [Trace, logs, worker source, and available recording outputs](docs/results/kaggle-20261001/)
-- [Previous completed run archive](docs/results/best-run-evidence.zip)
+- [Run summary and verification commands](docs/results/kaggle-20261004/summary.md)
+- [Strict pass report](docs/results/kaggle-20261004/interra_elevenlabs_pass_rate_report.json)
+- [Tool and latency report](docs/results/kaggle-20261004/interra_elevenlabs_evaluation_report.json)
+- [Per-recording results, traces and logs](docs/results/kaggle-20261004/)
+- [2026-10-01 run](docs/results/kaggle-20261001/) and
+  [previous completed run archive](docs/results/best-run-evidence.zip)
 
 The pinned evaluator report filenames use `interra_elevenlabs` as the provider
 id; this run used LiveKit Inference models.
 
-| Metric | Latest | Previous main baseline |
-| --- | ---: | ---: |
-| Strict pass | 43/100 | 31/100 |
-| Turn-take | 90/100 | 58/100 |
-| No response | 10/100 | 42/100 |
-| Wrong tools | 28 | 50 |
-| Wrong arguments | 29 | 19 |
-| Tool selection, turn-taken | 85.7% | 88.5% |
-| Argument accuracy, turn-taken | 56.3% | 58.6% |
-| Tool selection, all recordings | 77.2% | 51.3% |
-| Argument accuracy, all recordings | 50.7% | 34.0% |
-| Average response latency, excluding interruptions | 4.175 seconds | 4.545 seconds |
-| Early interruptions among turn-taken recordings | 11/90 | 6/58 |
+| Metric | 2026-10-04 | 2026-10-01 | Previous main baseline |
+| --- | ---: | ---: | ---: |
+| Strict pass | **70/100** | 43/100 | 31/100 |
+| Turn-take | 100/100 | 90/100 | 58/100 |
+| No response | 0/100 | 10/100 | 42/100 |
+| Wrong tools | 13 | 28 | 50 |
+| Wrong arguments | 17 | 29 | 19 |
+| Tool selection, turn-taken | 93.4% | 85.7% | 88.5% |
+| Argument accuracy, turn-taken | 76.3% | 56.3% | 58.6% |
+| Tool selection, all recordings | 93.4% | 77.2% | 51.3% |
+| Argument accuracy, all recordings | 76.3% | 50.7% | 34.0% |
+| Average response latency, excluding interruptions | 4.452 seconds | 4.175 seconds | 4.545 seconds |
+| Early interruptions among turn-taken recordings | 3/100 | 11/90 | 6/58 |
 
-This is one full run. LiveKit logged LLM credit-quota errors, the organizer LLM
-judge was disabled, and only 15 of 100 per-recording JSONs were retrievable.
-No normalized organizer score is claimed. Turn-taken selection and argument
-accuracy are slightly lower than the previous run. Repeat twice after quota is
-restored; the demo and registered team details also remain outstanding. See
-[the run review](docs/KAGGLE_RUN_REVIEW.md) and
+The LiveKit project ran out of Inference credits partway through the 2026-10-04
+run; the 29 recordings from the first quota error onward were re-recorded with
+the same code and the official evaluator scored all 100. The organizer LLM
+judge was disabled, so no normalized organizer score is claimed. See
+[status and run history](docs/STATUS.md) and
 [remaining completion items](docs/10_DEFINITION_OF_DONE.md).
 
 ## Documentation

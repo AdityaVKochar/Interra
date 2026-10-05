@@ -22,10 +22,10 @@ its tests remain useful, but it no longer defines completion.
 - [x] Reproduction runner can bootstrap the benchmark and published data.
 - [x] Runner starts the agent, runs inference, and invokes the tool and pass evaluators;
   optional LLM-assisted latency analysis requires `--use-llm`.
-- [x] A baseline run covers all 100 recordings; aggregate reports are archived (15 of 100 per-recording JSONs were retrievable for the latest run).
+- [x] The latest run covers all 100 recordings; aggregate reports and all 100 per-recording results are archived (`docs/results/kaggle-20261004/`).
 - [x] Official tool-selection report is saved.
 - [ ] Semantic argument and response report is saved with the LLM judge enabled.
-- [x] Strict pass-rate report is saved for the latest run (43/100; previous main baseline 31/100).
+- [x] Strict pass-rate report is saved for the latest run (70/100 on 2026-10-04; 43/100 on 2026-10-01; previous main baseline 31/100).
 - [ ] First-response, tool-call, and task-completion latency report is saved.
 - [x] Model versions, provider configuration, measured source, recording results
   and logs are archived with hashes in `docs/results/`. The original sampling
