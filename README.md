@@ -233,8 +233,11 @@ docker run --rm --env-file .env \
 
 The default command is `python -m agent.fdb_livekit start`. Run the official
 CUDA scorer separately with the benchmark commands above. The worker image
-does not include the scorer's GPU stack or benchmark data. Docker build/run
-has not been verified on this workstation because its Docker daemon is offline.
+does not include the scorer's GPU stack or benchmark data. On 2026-10-05 both
+`Dockerfile` and `Dockerfile.local` built from a clean checkout (Docker 29.6).
+The worker image runs as the non-root `interra` user with Python 3.11, ffmpeg,
+LiveKit Agents 1.8.3 and LiveKit RTC 1.1.18, and all unit tests pass inside it
+(`docker run --rm interra sh -c 'python -m unittest discover -s tests'`).
 
 ## Camera extension
 

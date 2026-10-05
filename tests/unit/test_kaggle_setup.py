@@ -151,6 +151,7 @@ class KaggleSetupTests(unittest.TestCase):
                 patch.object(kaggle_setup, "run", side_effect=lambda command, **_: commands.append(command)),
                 patch.object(kaggle_setup, "start_ollama") as start_ollama,
                 patch.object(kaggle_setup, "stop_ollama") as stop_ollama,
+                patch.object(kaggle_setup, "enable_fast_qwen_if_supported"),  # probes Ollama with curl
                 patch.object(kaggle_setup, "read_kaggle_secrets", return_value=["LIVEKIT_API_KEY"]),
                 patch.dict(os.environ, {"INTERRA_FDB_LLM_PROVIDER": "ollama"}),
             ):
