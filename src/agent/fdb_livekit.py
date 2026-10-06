@@ -134,16 +134,28 @@ def load_benchmark_module(fdb_v3_root: Path) -> ModuleType:
 
 
 class TraceWriter:
-    def __init__(self, trace_dir: Path):
+    """Append trace records to ``livekit-agent.jsonl``, and optionally to a listener.
+
+    The listener (the live demo console's publisher) sees each record after it
+    is written; a listener failure never loses or blocks the trace.
+    """
+
+    def __init__(self, trace_dir: Path, listener: Any | None = None):
         trace_dir.mkdir(parents=True, exist_ok=True)
         self.path = trace_dir / "livekit-agent.jsonl"
         self._lock = threading.Lock()
+        self._listener = listener
 
     def append(self, kind: str, **payload: Any) -> None:
         record = {"time": time.time(), "kind": kind, **payload}
         with self._lock:
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        if self._listener is not None:
+            try:
+                self._listener(record)
+            except Exception:
+                pass
 
 
 def _call_key(name: str, arguments: dict[str, Any]) -> str:
@@ -1130,7 +1142,14 @@ async def entrypoint(ctx: Any) -> None:
     def release_held_turn(text: str) -> None:
         session.generate_reply(user_input=text, input_modality="audio")
 
-    trace = TraceWriter(config.trace_dir)
+    # The live demo console listens on the room's data channel. Scored runs leave
+    # INTERRA_UI_EVENTS unset, so nothing extra is published.
+    console = None
+    if os.environ.get("INTERRA_UI_EVENTS") == "1":
+        from agent.ui_events import RoomEventPublisher
+
+        console = RoomEventPublisher(ctx.room)
+    trace = TraceWriter(config.trace_dir, listener=console.forward if console else None)
     hold = UnfinishedTurnHold(
         release_held_turn, trace, ctx.room.name, config.unfinished_turn_hold_seconds
     )
@@ -1192,7 +1211,10 @@ async def entrypoint(ctx: Any) -> None:
     def on_error(event: Any) -> None:
         trace_session_error(trace, ctx.room.name, event)
 
-    trace.append("session_started", room=ctx.room.name)
+    trace.append(
+        "session_started", room=ctx.room.name, agent="benchmark",
+        stt=config.stt_model, llm=f"{config.llm_provider}:{config.llm_model}", tts=config.tts_model,
+    )
     print(
         "Interra FDB speech:"
         f" stt={config.stt_model} llm={config.llm_provider}:{config.llm_model} tts={config.tts_model}"
@@ -1206,6 +1228,8 @@ async def entrypoint(ctx: Any) -> None:
     from livekit.agents import room_io
 
     await ctx.connect()
+    if console is not None:
+        console.start()
     participant = await ctx.wait_for_participant()
     try:
         await run_session_lifecycle(
@@ -1220,6 +1244,8 @@ async def entrypoint(ctx: Any) -> None:
         )
     finally:
         await hold.aclose()
+        if console is not None:
+            await console.aclose()
 
 
 def main() -> None:

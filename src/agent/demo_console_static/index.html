@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interra live console</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.js"></script>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Interra <small>live agent console</small></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-mode="benchmark" aria-selected="true">Benchmark recording</button>
+      <button class="tab" role="tab" data-mode="camera" aria-selected="false">Camera troubleshooting</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="badges" id="models"></div>
+    <span class="pill" id="connection">Not connected</span>
+  </header>
+
+  <div class="metrics">
+    <div class="metric"><b id="m-latency">–</b><span>Last response latency</span></div>
+    <div class="metric"><b id="m-tools">0</b><span>Tool calls</span></div>
+    <div class="metric"><b id="m-interruptions">0</b><span>Interruptions</span></div>
+    <div class="metric"><b id="m-held">0</b><span>Held mid-sentence turns</span></div>
+    <div class="metric"><b id="m-stale">0</b><span>Stale / cancelled results</span></div>
+    <div class="metric"><b id="m-dupes">0</b><span>Duplicate writes blocked</span></div>
+    <div class="metric"><b id="m-frames">0</b><span>Camera frames sent</span></div>
+  </div>
+
+  <main>
+    <section aria-label="Stage">
+      <h2>Stage <span class="spacer"></span><span id="room-name" class="badge" hidden></span></h2>
+      <div class="scroll">
+        <div id="stage-benchmark">
+          <div class="card">
+            <h3>Released FDB-v3 recording</h3>
+            <div class="hint">A real human recording from the benchmark is played into a LiveKit room by the
+              official recorder. This console listens as a hidden participant.</div>
+            <label for="recording">Recording</label>
+            <select id="recording"></select>
+            <div id="recording-meta"></div>
+            <button class="btn" id="bench-start">Join room and play recording</button>
+            <div class="progress"><div id="bench-progress"></div></div>
+            <div class="hint" id="bench-status">Start the agent with INTERRA_UI_EVENTS=1 python scripts/fdb_v3.py agent</div>
+          </div>
+        </div>
+        <div id="stage-camera" hidden>
+          <div class="stage-video">
+            <video id="local-video" autoplay muted playsinline></video>
+            <div class="empty" id="video-empty">Camera preview appears here once the session starts.</div>
+            <div class="overlay" id="video-overlay" hidden></div>
+          </div>
+          <button class="btn" id="cam-start">Start camera session</button>
+          <div class="hint">Show a device to the camera and talk. Correct yourself mid-sentence or interrupt while
+            the agent is looking something up; the internals panel shows what happens to the obsolete work.</div>
+        </div>
+        <div class="meters">
+          <div class="meter user"><span id="user-label">Person</span><div class="bar"><div id="meter-user"></div></div></div>
+          <div class="meter agent"><span>Agent</span><div class="bar"><div id="meter-agent"></div></div></div>
+        </div>
+        <button class="btn secondary" id="leave" disabled>Leave room</button>
+      </div>
+    </section>
+
+    <section aria-label="Conversation">
+      <h2>Live conversation</h2>
+      <div class="scroll" id="transcript"><div class="empty-state">Transcripts stream here as people speak.</div></div>
+    </section>
+
+    <section aria-label="Agent internals">
+      <h2>Agent internals</h2>
+      <div class="state-row">
+        <span class="state" data-user-state>person: –</span>
+        <span class="state" data-agent-state="listening">listening</span>
+        <span class="state" data-agent-state="thinking">thinking</span>
+        <span class="state" data-agent-state="speaking">speaking</span>
+        <span class="badge" id="request-version" hidden></span>
+      </div>
+      <div class="scroll" id="timeline"><div class="empty-state">Tool calls, corrections and safety decisions appear here.</div></div>
+      <div class="tickets" id="tickets" hidden><h4>Support ticket desk</h4><div id="ticket-list"></div></div>
+    </section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

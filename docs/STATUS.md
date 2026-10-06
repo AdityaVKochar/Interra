@@ -1,3 +1,37 @@
+# Live console and fuller camera extension — 2026-10-06
+
+- `python -m agent.demo_console` (aiohttp, 127.0.0.1:8787): a browser console for
+  recording the demo. It joins the LiveKit room with `livekit-client` 2.22.3 and
+  shows the camera, audio levels, streaming transcripts (`lk.transcription`), the
+  agent state (`lk.agent.state`), response latency, and a timeline built from
+  events the agents publish on the `interra.events` data topic. Benchmark mode
+  lists released recordings (self-corrections first, display metadata only, no
+  expected answers), joins as a hidden listener and runs the official
+  `livekit_inference.py` recorder; camera mode dispatches the troubleshooter and
+  joins with camera and microphone. Keys stay server-side; the browser gets a
+  two-hour room token.
+- `agent.ui_events.RoomEventPublisher`: thread-safe, bounded, owned publishing
+  task; failures are counted and never stop the agent. The benchmark agent
+  forwards its trace to it only when `INTERRA_UI_EVENTS=1`, so scored runs are
+  unchanged; its `session_started` trace event now names the models.
+- Camera extension: three tools. `look_up_fix` reads a local guide library with
+  a simulated two-second lookup; `open_support_ticket` / `cancel_support_ticket`
+  write `artifacts/support-tickets.jsonl` through `TicketDesk`, which returns the
+  open ticket for a repeated request. Writes call `disallow_interruptions()`
+  and are skipped if the turn was already interrupted. `TurnGuard` advances the
+  request version on every turn and on a final transcript spoken while a tool
+  runs; an older lookup result is discarded, a cancelled lookup is reported and
+  the cancellation propagates. The thumbnail of the frame sent with each turn is
+  published to the console.
+- Verified here: tool schemas build (the injected `RunContext` is hidden from
+  the model); the worker registers and receives a dispatched job. Media cannot
+  connect from this sandbox (no UDP/WebRTC), so a live session is still to be
+  run on a local machine. The console UI was rendered in headless Chromium with
+  scripted events at 1600×960 and 900 px wide.
+- Tests added: `test_troubleshooting.py` (10), `test_ui_events.py` (8),
+  `test_extension_tools.py` (8), `test_demo_console.py` (7). 260 tests pass on
+  Python 3.11.
+
 # Demo recording support — 2026-10-05
 
 - `scripts/demo_room.py`: `list` shows released recordings with self-corrections

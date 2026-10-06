@@ -249,22 +249,33 @@ LiveKit Agents 1.8.3 and LiveKit RTC 1.1.18, and all unit tests pass inside it
 
 ## Camera extension
 
-Device troubleshooting is a second LiveKit session. It subscribes to the
-participant camera, keeps the latest frame, and attaches that frame once to
-the next spoken turn. Only the linked participant's camera is accepted;
-disconnect discards its pending frame, and older images are removed from model
-history. It does not register the 12 benchmark tools. Live end-to-end camera
-behavior remains to be demonstrated.
+Camera-assisted device troubleshooting is a second LiveKit agent, outside the
+benchmark domains (`src/agent/extension_livekit.py`, rules in
+`src/agent/troubleshooting.py`). The person shows a device on camera and talks:
+
+- Only the linked participant's camera is used; each spoken turn carries only
+  the newest frame, and older images are removed from the model history.
+- `look_up_fix(device, symptom)` returns ordered, safe checks from a local guide
+  library (routers, printers, power strips, chargers, smart bulbs, TVs,
+  headphones, phones). Its two-second lookup is simulated so it can be
+  interrupted; hazards such as heat or smoke stop troubleshooting.
+- `open_support_ticket` and `cancel_support_ticket` write to
+  `artifacts/support-tickets.jsonl`. Writes cannot be interrupted once started,
+  are skipped if the turn was already interrupted, and never repeat: asking
+  twice returns the open ticket.
+- Every turn and every correction spoken while a tool runs advances a request
+  version. A lookup that finishes for an older version is discarded; one
+  cancelled by an interruption is reported and the cancellation propagates.
 
 ```bash
-python -m agent.extension_livekit start
+python -m agent.extension_livekit start     # worker, agent name interra-camera-troubleshooter
+python -m agent.demo_console                # live console at http://127.0.0.1:8787
 ```
 
-The same `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` variables
-are required. The worker uses the agent name `interra-camera-troubleshooter`;
-`python scripts/demo_room.py camera` dispatches it into a new room and prints a
-browser link that joins with camera and microphone. Step-by-step recording
-instructions for both demo parts are in [docs/DEMO.md](docs/DEMO.md).
+The console dispatches the agent into a new room, joins with camera and
+microphone, and shows transcripts, agent state, tool calls, discarded results,
+blocked duplicate writes and the frame sent with each turn. Recording steps for
+both demo parts are in [docs/DEMO.md](docs/DEMO.md).
 
 ## Tests
 

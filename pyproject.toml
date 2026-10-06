@@ -36,3 +36,6 @@ interra-camera-agent = "agent.extension_livekit:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+agent = ["demo_console_static/*"]
