@@ -112,6 +112,8 @@ class FdbLiveKitTests(unittest.TestCase):
         self.assertEqual(_as_int("2"), 2)
         self.assertEqual(_as_float("$1,200"), 1200.0)
         self.assertEqual(_as_int("two"), 2)
+        self.assertEqual(_as_int("a couple"), 2)
+        self.assertEqual(_as_int("a dozen"), 12)
         self.assertEqual(_as_float("fifteen hundred dollars"), 1500.0)
 
     def test_thinking_flag_is_sent_only_after_the_ollama_probe(self):

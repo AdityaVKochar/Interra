@@ -35,6 +35,18 @@ Start the camera extension in a separate terminal. It is not the benchmark agent
 python -m agent.extension_livekit start
 ```
 
+Replay the booking correction without a camera or a LiveKit room:
+
+```bash
+python -m agent.extension_demo
+```
+
+After a rehearsal, open the trace beside the recording. Executed, dropped, and reused calls are labeled:
+
+```bash
+python -m agent.replay artifacts/fdb_v3/livekit-agent.jsonl -o artifacts/fdb_v3/replay.html
+```
+
 Run and evaluate the released benchmark:
 
 ```bash

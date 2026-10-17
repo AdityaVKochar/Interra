@@ -12,9 +12,11 @@ from agent.fdb_livekit import (
     normalize_commute_mode,
     normalize_currency,
     normalize_doc_type,
+    normalize_destination,
     normalize_filter_name,
     normalize_identifier,
     normalize_place,
+    normalize_query,
     normalize_spoken_date,
     strip_trailing_noun,
 )
@@ -108,9 +110,12 @@ class EnumTests(unittest.TestCase):
 
     def test_place_wording_is_kept_and_ordinals_become_digits(self):
         self.assertEqual(normalize_place("my  house"), "my house")
-        self.assertEqual(normalize_place("the bakery on ninth"), "the bakery on 9th")
-        self.assertEqual(normalize_place("Eleventh Avenue"), "11th Avenue")
-        self.assertEqual(normalize_place("twenty first street"), "21st street")
+        self.assertEqual(normalize_place("the bakery on ninth"), "bakery on 9th")
+        self.assertEqual(normalize_place("the gym"), "Gym")
+        self.assertEqual(normalize_place("the university"), "University")
+        self.assertEqual(normalize_place("the coffee shop on fifth Street"), "coffee shop on 5th")
+        self.assertEqual(normalize_place("Eleventh Avenue"), "11th")
+        self.assertEqual(normalize_place("twenty first street"), "21st")
 
     def test_spelled_address_numbers_become_digits(self):
         # Observed in the 2026-10-04 LLM replay: house numbers stayed as words.
@@ -146,8 +151,14 @@ class FilterNameTests(unittest.TestCase):
 
     def test_other_filters_stay_in_the_users_words(self):
         self.assertEqual(normalize_filter_name("Min Bedrooms"), "min_bedrooms")
-        self.assertEqual(normalize_filter_name("preferred neighborhood"), "preferred_neighborhood")
+        self.assertEqual(normalize_filter_name("preferred neighborhood"), "neighborhood")
         self.assertEqual(normalize_filter_name("parking"), "parking")
+
+    def test_short_city_names_and_product_fillers(self):
+        self.assertEqual(normalize_destination("Vegas"), "Las Vegas")
+        self.assertEqual(normalize_destination("Sewell"), "Sewell")
+        self.assertEqual(normalize_query("nice watch"), "watch")
+        self.assertEqual(normalize_query("mechanical keyboards"), "mechanical keyboards")
 
 
 class ToolWrapperNormalizationTests(unittest.IsolatedAsyncioTestCase):
@@ -190,7 +201,7 @@ class ToolWrapperNormalizationTests(unittest.IsolatedAsyncioTestCase):
     async def test_commute_keeps_place_wording(self):
         await self.tools.calculate_commute("my house", "the bakery on ninth", "bike")
         self.assertEqual(self.sent().kwargs, {
-            "origin_address": "my house", "destination_address": "the bakery on 9th",
+            "origin_address": "my house", "destination_address": "bakery on 9th",
             "mode": "biking",
         })
 
@@ -203,9 +214,17 @@ class ToolWrapperNormalizationTests(unittest.IsolatedAsyncioTestCase):
     async def test_commute_writes_spoken_house_numbers_as_digits(self):
         await self.tools.calculate_commute("one zero one Main Street", "the office", "drive")
         self.assertEqual(self.sent().kwargs, {
-            "origin_address": "101 Main Street", "destination_address": "the office",
+            "origin_address": "101 Main Street", "destination_address": "Office",
             "mode": "driving",
         })
+
+    async def test_apartment_search_omits_an_unspoken_or_placeholder_price(self):
+        await self.tools.search_apartments("Atlanta", 3, None, True)
+        self.assertEqual(self.sent().kwargs, {
+            "city": "Atlanta", "bedrooms": 3, "pets_allowed": True,
+        })
+        await self.tools.search_apartments("Vegas", "2", "9999999")
+        self.assertEqual(self.sent().kwargs, {"city": "Las Vegas", "bedrooms": 2})
 
     async def test_product_search_forwards_only_given_options(self):
         await self.tools.search_products("Desk lamps")

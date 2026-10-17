@@ -3,10 +3,11 @@
 Interra is a voice agent that stays in the conversation while it works. A person
 can hesitate, interrupt, or correct themselves in the middle of a sentence. The
 agent answers out loud and runs tool calls outside the event loop. The deployed
-LiveKit agent uses SDK turn interruption and tool calling; its prompt asks it to
-ground completion claims in tool results. The separate coordination runtime has
-tested stale-result rejection and duplicate-write protection. Those guarantees
-are not yet integrated into the FDB-v3 adapter.
+LiveKit agent uses SDK turn interruption and tool calling. Before a tool is
+logged, a commit gate waits out a short quiet window and drops the call if the
+person keeps speaking or a newer transcript arrives. A dropped call is not
+written to the benchmark tool log. An identical call in the same room still
+runs once. The prompt asks the model to ground completion claims in tool results.
 
 Most assistants listen, then think, then speak. That falls apart when the
 destination changes while a route is still being looked up, or when a booking
@@ -52,6 +53,11 @@ does not substitute for an FDB-v3 run.
 
 - Presentation: [8-slide submission deck](docs/Interra_Theme05_submission.pptx)
 - Demo video: [Interra demo](https://cursor.com/artifacts/v/art-65efdeb4-9b6f-4416-839a-875b82833f5a)
+- Local trace replay, from a recorded `livekit-agent.jsonl`:
+
+```bash
+python -m agent.replay artifacts/fdb_v3/livekit-agent.jsonl -o artifacts/fdb_v3/replay.html
+```
 
 The recording is three to five minutes: one benchmark interruption or
 self-correction, then the camera troubleshooting session.
@@ -107,7 +113,10 @@ python scripts/reproduce.py
 
 This command reads `.env`, creates `.venv-fdb`, installs dependencies, downloads
 the pinned benchmark and released recordings, starts the agent, runs a speech
-gate and all recordings, and evaluates the results. Existing shell values take
+gate and all recordings, and evaluates the results. Before the install it writes
+`artifacts/fdb_v3/runs/<timestamp>/run_info.txt` with the git commit, the FDB-v3
+pin, the model names, and the seed. After install it writes `pip-freeze.txt` in
+that same folder. Secret values are not written. Existing shell values take
 precedence. Add `--use-llm` and an `OPENAI_API_KEY` for the optional local judge.
 `--seed 0` is the default Python hash seed; hosted models are not deterministic.
 Git and ffmpeg must already be installed, and LiveKit inference quota must be
@@ -253,8 +262,19 @@ Device troubleshooting is a second LiveKit session. It subscribes to the
 participant camera, keeps the latest frame, and attaches that frame once to
 the next spoken turn. Only the linked participant's camera is accepted;
 disconnect discards its pending frame, and older images are removed from model
-history. It does not register the 12 benchmark tools. Live end-to-end camera
-behavior remains to be demonstrated.
+history. It does not register the 12 benchmark tools. A visible code is looked
+up in Interra's own demo catalog (`E1`, `E2`, `E3`). A follow-up visit is
+scheduled only after the same commit gate stays quiet, and a correction drops
+the booking before it is stored. Asking what was scheduled reads that session's
+list. This correction can be replayed without a camera:
+
+```bash
+python -m agent.extension_demo
+```
+
+That writes `artifacts/extension-demo/replay.html`, with the Friday visit
+dropped and the Saturday visit stored. The live camera worker is still
+`python -m agent.extension_livekit start`.
 
 ```bash
 python -m agent.extension_livekit start

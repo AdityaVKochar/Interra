@@ -72,9 +72,11 @@ Turn and argument handling can be tuned without code changes:
 `INTERRA_FDB_LLM_TEMPERATURE` (default 0), `INTERRA_FDB_ENDPOINTING_MIN_DELAY`
 and `INTERRA_FDB_ENDPOINTING_MAX_DELAY` (0.7 and 1.2 s; LiveKit's hosted
 semantic turn detector picks between them), `INTERRA_FDB_UNFINISHED_TURN_HOLD_SECONDS`
-(1.0 s; 0 disables holding turns that end mid-sentence) and
-`INTERRA_FDB_RECORDER_RETRIES` (1; re-runs recordings whose official recorder
-crashed before writing a result).
+(1.0 s; 0 disables holding turns that end mid-sentence),
+`INTERRA_FDB_COMMIT_QUIET_SECONDS` (0.6 s; a tool call waits out this quiet
+window and is dropped, not logged, if speech resumes or a newer transcript
+arrives) and `INTERRA_FDB_RECORDER_RETRIES` (1; re-runs recordings whose
+official recorder crashed before writing a result).
 
 Offline checks need no audio or GPU: `python -m agent.fdb_offline rescore --run
 docs/results/kaggle-20261001` re-scores archived tool calls with the current

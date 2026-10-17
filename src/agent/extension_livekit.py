@@ -11,17 +11,27 @@ import asyncio
 import os
 from typing import Any
 
-from agent.fdb_livekit import FdbConfig, livekit_llm_model, livekit_speech_models
+from agent.device_catalog import DeviceDesk, GatedAction
+from agent.fdb_livekit import (
+    CommitGate,
+    FdbConfig,
+    TraceWriter,
+    livekit_llm_model,
+    livekit_speech_models,
+)
 
 
 EXTENSION_INSTRUCTIONS = """
 You help a person troubleshoot a device they show on camera.
 Use the current image and the person's words together. Describe only details
 you can actually see. Ask for a closer view when labels or controls are unclear.
-Offer one safe, concrete check at a time. If the person corrects the device or
-symptom, use the correction and the latest frame instead of stale observations.
+When a code is visible, look it up with lookup_indicator. Do not invent a meaning.
+Offer one safe check from that result. If they want a person to come, schedule
+it with schedule_check and answer "did it go through?" from list_scheduled_checks.
+If they correct the day, the device, or the symptom, use the correction and the latest frame. A call
+that was not executed comes back as superseded; do not say it happened.
 If no camera frame is available, ask the person to turn on the camera.
-Never claim that a repair or remote action has been completed when it has not.
+Never claim that a repair has been completed.
 """.strip()
 
 
@@ -122,14 +132,45 @@ async def entrypoint(ctx: Any) -> None:
 
     config = FdbConfig.from_env()
     frames = LatestFrameSource()
+    trace = TraceWriter(config.trace_dir)
+    gate = CommitGate(config.commit_quiet_seconds)
+    desk = DeviceDesk()
+    actions = GatedAction(gate, trace, ctx.room.name)
     ctx.add_shutdown_callback(frames.close)
     await ctx.connect()
     participant = await ctx.wait_for_participant()
     identity = participant.identity
 
+    class CameraTools:
+        def __init__(self) -> None:
+            pass
+
+        @llm.function_tool(description="Look up a code you can see on the device display.")
+        async def lookup_indicator(self, code: str) -> str:
+            return await actions.run(
+                "lookup_indicator", {"code": code}, lambda: desk.lookup(code)
+            )
+
+        @llm.function_tool(description="Schedule one follow-up visit. Use the day the person settled on.")
+        async def schedule_check(self, day: str, window: str) -> str:
+            return await actions.run(
+                "schedule_check",
+                {"day": day, "window": window},
+                lambda: desk.schedule(day, window),
+            )
+
+        @llm.function_tool(description="List visits that were actually scheduled. Use this to confirm a booking.")
+        async def list_scheduled_checks(self) -> str:
+            return await actions.run(
+                "list_scheduled_checks", {}, lambda: desk.list_visits()
+            )
+
     class CameraTroubleshooter(Agent):
         def __init__(self) -> None:
-            super().__init__(instructions=EXTENSION_INSTRUCTIONS)
+            super().__init__(
+                instructions=EXTENSION_INSTRUCTIONS,
+                tools=llm.find_function_tools(CameraTools()),
+            )
             self._on_track: Any | None = None
             self._on_untrack: Any | None = None
             self._track_sid: str | None = None
@@ -194,6 +235,16 @@ async def entrypoint(ctx: Any) -> None:
         llm=livekit_llm_model(inference, config),
         tts=speech_tts,
     )
+
+    @session.on("user_state_changed")
+    def on_user_state(event: Any) -> None:
+        gate.set_speaking(str(event.new_state) == "speaking")
+
+    @session.on("user_input_transcribed")
+    def on_transcript(event: Any) -> None:
+        if event.is_final:
+            gate.note_transcript()
+
     await session.start(
         room=ctx.room,
         agent=CameraTroubleshooter(),

@@ -1,3 +1,34 @@
+# Argument fixes from the 17 wrong-argument recordings — 2026-10-17
+
+- Read the 17 tool-right / argument-wrong recordings in
+  `docs/results/kaggle-20261004`. Dates in those recordings already matched.
+- Places now drop a leading "the", capitalize a one-word place, and drop a
+  street type that only repeats an ordinal ("the coffee shop on fifth Street"
+  becomes "coffee shop on 5th"). "Vegas" becomes "Las Vegas". "nice watch"
+  becomes "watch". "preferred neighborhood" becomes the filter neighborhood.
+  "a couple" is 2 and "a dozen" is 12. An unspoken or million-plus rent is
+  omitted. These are general speech normalizers, not scenario answers.
+- Words the transcript never contained (a city, a digit, or a letter the speech
+  recognizer missed) are not filled in.
+- `python -m agent.extension_demo` replays the camera booking correction with
+  no LiveKit room: Friday is dropped, Saturday is stored.
+
+# Commit gate, camera catalog, and run record — 2026-10-17
+
+- The scored FDB agent holds a tool call through `CommitGate` and drops it
+  before telemetry if speech resumes or a newer transcript arrives. Dropped
+  calls are traced as `tool_call_dropped` and are not written to
+  `agent_tool_calls.log`. Identical calls in one room still run once.
+- The camera session looks up `E1`/`E2`/`E3` in an Interra-owned demo catalog
+  and schedules a visit through the same gate. A dropped booking is not stored.
+- `scripts/reproduce.py` writes `run_info.txt` (commit, FDB pin, models, seed,
+  no secrets) and `pip-freeze.txt` under `artifacts/fdb_v3/runs/<timestamp>/`.
+- `python -m agent.replay` renders executed, dropped, and reused calls from a
+  trace. No new FDB score and no demo video were produced in this change.
+- Tests: `tests.unit.test_fdb_turns`, `tests.unit.test_device_catalog`,
+  `tests.unit.test_replay`, `tests.unit.test_reproduce`,
+  `tests.unit.test_extension_livekit`.
+
 # Final presentation update — 2026-10-05
 
 - Pulled the latest `origin/main` revision (`663e5de`) into the working branch.
