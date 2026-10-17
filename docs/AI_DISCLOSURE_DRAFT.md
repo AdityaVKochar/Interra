@@ -60,9 +60,7 @@ Name of Team Representative: Maitri Shah
 
 Role: Primary member
 
-Signature:
-
-![Signature of Maitri Shah](assets/maitri-shah-signature.jpg)
+Signature: Maitri Shah
 
 Date: 30 September 2026
 

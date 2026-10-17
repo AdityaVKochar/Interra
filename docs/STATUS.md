@@ -487,9 +487,10 @@ reasoning errors need fresh measured results. See `docs/KAGGLE_RUN_REVIEW.md`.
 - `docs/AI_DISCLOSURE_DRAFT.md` now follows the organizer form: team
   `VITV_smoothOperator_5`, VITV, project Interra, and representative Maitri
   Shah. It records the LiveKit Inference profile and the version 7 baseline
-  (31/100 strict pass, 52/100 turn-take). Maitri Shah's signature image is in
-  `docs/assets/maitri-shah-signature.jpg`. Phone and email stay blank in the
-  repository until the team adds them.
+  (31/100 strict pass, 52/100 turn-take). The declaration is signed with the
+  typed name Maitri Shah. The handwritten signature image is not kept in the
+  repository. Phone and email stay blank in the repository until the team
+  adds them.
 - `requirements.txt` lists the FDB extra pins from `pyproject.toml`.
 - `README.md` is a project document: architecture, reproducible setup,
   `requirements.txt`, presentation path, and demo-video link. It does not
