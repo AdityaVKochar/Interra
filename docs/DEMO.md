@@ -29,10 +29,35 @@ Start the agent independently when rehearsing:
 python scripts/fdb_v3.py agent
 ```
 
+Open the judge page after both workers are running. Voice uses the name
+`interra-benchmark`. Camera keeps its own name. The page shows the live gate
+decision beside the scored 4 October 2026 run:
+
+```bash
+# voice worker
+INTERRA_FDB_AGENT_NAME=interra-benchmark python -m agent.fdb_livekit dev
+# camera worker, second terminal
+python -m agent.extension_livekit dev
+# page
+python -m agent.demo_page
+```
+
 Start the camera extension in a separate terminal. It is not the benchmark agent:
 
 ```bash
 python -m agent.extension_livekit start
+```
+
+Replay the booking correction without a camera or a LiveKit room:
+
+```bash
+python -m agent.extension_demo
+```
+
+After a rehearsal, open the trace beside the recording. Executed, dropped, and reused calls are labeled:
+
+```bash
+python -m agent.replay artifacts/fdb_v3/livekit-agent.jsonl -o artifacts/fdb_v3/replay.html
 ```
 
 Run and evaluate the released benchmark:

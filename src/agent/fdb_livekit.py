@@ -21,6 +21,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from agent.commit import SUPERSEDED, CommitGate
 from livekit.plugins import silero
 from livekit.agents.types import APIConnectOptions
 
@@ -29,6 +30,15 @@ from livekit.agents.types import APIConnectOptions
 # this module is being loaded on the process main thread instead.
 if os.environ.get("INTERRA_FDB_LLM_PROVIDER", "livekit") == "ollama":
     from livekit.plugins import openai as _openai_plugin  # noqa: F401
+
+
+def load_local_env() -> None:
+    """Read .env from the repo root. Values already set in the shell stay."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 
 def _model_fallbacks(name: str, default: str) -> tuple[str, ...]:
@@ -55,6 +65,7 @@ class FdbConfig:
     endpointing_min_delay: float = 0.7
     endpointing_max_delay: float = 1.2
     unfinished_turn_hold_seconds: float = 1.0
+    commit_quiet_seconds: float = 0.6
 
     def __post_init__(self) -> None:
         if self.session_cooldown_seconds < 0:
@@ -63,6 +74,8 @@ class FdbConfig:
             raise ValueError("endpointing delays must satisfy 0 <= min_delay <= max_delay")
         if self.unfinished_turn_hold_seconds < 0:
             raise ValueError("unfinished_turn_hold_seconds must be non-negative")
+        if self.commit_quiet_seconds < 0:
+            raise ValueError("commit_quiet_seconds must be non-negative")
 
     @classmethod
     def from_env(cls) -> "FdbConfig":
@@ -96,6 +109,9 @@ class FdbConfig:
             ),
             unfinished_turn_hold_seconds=float(
                 os.environ.get("INTERRA_FDB_UNFINISHED_TURN_HOLD_SECONDS", "1.0")
+            ),
+            commit_quiet_seconds=float(
+                os.environ.get("INTERRA_FDB_COMMIT_QUIET_SECONDS", "0.6")
             ),
         )
 
@@ -166,10 +182,12 @@ class ToolExecutor:
         room_name: str,
         trace: TraceWriter,
         telemetry_path: Path | None | str = "default",
+        gate: CommitGate | None = None,
     ):
         self.registry = registry
         self.room_name = room_name
         self.trace = trace
+        self.gate = gate
         # The benchmark scores this file. Offline replays pass None to skip it.
         self.telemetry_path: Path | None = (
             Path(tempfile.gettempdir()) / "agent_tool_calls.log"
@@ -179,6 +197,16 @@ class ToolExecutor:
         self._completed: dict[str, asyncio.Future[str]] = {}
 
     async def call(self, name: str, **arguments: Any) -> str:
+        if self.gate is not None:
+            epoch = self.gate.epoch
+            if not await self.gate.allow(epoch):
+                self.trace.append(
+                    "tool_call_dropped",
+                    room=self.room_name,
+                    call={"function": name, "args": arguments},
+                    reason="user continued",
+                )
+                return SUPERSEDED
         key = _call_key(name, arguments)
         while (previous := self._completed.get(key)) is not None:
             try:
@@ -315,6 +343,15 @@ def _as_float(value: Any) -> float:
         return float(normalized)
     except ValueError:
         pass
+    phrase = re.sub(r"\s+", " ", normalized.lower())
+    phrase = re.sub(r"\bof\b", "", phrase)
+    phrase = re.sub(r"\s+", " ", phrase).strip()
+    quantities = {
+        "couple": 2, "a couple": 2, "pair": 2, "a pair": 2,
+        "dozen": 12, "a dozen": 12, "twice": 2,
+    }
+    if phrase in quantities:
+        return float(quantities[phrase])
     units = {
         "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
         "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
@@ -590,11 +627,33 @@ def spoken_number_run(words: list[str]) -> str:
     return "".join(groups)
 
 
-def normalize_place(value: str) -> str:
-    """Keep the user's place wording; write spelled numbers and ordinals as digits.
+_PLACE_NICKNAMES = {
+    "vegas": "Las Vegas",
+    "nyc": "New York",
+    "sf": "San Francisco",
+    "la": "Los Angeles",
+    "dc": "Washington",
+}
+_STREET_AFTER_ORDINAL = (
+    "street", "st", "avenue", "ave", "road", "rd", "boulevard", "blvd",
+    "lane", "ln", "drive", "dr",
+)
 
-    Only runs of two or more number words are rewritten, so a lone word such
-    as "the one on Main" keeps its meaning.
+
+def normalize_destination(value: str) -> str:
+    """Expand a whole-city short name. Any other wording is kept."""
+    if not isinstance(value, str):
+        return value
+    text = re.sub(r"\s+", " ", value.strip())
+    return _PLACE_NICKNAMES.get(text.lower(), text)
+
+
+def normalize_place(value: str) -> str:
+    """Write numbers as digits and drop a leading "the" on a place name.
+
+    A single-word place is capitalized ("the gym" becomes "Gym"). A street
+    type that only repeats an ordinal ("5th Street") is dropped. "the one on
+    Main" is left alone so the lone word "one" keeps its meaning.
     """
     if not isinstance(value, str):
         return value
@@ -613,7 +672,29 @@ def normalize_place(value: str) -> str:
     text = re.sub(ordinal, digits, text, flags=re.IGNORECASE)
     word = r"(?:" + "|".join(sorted(_NUMBER_WORDS, key=len, reverse=True)) + r")"
     run = rf"\b{word}(?:[\s\-]+{word})+\b"
-    return re.sub(run, number, text, flags=re.IGNORECASE)
+    text = re.sub(run, number, text, flags=re.IGNORECASE)
+    street = "|".join(_STREET_AFTER_ORDINAL)
+    text = re.sub(rf"\b(\d+(?:st|nd|rd|th))\s+(?:{street})\b", r"\1", text, flags=re.IGNORECASE)
+    if not re.match(r"(?i)the\s+one\b", text):
+        stripped = re.sub(r"(?i)^the\s+", "", text)
+        if stripped:
+            text = stripped
+    if re.fullmatch(r"[A-Za-z]+", text) and text[0].islower():
+        text = text.capitalize()
+    return text
+
+
+_QUERY_FILLERS = {"nice", "good", "great", "lovely", "decent"}
+
+
+def normalize_query(value: str) -> str:
+    """Drop a leading filler adjective. Plurals and real product words stay."""
+    if not isinstance(value, str):
+        return value
+    words = re.sub(r"\s+", " ", value.strip()).split(" ")
+    if len(words) >= 2 and words[0].lower() in _QUERY_FILLERS:
+        words = words[1:]
+    return " ".join(words)
 
 
 _PRICE_WORDS = ("price", "rent", "budget", "cost", "monthly_rent", "rent_price", "monthly_budget")
@@ -623,6 +704,8 @@ _FILTER_ALIASES = {
     "allows_pets": "pets_allowed", "pets_ok": "pets_allowed",
     "bedroom": "bedrooms", "num_bedrooms": "bedrooms", "bedroom_count": "bedrooms",
     "number_of_bedrooms": "bedrooms",
+    "preferred_neighborhood": "neighborhood", "preferred_area": "neighborhood",
+    "neighbourhood": "neighborhood",
 }
 
 
@@ -685,16 +768,24 @@ When to act:
 - Only call tools for actions the user asked for. Do not add extra steps.
 
 Argument values:
-- Copy the user's own wording for names, places, products and search terms,
-  keeping words like "my" and "the", plurals and qualifiers. Do not add a city,
-  street type or other detail the user did not say. Write ordinals and numbers
-  as digits ("9th", "4").
+- Copy the user's own wording for names, products and search terms, keeping
+  plurals. Drop a filler such as "nice" from a product. Do not add a city,
+  street type or other detail the user did not say, and never send a placeholder
+  such as "my city". Expand a one-word city nickname to the full city name.
+  Write ordinals and numbers as digits ("9th", "4"). Eighteen hundred is 1800.
+  A couple is 2. A dozen is 12.
 - Dates are "Month Day" as spoken, such as "October 14". Never use ISO format and
-  never add a year.
+  never add a year. A weekday such as "next Friday" stays as the user said it.
 - Spelled identifiers are joined into one uppercase code without spaces or
-  dashes: "z q seven" becomes "ZQ7".
-- Use the enum spellings given in each tool description. Use 3-letter currency
-  codes. Keep numeric and boolean values typed.
+  dashes, and every spelled character is kept: "z q seven" is "ZQ7" and a
+  repeated digit is kept twice.
+- A minimum count keeps the min_ prefix in the filter name. A preference such
+  as a preferred area uses the plain noun, without the word preferred. A pet,
+  cat or dog request sets pets_allowed to true. Omit max_price when the user
+  gives no rent or budget.
+- Use the enum spellings given in each tool description. from_currency is the
+  money the user has and to_currency is the money they want; the two codes
+  differ when the user names two currencies. Keep numeric and boolean values typed.
 
 Speaking: when all requested tools have finished, give one brief answer grounded
 in the tool results. Never invent a tool result.
@@ -918,11 +1009,12 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         async def search_flights(self, destination: str, date: str) -> str:
             """
             Args:
-                destination: The city or airport as the user said it.
+                destination: The city as the user said it. Expand a one-word nickname to the full city name.
                 date: Travel date as spoken, "Month Day" such as "October 14". No year, not ISO.
             """
             return await self.executor.call(
-                "search_flights", destination=destination.strip(), date=normalize_spoken_date(date)
+                "search_flights", destination=normalize_destination(destination),
+                date=normalize_spoken_date(date),
             )
 
         @function_tool(description="Book a flight found by search_flights for a passenger.")
@@ -968,8 +1060,8 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
             """
             Args:
                 amount: Amount of from_currency to convert, as a number.
-                from_currency: 3-letter code of the currency the user has, e.g. "CHF".
-                to_currency: 3-letter code of the currency the user wants, e.g. "AUD".
+                from_currency: 3-letter code of the currency the user already has.
+                to_currency: 3-letter code of the currency the user wants back. Different from from_currency when they name two currencies.
             """
             return await self.executor.call(
                 "get_exchange_rate",
@@ -992,19 +1084,23 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
 
         @function_tool(description="Search for long-term rental apartments in a city. Not for hotels or short stays.")
         async def search_apartments(
-            self, city: str, bedrooms: int | str, max_price: float | str,
+            self, city: str, bedrooms: int | str, max_price: float | str | None = None,
             pets_allowed: bool | None = None,
         ) -> str:
             """
             Args:
-                city: City name as the user said it.
+                city: A city name the user spoke. Never a placeholder such as "my city".
                 bedrooms: Number of bedrooms, as a number.
-                max_price: Maximum monthly rent, as a number.
-                pets_allowed: Only when the user asks about pets.
+                max_price: Maximum monthly rent, only when the user gives one. Omit it otherwise.
+                pets_allowed: True when the user mentions pets, a cat, a dog, or pet friendly.
             """
             arguments: dict[str, Any] = {
-                "city": city.strip(), "bedrooms": _as_int(bedrooms), "max_price": _as_float(max_price),
+                "city": normalize_destination(city), "bedrooms": _as_int(bedrooms),
             }
+            if max_price is not None:
+                price = _as_float(max_price)
+                if price < 1_000_000:
+                    arguments["max_price"] = price
             if pets_allowed is not None:
                 arguments["pets_allowed"] = pets_allowed
             return await self.executor.call("search_apartments", **arguments)
@@ -1015,8 +1111,8 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         ) -> str:
             """
             Args:
-                origin_address: Starting place in the user's words, keeping "my"/"the", or an address returned by an earlier tool.
-                destination_address: Destination in the user's words, keeping "my"/"the". Do not add a city.
+                origin_address: Starting place in the user's words, or an address returned by an earlier tool.
+                destination_address: Destination in the user's words, without a leading "the". Do not add a city or a street type.
                 mode: One of "driving", "walking", "biking" or "transit". Defaults to "driving".
             """
             return await self.executor.call(
@@ -1034,7 +1130,7 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         async def update_search_filter(self, filter_name: str, value: str | float | bool) -> str:
             """
             Args:
-                filter_name: snake_case filter key. Use the search_apartments parameter name when the filter is one of them ("max_price" for any rent or budget limit, "bedrooms", "pets_allowed"); otherwise the user's words with min_/max_ for bounds (e.g. "min_bathrooms") or a plain noun (e.g. "parking").
+                filter_name: snake_case key. Rent or budget is max_price or min_price. A minimum count keeps its min_ prefix. A preferred area uses the plain noun, without the word preferred. Pets are pets_allowed. Any other filter is the user's noun, such as parking.
                 value: The new value: a number for bounds and counts, true/false for yes/no filters, otherwise text.
             """
             return await self.executor.call(
@@ -1057,11 +1153,11 @@ def create_benchmark_tools(executor: ToolExecutor, function_tool: Any) -> Any:
         ) -> str:
             """
             Args:
-                query: The product words the user used, keeping plurals and qualifiers. If the user changed their mind, only the product they settled on.
+                query: The product words the user used, keeping plurals. Drop a filler adjective such as "nice". If the user changed their mind, only the product they settled on.
                 max_price: Maximum price as a number, only when the user gives one.
                 category: Product category, only when the user names one.
             """
-            arguments: dict[str, Any] = {"query": query.strip()}
+            arguments: dict[str, Any] = {"query": normalize_query(query)}
             if max_price is not None:
                 arguments["max_price"] = _as_float(max_price)
             if category:
@@ -1116,6 +1212,7 @@ def trace_session_error(trace: TraceWriter, room_name: str, event: Any) -> None:
 
 async def entrypoint(ctx: Any) -> None:
     """LiveKit job entrypoint. Must stay module-level so the worker process can import it."""
+    load_local_env()
     config = FdbConfig.from_env()
     missing = config.missing_requirements()
     if missing:
@@ -1143,7 +1240,8 @@ async def entrypoint(ctx: Any) -> None:
             apply_turn_hold(hold, new_message, StopResponse)
 
     registry = benchmark.MockAPIRegistry(latency_profile=config.latency_profile)
-    executor = ToolExecutor(registry, ctx.room.name, trace)
+    gate = CommitGate(config.commit_quiet_seconds)
+    executor = ToolExecutor(registry, ctx.room.name, trace, gate=gate)
     tools = llm.find_function_tools(create_benchmark_tools(executor, function_tool))
 
     speech_stt, speech_tts = livekit_speech_models(inference, config)
@@ -1170,9 +1268,14 @@ async def entrypoint(ctx: Any) -> None:
         trace.append("user_state", room=ctx.room.name, state=str(event.new_state))
         if str(event.new_state) == "speaking":
             hold.on_user_speaking()
+            gate.set_speaking(True)
+        elif str(event.new_state) in {"listening", "away"}:
+            gate.set_speaking(False)
 
     @session.on("user_input_transcribed")
     def on_transcript(event: Any) -> None:
+        if event.is_final:
+            gate.note_transcript()
         trace.append(
             "transcript",
             room=ctx.room.name,
@@ -1198,7 +1301,8 @@ async def entrypoint(ctx: Any) -> None:
         f" stt={config.stt_model} llm={config.llm_provider}:{config.llm_model} tts={config.tts_model}"
         f" temperature={config.llm_temperature}"
         f" endpointing={config.endpointing_min_delay}-{config.endpointing_max_delay}s"
-        f" unfinished_hold={config.unfinished_turn_hold_seconds}s",
+        f" unfinished_hold={config.unfinished_turn_hold_seconds}s"
+        f" commit_quiet={config.commit_quiet_seconds}s",
         flush=True,
     )
     # Keep playout alive briefly after disconnect, then explicitly release the
@@ -1222,7 +1326,21 @@ async def entrypoint(ctx: Any) -> None:
         await hold.aclose()
 
 
+def benchmark_dispatch_name() -> str:
+    """Empty means the official runner auto-dispatches this worker to every room.
+
+    The judge page sets ``INTERRA_FDB_AGENT_NAME`` so this worker enters only
+    the voice room and does not also join the camera room.
+    """
+    return os.environ.get("INTERRA_FDB_AGENT_NAME", "").strip()
+
+
+def register_benchmark_session(server: Any) -> None:
+    server.rtc_session(entrypoint, agent_name=benchmark_dispatch_name())
+
+
 def main() -> None:
+    load_local_env()
     config = FdbConfig.from_env()
     missing = config.missing_requirements()
     if missing:
@@ -1232,7 +1350,7 @@ def main() -> None:
     from livekit.agents import AgentServer
 
     server = AgentServer(setup_fnc=prewarm, num_idle_processes=1, initialize_process_timeout=60.0)
-    server.rtc_session(entrypoint)
+    register_benchmark_session(server)
     agents.cli.run_app(server)
 
 

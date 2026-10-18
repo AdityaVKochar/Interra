@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import shutil
@@ -36,6 +37,32 @@ def load_environment(path: Path, environment: dict[str, str]) -> dict[str, str]:
         if value and not result.get(name):
             result[name] = value
     return result
+
+
+def run_info(root: Path, environment: dict[str, str], seed: int) -> str:
+    """Record how a run was configured without writing secret values."""
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    pin = "3e799c45a045256f47d5f1c9cda90157e2d2ec9e"
+    lines = [
+        f"recorded_at: {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
+        f"commit: {commit.stdout.strip() if commit.returncode == 0 else 'unknown'}",
+        f"fdb_v3_commit: {pin}",
+        f"python: {sys.version.split()[0]}",
+        f"seed: {seed}",
+        "judge: organizer re-run uses the pinned judge; this record does not invent one",
+        f"livekit_url_set: {bool(environment.get('LIVEKIT_URL'))}",
+        f"stt: {environment.get('INTERRA_FDB_STT_MODEL', 'deepgram/nova-3')}",
+        f"llm: {environment.get('INTERRA_FDB_LLM_MODEL', 'openai/gpt-4.1-mini')}",
+        f"tts: {environment.get('INTERRA_FDB_TTS_MODEL', 'cartesia/sonic-3')}",
+        f"llm_provider: {environment.get('INTERRA_FDB_LLM_PROVIDER', 'livekit')}",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def reproduction_commands(venv: Path, use_llm: bool) -> list[list[str]]:
@@ -73,7 +100,25 @@ def main() -> None:
     if absent:
         parser.error("Install these prerequisites on PATH: " + ", ".join(absent))
     environment["PYTHONHASHSEED"] = str(args.seed)
-    for command in reproduction_commands(args.venv.resolve(), args.use_llm):
+    run_dir = ROOT / "artifacts" / "fdb_v3" / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run_info.txt").write_text(run_info(ROOT, environment, args.seed), encoding="utf-8")
+    print(f"Wrote {run_dir / 'run_info.txt'}", flush=True)
+    commands = reproduction_commands(args.venv.resolve(), args.use_llm)
+    for command in commands[:4]:
+        print("+", " ".join(command), flush=True)
+        subprocess.run(command, cwd=ROOT, env=environment, check=True)
+    python = commands[2][0]
+    freeze = subprocess.run(
+        [python, "-m", "pip", "freeze"],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    (run_dir / "pip-freeze.txt").write_text(freeze.stdout, encoding="utf-8")
+    for command in commands[4:]:
         print("+", " ".join(command), flush=True)
         subprocess.run(command, cwd=ROOT, env=environment, check=True)
 

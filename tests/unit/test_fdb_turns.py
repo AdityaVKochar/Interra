@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 from agent.fdb_livekit import (
+    CommitGate,
     FdbConfig,
     INSTRUCTIONS,
     ToolExecutor,
@@ -60,6 +61,33 @@ class ToolExecutorDeduplicationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.registry.calls), 1)
         self.assertEqual(len(self.telemetry()), 1)
         self.assertEqual(self.trace_kinds(), ["tool_call", "tool_call_deduplicated"])
+
+    async def test_speech_that_resumes_drops_the_call_before_it_is_logged(self):
+        gate = CommitGate(quiet_seconds=0.6)
+        executor = ToolExecutor(self.registry, "room-a", self.trace, gate=gate)
+        gate.set_speaking(True)
+        task = asyncio.create_task(executor.call("track_order", order_id="ZQ7"))
+        await asyncio.sleep(0)
+        gate.note_transcript()
+        result = json.loads(await task)
+        self.assertEqual(result["status"], "superseded")
+        self.assertEqual(self.registry.calls, [])
+        self.assertEqual(self.telemetry(), [])
+        self.assertIn("tool_call_dropped", self.trace_kinds())
+
+    async def test_quiet_window_releases_one_logged_call(self):
+        clock = {"now": 0.0}
+        gate = CommitGate(quiet_seconds=0.6, clock=lambda: clock["now"])
+        gate.set_speaking(True)
+        gate.set_speaking(False)
+        executor = ToolExecutor(self.registry, "room-a", self.trace, gate=gate)
+        task = asyncio.create_task(executor.call("track_order", order_id="ZQ7"))
+        await asyncio.sleep(0.05)
+        self.assertEqual(self.telemetry(), [])
+        clock["now"] = 0.6
+        result = json.loads(await asyncio.wait_for(task, timeout=1))
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(len(self.telemetry()), 1)
 
     async def test_changed_arguments_run_again(self):
         executor = ToolExecutor(self.registry, "room-a", self.trace)

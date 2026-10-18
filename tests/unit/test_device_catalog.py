@@ -1,0 +1,60 @@
+"""Camera catalog and booking gate, without a LiveKit connection."""
+import asyncio
+import json
+import unittest
+
+from agent.commit import CommitGate
+from agent.device_catalog import DeviceDesk, GatedAction
+
+
+class ListTrace:
+    def __init__(self) -> None:
+        self.events: list[dict] = []
+
+    def append(self, kind: str, **payload) -> None:
+        self.events.append({"kind": kind, **payload})
+
+
+class DeviceCatalogTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.trace = ListTrace()
+        self.desk = DeviceDesk()
+
+    def kinds(self):
+        return [event["kind"] for event in self.trace.events]
+
+    def test_known_code_returns_one_check_and_unknown_code_does_not_invent_one(self):
+        found = self.desk.lookup("e1")
+        self.assertEqual(found["status"], "found")
+        self.assertIn("door", found["meaning"].lower())
+        unknown = self.desk.lookup("ZZ")
+        self.assertEqual(unknown["status"], "unknown")
+        self.assertNotIn("meaning", unknown)
+
+    async def test_correction_drops_a_booking_before_it_is_stored(self):
+        gate = CommitGate(quiet_seconds=0.6)
+        actions = GatedAction(gate, self.trace, "room")
+        gate.set_speaking(True)
+        task = asyncio.create_task(
+            actions.run("schedule_check", {"day": "Friday", "window": "morning"}, lambda: self.desk.schedule("Friday", "morning"))
+        )
+        await asyncio.sleep(0)
+        gate.note_transcript()
+        result = json.loads(await task)
+        self.assertEqual(result["status"], "superseded")
+        self.assertEqual(self.desk.list_visits()["visits"], [])
+        self.assertEqual(self.kinds(), ["tool_call_dropped"])
+
+    async def test_quiet_booking_is_visible_to_a_later_read(self):
+        clock = {"now": 0.0}
+        gate = CommitGate(quiet_seconds=0.6, clock=lambda: clock["now"])
+        gate.set_speaking(True)
+        gate.set_speaking(False)
+        actions = GatedAction(gate, self.trace, "room")
+        task = asyncio.create_task(
+            actions.run("schedule_check", {"day": "Saturday", "window": "morning"}, lambda: self.desk.schedule("Saturday", "morning"))
+        )
+        clock["now"] = 0.6
+        await task
+        listed = json.loads(await actions.run("list_scheduled_checks", {}, self.desk.list_visits))
+        self.assertEqual(listed["visits"][0]["day"], "Saturday")

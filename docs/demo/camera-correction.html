@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Camera correction: Friday dropped, Saturday kept</title>
+<style>
+body { font-family: Georgia, serif; margin: 2rem; color: #1c1c1c; background: #fff; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border-bottom: 1px solid #ccc; text-align: left; padding: 0.4rem; vertical-align: top; color: #1c1c1c; }
+</style>
+</head>
+<body>
+<h1>Camera correction: Friday dropped, Saturday kept</h1>
+<table>
+<thead><tr><th>Event</th><th>Room</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Executed</td><td>camera-demo</td><td>lookup_indicator {&quot;code&quot;: &quot;E1&quot;}</td></tr>
+<tr><td>Dropped</td><td>camera-demo</td><td>schedule_check {&quot;day&quot;: &quot;Friday&quot;, &quot;window&quot;: &quot;morning&quot;} (user continued)</td></tr>
+<tr><td>Executed</td><td>camera-demo</td><td>schedule_check {&quot;day&quot;: &quot;Saturday&quot;, &quot;window&quot;: &quot;morning&quot;}</td></tr>
+<tr><td>Executed</td><td>camera-demo</td><td>list_scheduled_checks {}</td></tr>
+</tbody>
+</table>
+</body>
+</html>

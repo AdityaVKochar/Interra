@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.reproduce import load_environment, reproduction_commands
+from scripts.reproduce import load_environment, reproduction_commands, run_info
 
 
 class ReproduceTests(unittest.TestCase):
@@ -31,3 +31,20 @@ class ReproduceTests(unittest.TestCase):
             with self.assertRaises(ValueError) as error:
                 load_environment(env, {})
             self.assertNotIn("sensitive-value", str(error.exception))
+
+    def test_run_info_records_pin_and_models_without_secrets(self):
+        text = run_info(
+            Path("."),
+            {
+                "LIVEKIT_URL": "wss://secret.example",
+                "LIVEKIT_API_KEY": "key-value",
+                "INTERRA_FDB_LLM_MODEL": "openai/gpt-4.1-mini",
+            },
+            5,
+        )
+        self.assertIn("fdb_v3_commit: 3e799c45a045256f47d5f1c9cda90157e2d2ec9e", text)
+        self.assertIn("seed: 5", text)
+        self.assertIn("openai/gpt-4.1-mini", text)
+        self.assertIn("livekit_url_set: True", text)
+        self.assertNotIn("secret.example", text)
+        self.assertNotIn("key-value", text)
