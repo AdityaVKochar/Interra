@@ -114,9 +114,9 @@ def render_page(records: list[dict[str, Any]], title: str = "Interra trace") -> 
 <meta charset="utf-8">
 <title>{html.escape(title)}</title>
 <style>
-body {{ font-family: Georgia, serif; margin: 2rem; color: #1c1c1c; }}
+body {{ font-family: Georgia, serif; margin: 2rem; color: #1c1c1c; background: #fff; }}
 table {{ border-collapse: collapse; width: 100%; }}
-td, th {{ border-bottom: 1px solid #ccc; text-align: left; padding: 0.4rem; vertical-align: top; }}
+td, th {{ border-bottom: 1px solid #ccc; text-align: left; padding: 0.4rem; vertical-align: top; color: #1c1c1c; }}
 </style>
 </head>
 <body>
