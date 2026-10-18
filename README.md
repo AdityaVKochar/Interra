@@ -284,6 +284,13 @@ The same `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` variables
 are required. In the LiveKit project, dispatch this worker with the agent
 name `interra-camera-troubleshooter`.
 
+The judge page puts the live voice correction, the camera correction, and the
+scored 4 October 2026 run on one screen:
+
+```bash
+python -m agent.demo_page
+```
+
 ## Tests
 
 ```bash

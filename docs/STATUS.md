@@ -1,3 +1,16 @@
+# Judge page — 2026-10-18
+
+- `python -m agent.demo_page` serves one local page at
+  `http://127.0.0.1:8780/`. The large line is the gate's latest decision
+  (heard, held, dropped, executed, or reused). Voice and camera are separate
+  rooms. The 4 October 2026 housing self-correction stays on the page with
+  70/100 strict, 100/100 turn-take, 4.452 s, the organizer LLM judge off, and
+  29 recordings re-recorded after the credit outage.
+- The benchmark worker stays auto-dispatched until
+  `INTERRA_FDB_AGENT_NAME=interra-benchmark`. That name is only for the judge
+  page, so the voice worker does not also enter the camera room.
+- No new FDB score and no demo video were produced.
+
 # Argument fixes from the 17 wrong-argument recordings — 2026-10-17
 
 - Read the 17 tool-right / argument-wrong recordings in
