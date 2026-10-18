@@ -18,6 +18,7 @@ from agent.fdb_livekit import (
     TraceWriter,
     livekit_llm_model,
     livekit_speech_models,
+    load_local_env,
 )
 
 
@@ -119,6 +120,7 @@ def camera_matches(participant: Any, publication: Any, identity: str, camera_sou
 
 
 async def entrypoint(ctx: Any) -> None:
+    load_local_env()
     missing = [
         name for name in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
         if not os.environ.get(name)
@@ -204,6 +206,11 @@ async def entrypoint(ctx: Any) -> None:
             ctx.room.on("track_subscribed", on_track_subscribed)
             self._on_untrack = on_track_unsubscribed
             ctx.room.on("track_unsubscribed", on_track_unsubscribed)
+            self.session.generate_reply(
+                instructions=(
+                    "Say one short sentence: you can hear them, and ask them to hold the code up to the camera."
+                )
+            )
 
         async def on_user_turn_completed(
             self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
@@ -253,6 +260,7 @@ async def entrypoint(ctx: Any) -> None:
 
 
 def main() -> None:
+    load_local_env()
     from livekit import agents
     from livekit.agents import AgentServer
 

@@ -32,6 +32,15 @@ if os.environ.get("INTERRA_FDB_LLM_PROVIDER", "livekit") == "ollama":
     from livekit.plugins import openai as _openai_plugin  # noqa: F401
 
 
+def load_local_env() -> None:
+    """Read .env from the repo root. Values already set in the shell stay."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+
+
 def _model_fallbacks(name: str, default: str) -> tuple[str, ...]:
     configured = os.environ.get(name, default)
     return tuple(model.strip() for model in configured.split(",") if model.strip())
@@ -1203,6 +1212,7 @@ def trace_session_error(trace: TraceWriter, room_name: str, event: Any) -> None:
 
 async def entrypoint(ctx: Any) -> None:
     """LiveKit job entrypoint. Must stay module-level so the worker process can import it."""
+    load_local_env()
     config = FdbConfig.from_env()
     missing = config.missing_requirements()
     if missing:
@@ -1316,7 +1326,21 @@ async def entrypoint(ctx: Any) -> None:
         await hold.aclose()
 
 
+def benchmark_dispatch_name() -> str:
+    """Empty means the official runner auto-dispatches this worker to every room.
+
+    The judge page sets ``INTERRA_FDB_AGENT_NAME`` so this worker enters only
+    the voice room and does not also join the camera room.
+    """
+    return os.environ.get("INTERRA_FDB_AGENT_NAME", "").strip()
+
+
+def register_benchmark_session(server: Any) -> None:
+    server.rtc_session(entrypoint, agent_name=benchmark_dispatch_name())
+
+
 def main() -> None:
+    load_local_env()
     config = FdbConfig.from_env()
     missing = config.missing_requirements()
     if missing:
@@ -1326,7 +1350,7 @@ def main() -> None:
     from livekit.agents import AgentServer
 
     server = AgentServer(setup_fnc=prewarm, num_idle_processes=1, initialize_process_timeout=60.0)
-    server.rtc_session(entrypoint)
+    register_benchmark_session(server)
     agents.cli.run_app(server)
 
 

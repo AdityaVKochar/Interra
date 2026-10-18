@@ -75,7 +75,9 @@ semantic turn detector picks between them), `INTERRA_FDB_UNFINISHED_TURN_HOLD_SE
 (1.0 s; 0 disables holding turns that end mid-sentence),
 `INTERRA_FDB_COMMIT_QUIET_SECONDS` (0.6 s; a tool call waits out this quiet
 window and is dropped, not logged, if speech resumes or a newer transcript
-arrives) and `INTERRA_FDB_RECORDER_RETRIES` (1; re-runs recordings whose
+arrives), `INTERRA_FDB_AGENT_NAME` (empty; the official runner auto-dispatches
+this worker. The judge page sets it to `interra-benchmark` so the voice worker
+does not also enter the camera room) and `INTERRA_FDB_RECORDER_RETRIES` (1; re-runs recordings whose
 official recorder crashed before writing a result).
 
 Offline checks need no audio or GPU: `python -m agent.fdb_offline rescore --run
