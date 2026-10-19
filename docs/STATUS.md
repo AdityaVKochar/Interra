@@ -1,3 +1,32 @@
+# Judge console redesign — 2026-10-20
+
+- Branch `ui-rework` from `parent-main`. `python -m agent.demo_page` now serves
+  `src/agent/web/` (index.html, app.css, app.js, orb.js, logo.svg) instead of an
+  inline string: Geist Mono throughout, glass panels, a WebGL orb (warm = person,
+  cool = agent) with a CSS fallback, a state-sequenced bar visualizer, a mic
+  waveform, dark and light themes, and a new logo.
+- Transcript: live captions from the agent's `lk.transcription` text streams;
+  the worker trace is the fallback. Logs: every trace record for the room with
+  filters, search, expandable JSON, copy and `.jsonl` download. `/events`
+  resumes from `Last-Event-ID`.
+- Gate: `ToolExecutor` and `GatedAction` trace `tool_call_pending` before the
+  quiet-window wait, so the page shows the hold before Executed or Dropped. The
+  camera worker now traces user/agent state, transcripts, replies, errors,
+  close, and `camera_frame` per turn.
+- `/replay` plays room `eval-31fcf764` (housing_11) from the 4 October trace
+  with original timestamps (idle gaps over 2.5 s shortened, labelled). The
+  pinned evaluator did not pass this recording (city expected "Austin", got
+  "my city"); the page now says so. The earlier line "the city was heard as
+  my city" is not supported by the trace and was replaced by the verbatim reply.
+- Fixed: `/config` imported the worker module from a request thread, where
+  LiveKit refuses to register plugins; it is now imported at module load.
+- Tests: `tests.unit.test_demo_page` (served assets, SSE resume, replay result,
+  config without secrets, fresh-process thread regression),
+  `test_extension_livekit` (frame trace), updated pending-order assertions in
+  `test_fdb_turns` and `test_device_catalog`.
+- Not verified: a live LiveKit call from this page (no microphone in this
+  environment). No new FDB score.
+
 # Judge page — 2026-10-18
 
 - `python -m agent.demo_page` serves one local page at

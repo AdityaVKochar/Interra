@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Interra">
+  <!-- Interra mark: a person's speech (warm) meets the commit gate (white) and the agent's calmer reply (cool). -->
+  <defs>
+    <linearGradient id="interra-tile" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#23232d"/>
+      <stop offset="1" stop-color="#0c0c11"/>
+    </linearGradient>
+    <radialGradient id="interra-glow-warm" cx="14" cy="34" r="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff7a1a" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="interra-glow-cool" cx="50" cy="30" r="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c7cff" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#7c7cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="interra-warm" x1="8" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6a1a"/>
+      <stop offset="1" stop-color="#ffb45e"/>
+    </linearGradient>
+    <linearGradient id="interra-cool" x1="37" y1="0" x2="56" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b4c0ff"/>
+      <stop offset="1" stop-color="#6d6af5"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#interra-tile)"/>
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#interra-glow-warm)"/>
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#interra-glow-cool)"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="17.5" fill="none" stroke="#ffffff" stroke-opacity=".14"/>
+  <path d="M10 32c2-10 6-10 8 0s6 10 8 0" fill="none" stroke="url(#interra-warm)" stroke-width="5" stroke-linecap="round"/>
+  <rect x="29.25" y="14" width="5.5" height="36" rx="2.75" fill="#ffffff"/>
+  <path d="M38 32c2-6 6-6 8 0s6 6 8 0" fill="none" stroke="url(#interra-cool)" stroke-width="5" stroke-linecap="round"/>
+</svg>

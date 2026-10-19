@@ -43,7 +43,8 @@ class DeviceCatalogTests(unittest.IsolatedAsyncioTestCase):
         result = json.loads(await task)
         self.assertEqual(result["status"], "superseded")
         self.assertEqual(self.desk.list_visits()["visits"], [])
-        self.assertEqual(self.kinds(), ["tool_call_dropped"])
+        self.assertEqual(self.kinds(), ["tool_call_pending", "tool_call_dropped"])
+        self.assertEqual(self.trace.events[0]["call"]["args"]["day"], "Friday")
 
     async def test_quiet_booking_is_visible_to_a_later_read(self):
         clock = {"now": 0.0}

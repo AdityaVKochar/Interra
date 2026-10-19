@@ -73,7 +73,8 @@ class ToolExecutorDeduplicationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status"], "superseded")
         self.assertEqual(self.registry.calls, [])
         self.assertEqual(self.telemetry(), [])
-        self.assertIn("tool_call_dropped", self.trace_kinds())
+        # The trace shows the call held at the gate before it was dropped.
+        self.assertEqual(self.trace_kinds(), ["tool_call_pending", "tool_call_dropped"])
 
     async def test_quiet_window_releases_one_logged_call(self):
         clock = {"now": 0.0}
@@ -84,10 +85,15 @@ class ToolExecutorDeduplicationTests(unittest.IsolatedAsyncioTestCase):
         task = asyncio.create_task(executor.call("track_order", order_id="ZQ7"))
         await asyncio.sleep(0.05)
         self.assertEqual(self.telemetry(), [])
+        self.assertEqual(self.trace_kinds(), ["tool_call_pending"])
         clock["now"] = 0.6
         result = json.loads(await asyncio.wait_for(task, timeout=1))
         self.assertEqual(result["status"], "success")
         self.assertEqual(len(self.telemetry()), 1)
+        self.assertEqual(self.trace_kinds(), ["tool_call_pending", "tool_call"])
+        pending = json.loads(self.trace.path.read_text().splitlines()[0])
+        self.assertEqual(pending["call"], {"function": "track_order", "args": {"order_id": "ZQ7"}})
+        self.assertEqual(pending["quiet_seconds"], 0.6)
 
     async def test_changed_arguments_run_again(self):
         executor = ToolExecutor(self.registry, "room-a", self.trace)

@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from agent.extension_livekit import (
     EXTENSION_INSTRUCTIONS, LatestFrameSource, entrypoint, camera_matches, clear_previous_images,
+    trace_frame_decision,
 )
 
 
@@ -143,6 +144,30 @@ class ExtensionLiveKitTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(camera_matches(participant, camera, "speaker", "camera"))
         self.assertFalse(camera_matches(participant, camera, "other", "camera"))
         self.assertFalse(camera_matches(participant, screen, "speaker", "camera"))
+
+    def test_each_turn_records_whether_a_frame_was_attached(self):
+        class Trace:
+            def __init__(self):
+                self.events = []
+
+            def append(self, kind, **payload):
+                self.events.append({"kind": kind, **payload})
+
+        trace = Trace()
+        trace_frame_decision(trace, "camera-room", SimpleNamespace(width=1280, height=720))
+        trace_frame_decision(trace, "camera-room", None)
+        self.assertEqual(trace.events, [
+            {"kind": "camera_frame", "room": "camera-room", "attached": True, "width": 1280, "height": 720},
+            {"kind": "camera_frame", "room": "camera-room", "attached": False},
+        ])
+
+    def test_camera_session_traces_speech_state_replies_and_frames(self):
+        source = inspect.getsource(entrypoint)
+        self.assertIn("trace_frame_decision(trace, ctx.room.name, frame)", source)
+        self.assertIn("trace_conversation_item(trace, ctx.room.name, event.item)", source)
+        self.assertIn("trace_session_error(trace, ctx.room.name, event)", source)
+        for kind in ("user_state", "transcript", "agent_state", "session_started", "session_closed"):
+            self.assertIn('"' + kind + '"', source)
 
     def test_old_visual_evidence_is_removed_but_text_is_preserved(self):
         class Image:

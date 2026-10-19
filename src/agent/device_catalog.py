@@ -71,6 +71,12 @@ class GatedAction:
 
     async def run(self, name: str, arguments: dict[str, Any], action: Callable[[], dict[str, Any]]) -> str:
         epoch = self.gate.epoch
+        self.trace.append(
+            "tool_call_pending",
+            room=self.room_name,
+            call={"function": name, "args": arguments},
+            quiet_seconds=self.gate.quiet_seconds,
+        )
         if not await self.gate.allow(epoch):
             self.trace.append(
                 "tool_call_dropped",
