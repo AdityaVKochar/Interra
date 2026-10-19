@@ -36,6 +36,8 @@ from typing import Any
 import uuid
 import wave
 
+from agent.troubleshooting import EXTENSION_ROOM_PREFIX
+
 ROOT = Path(__file__).resolve().parents[2]
 STATIC = Path(__file__).resolve().parent / "demo_console_static"
 CAMERA_AGENT = "interra-camera-troubleshooter"
@@ -53,6 +55,38 @@ def data_root() -> Path:
 
 def trace_path() -> Path:
     return Path(os.environ.get("INTERRA_FDB_TRACE_DIR", ROOT / "artifacts/fdb_v3")) / "livekit-agent.jsonl"
+
+
+def results_dir() -> Path:
+    """The published official-evaluator run the Results tab shows."""
+    return Path(os.environ.get("INTERRA_RESULTS_DIR", ROOT / "docs/results/kaggle-20261004"))
+
+
+def load_results(folder: Path) -> dict[str, Any] | None:
+    """Headline numbers and breakdowns from the official evaluator's two reports, unchanged."""
+    try:
+        passes = json.loads(next(folder.glob("*_pass_rate_report.json")).read_text(encoding="utf-8"))
+        evaluation = json.loads(next(folder.glob("*_evaluation_report.json")).read_text(encoding="utf-8"))
+    except (StopIteration, OSError, ValueError):
+        return None
+    turns, metrics, latency = evaluation["turn_taking"], evaluation["by_metric"], evaluation["latency"]
+    return {
+        "run": folder.name,
+        "benchmark": passes.get("benchmark_name", ""),
+        "evaluated_at": passes.get("evaluated_at", ""),
+        "total": passes["total_scenarios"],
+        "passed": passes["passed"],
+        "turn_taken": turns["turn_taken"],
+        "tool_selection": metrics["tool_selection_acc"],
+        "argument_accuracy": metrics["argument_acc"],
+        "latency_mean_s": latency["avg_response_latency_s"],
+        "latency_std_s": latency["std_response_latency_s"],
+        "early_interruptions": latency["interruption_count"],
+        "failures": passes.get("failure_breakdown", {}),
+        "by_feature": passes.get("by_disfluency_feature", {}),
+        "by_domain": passes.get("by_domain", {}),
+        "by_num_tools": passes.get("by_num_tools", {}),
+    }
 
 
 def missing_credentials() -> list[str]:
@@ -198,13 +232,19 @@ def create_app() -> Any:
             "data_root": str(data_root()),
         })
 
+    async def results(_: web.Request) -> web.Response:
+        summary = load_results(results_dir())
+        if summary is None:
+            return web.json_response({"error": f"no evaluator reports in {results_dir()}"}, status=404)
+        return web.json_response(summary)
+
     async def session(request: web.Request) -> web.Response:
         if missing := missing_credentials():
             return web.json_response({"error": "Set " + ", ".join(missing)}, status=400)
         body = await request.json()
         mode = body.get("mode")
         if mode == "camera":
-            room = f"interra-camera-{uuid.uuid4().hex[:8]}"
+            room = f"{EXTENSION_ROOM_PREFIX}{uuid.uuid4().hex[:8]}"
             await dispatch_camera_agent(room)
             token = room_token(room, "demo-user", hidden=False)
         elif mode == "benchmark":
@@ -239,6 +279,7 @@ def create_app() -> Any:
     app = web.Application()
     app.router.add_get("/", index)
     app.router.add_get("/api/config", config)
+    app.router.add_get("/api/results", results)
     app.router.add_post("/api/session", session)
     app.router.add_post("/api/benchmark/play", play)
     app.router.add_get("/api/benchmark/status", status)
@@ -252,11 +293,13 @@ def main(argv: list[str] | None = None) -> None:
 
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="Bind address; use 0.0.0.0 only inside a container whose port is published to 127.0.0.1.")
     args = parser.parse_args(argv)
     if missing := missing_credentials():
         print("Warning: set " + ", ".join(missing) + " before starting a session.", flush=True)
     print(f"Interra demo console: http://127.0.0.1:{args.port}", flush=True)
-    web.run_app(create_app(), host="127.0.0.1", port=args.port, print=None)
+    web.run_app(create_app(), host=args.host, port=args.port, print=None)
 
 
 if __name__ == "__main__":

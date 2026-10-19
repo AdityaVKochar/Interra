@@ -14,6 +14,7 @@
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" data-mode="benchmark" aria-selected="true">Benchmark recording</button>
       <button class="tab" role="tab" data-mode="camera" aria-selected="false">Camera troubleshooting</button>
+      <button class="tab" role="tab" data-mode="results" aria-selected="false">Results</button>
     </div>
     <div class="spacer"></div>
     <div class="badges" id="models"></div>
@@ -83,6 +84,20 @@
       <div class="tickets" id="tickets" hidden><h4>Support ticket desk</h4><div id="ticket-list"></div></div>
     </section>
   </main>
+
+  <div class="results" id="results-view" hidden>
+    <div class="results-head">
+      <h1>Full-Duplex-Bench v3, official evaluator</h1>
+      <div class="hint" id="results-sub">Loading the published run…</div>
+    </div>
+    <div class="tiles" id="results-tiles"></div>
+    <div class="breakdowns">
+      <div class="breakdown"><h3>Strict pass by speech feature</h3><div class="bars" id="bd-feature"></div></div>
+      <div class="breakdown"><h3>Strict pass by domain</h3><div class="bars" id="bd-domain"></div></div>
+      <div class="breakdown"><h3>Strict pass by tool calls expected</h3><div class="bars" id="bd-tools"></div></div>
+    </div>
+    <div class="hint" id="results-note"></div>
+  </div>
 </div>
 <script src="/static/app.js"></script>
 </body>

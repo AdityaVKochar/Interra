@@ -115,6 +115,26 @@ class ConsoleTests(unittest.IsolatedAsyncioTestCase):
         bad_room = await self.client.post("/api/benchmark/play", json={"room": "other", "recording": "shop_01_bbbb2222"})
         self.assertEqual(bad_room.status, 400)
 
+    async def test_results_come_from_the_official_reports(self):
+        folder = Path(self.directory.name) / "run"
+        folder.mkdir()
+        (folder / "x_pass_rate_report.json").write_text(json.dumps({
+            "benchmark_name": "B", "total_scenarios": 4, "passed": 3, "failure_breakdown": {"wrong_tools": 1},
+            "by_disfluency_feature": {"PAUSE": 0.5}, "by_domain": {"travel": 0.75}, "by_num_tools": {"1": 0.75}}))
+        (folder / "x_evaluation_report.json").write_text(json.dumps({
+            "turn_taking": {"turn_taken": 4}, "by_metric": {"tool_selection_acc": 0.9, "argument_acc": 0.8},
+            "latency": {"avg_response_latency_s": 4.4, "std_response_latency_s": 3.0, "interruption_count": 1}}))
+        with patch.dict(os.environ, {"INTERRA_RESULTS_DIR": str(folder)}):
+            body = await (await self.client.get("/api/results")).json()
+        self.assertEqual((body["passed"], body["total"], body["turn_taken"]), (3, 4, 4))
+        self.assertEqual(body["by_feature"], {"PAUSE": 0.5})
+        with patch.dict(os.environ, {"INTERRA_RESULTS_DIR": str(folder / "missing")}):
+            self.assertEqual((await self.client.get("/api/results")).status, 404)
+
+    def test_published_run_loads(self):
+        summary = demo_console.load_results(demo_console.ROOT / "docs/results/kaggle-20261004")
+        self.assertEqual((summary["passed"], summary["total"], summary["turn_taken"]), (70, 100, 100))
+
     async def test_index_and_static_files_are_served(self):
         self.assertIn("Interra live console", await (await self.client.get("/")).text())
         self.assertEqual((await self.client.get("/static/app.js")).status, 200)

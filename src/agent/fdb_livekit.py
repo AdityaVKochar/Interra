@@ -24,6 +24,8 @@ from typing import Any
 from livekit.plugins import silero
 from livekit.agents.types import APIConnectOptions
 
+from agent.troubleshooting import EXTENSION_ROOM_PREFIX
+
 # Plugins register themselves with LiveKit Agents during import. LiveKit calls
 # the process setup hook on a worker thread, so import optional providers while
 # this module is being loaded on the process main thread instead.
@@ -1248,6 +1250,19 @@ async def entrypoint(ctx: Any) -> None:
             await console.aclose()
 
 
+def accepts_room(room_name: str) -> bool:
+    """The camera troubleshooter is dispatched to its rooms by name; this agent stays out."""
+    return not room_name.startswith(EXTENSION_ROOM_PREFIX)
+
+
+async def on_job_request(request: Any) -> None:
+    """Join every room except the camera extension's, so both agents can run side by side."""
+    if accepts_room(request.room.name):
+        await request.accept()
+    else:
+        await request.reject()
+
+
 def main() -> None:
     config = FdbConfig.from_env()
     missing = config.missing_requirements()
@@ -1258,7 +1273,7 @@ def main() -> None:
     from livekit.agents import AgentServer
 
     server = AgentServer(setup_fnc=prewarm, num_idle_processes=1, initialize_process_timeout=60.0)
-    server.rtc_session(entrypoint)
+    server.rtc_session(entrypoint, on_request=on_job_request)
     agents.cli.run_app(server)
 
 

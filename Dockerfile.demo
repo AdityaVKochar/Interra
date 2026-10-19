@@ -1,0 +1,20 @@
+# Live demo image: the benchmark agent, the camera troubleshooter and the demo
+# console, without installing anything on the host. The repository is mounted
+# at /app, so code edits apply without a rebuild. See docs/DEMO.md.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg git libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml /tmp/interra/pyproject.toml
+# Dependencies only; the source comes from the mounted checkout.
+RUN python -c "import tomllib; d = tomllib.load(open('/tmp/interra/pyproject.toml', 'rb'))['project']; print('\n'.join(d['dependencies'] + d['optional-dependencies']['voice']))" > /tmp/interra/requirements.txt \
+    && pip install --no-cache-dir -r /tmp/interra/requirements.txt \
+        "numpy>=1.26,<3" "pydub>=0.25,<1" "ffmpeg-python>=0.2,<1" "gdown>=5,<6" \
+    && rm -rf /tmp/interra
+
+WORKDIR /app

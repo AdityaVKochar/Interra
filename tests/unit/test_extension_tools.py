@@ -83,6 +83,134 @@ class ToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tools.desk.tickets(), [])
 
 
+class SpeechDuringLookupTests(unittest.IsolatedAsyncioTestCase):
+    """Regression: live run 2026-10-06. The person said "wait, it's not the router" while the
+    router lookup ran; LiveKit paused the reply, the lookup finished as "ok" and its output was
+    committed to the chat history before the reply was interrupted."""
+
+    def make(self):
+        self.guard = TurnGuard()
+        self.guard.advance("first turn")
+        self.events = Recorder()
+        self.release = asyncio.Event()
+        self.started = asyncio.Event()
+
+        async def lookup_latency(_seconds):
+            self.started.set()
+            await self.release.wait()
+
+        return TroubleshootingTools(TicketDesk(None), self.guard, self.events, sleep=lookup_latency)
+
+    async def test_speech_during_a_lookup_discards_its_result(self):
+        tools = self.make()
+        task = asyncio.create_task(tools.look_up_fix("router", "internet light is off"))
+        await self.started.wait()
+        self.assertEqual(tools.supersede_running_lookups("person spoke"), 2)
+        self.release.set()
+        result = json.loads(await task)
+        self.assertEqual(result["status"], "discarded")
+        self.assertNotIn("checks", result)  # the old answer never reaches the chat history
+        self.assertEqual(self.events.kinds(), ["tool_started", "stale_result_discarded"])
+        stale = self.events.events[1][1]
+        self.assertEqual((stale["request_version"], stale["current_version"]), (1, 2))
+
+    async def test_one_utterance_supersedes_a_lookup_once(self):
+        tools = self.make()
+        task = asyncio.create_task(tools.look_up_fix("router", "no internet"))
+        await self.started.wait()
+        self.assertEqual(tools.supersede_running_lookups("speech started"), 2)
+        self.assertIsNone(tools.supersede_running_lookups("final transcript"))
+        self.release.set()
+        await task
+        self.assertEqual(self.guard.version, 2)
+
+    async def test_speech_without_a_running_lookup_changes_nothing(self):
+        tools = self.make()
+        self.assertIsNone(tools.supersede_running_lookups("backchannel"))
+        self.assertEqual(self.guard.version, 1)
+        self.assertEqual(self.events.kinds(), [])
+
+    async def test_lookup_repeated_after_a_discard_answers(self):
+        tools = self.make()
+        first = asyncio.create_task(tools.look_up_fix("router", "no internet"))
+        await self.started.wait()
+        tools.supersede_running_lookups("false start")
+        self.release.set()
+        self.assertEqual(json.loads(await first)["status"], "discarded")
+        self.assertEqual(json.loads(await tools.look_up_fix("router", "no internet"))["status"], "ok")
+
+    async def test_cancelled_lookup_is_no_longer_running(self):
+        tools = self.make()
+        task = asyncio.create_task(tools.look_up_fix("router", "no internet"))
+        await self.started.wait()
+        task.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await task
+        self.assertIsNone(tools.supersede_running_lookups("speech after cancel"))
+
+
+class FakeSpeechHandle:
+    def __init__(self):
+        self.allow_interruptions = True
+
+
+class FakeRunContext:
+    def __init__(self, interrupted=False):
+        self.speech_handle = FakeSpeechHandle()
+        self.interrupted = interrupted
+
+    def disallow_interruptions(self):
+        if self.interrupted:
+            raise RuntimeError("Cannot set allow_interruptions to False, the SpeechHandle is already interrupted")
+        self.speech_handle.allow_interruptions = False
+
+
+class ScopedWriteTests(unittest.IsolatedAsyncioTestCase):
+    """Regression: live run 2026-10-06. disallow_interruptions() left the whole confirmation
+    uninterruptible, LiveKit fed silence to STT meanwhile, and "Open the ticket please" was lost."""
+
+    def make(self):
+        self.events = Recorder()
+        return TroubleshootingTools(TicketDesk(None), TurnGuard(), self.events)
+
+    async def test_interruptions_are_held_only_while_the_write_runs(self):
+        tools = self.make()
+        context = FakeRunContext()
+        during = []
+
+        async def write():
+            during.append(context.speech_handle.allow_interruptions)
+            return await tools.open_support_ticket("power strip", "no power", "switch light off")
+
+        result = json.loads(await tools.write_without_interruption(context, "open_support_ticket", {}, write))
+        self.assertEqual(result["status"], "created")
+        self.assertEqual(during, [False])
+        self.assertTrue(context.speech_handle.allow_interruptions)
+
+    async def test_failed_write_still_allows_interruptions_again(self):
+        tools = self.make()
+        context = FakeRunContext()
+
+        async def write():
+            raise OSError("journal unavailable")
+
+        with self.assertRaises(OSError):
+            await tools.write_without_interruption(context, "open_support_ticket", {}, write)
+        self.assertTrue(context.speech_handle.allow_interruptions)
+
+    async def test_write_on_an_interrupted_turn_is_skipped(self):
+        tools = self.make()
+        context = FakeRunContext(interrupted=True)
+
+        async def write():
+            raise AssertionError("must not run")
+
+        result = json.loads(await tools.write_without_interruption(context, "open_support_ticket", {"device": "x"}, write))
+        self.assertEqual(result["status"], "skipped")
+        self.assertEqual(self.events.kinds(), ["write_skipped"])
+        self.assertEqual(tools.desk.tickets(), [])
+
+
 class ThumbnailTests(unittest.TestCase):
     def test_frame_thumbnail_is_a_small_jpeg(self):
         import base64

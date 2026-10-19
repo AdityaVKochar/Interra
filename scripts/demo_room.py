@@ -32,6 +32,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 CAMERA_AGENT = "interra-camera-troubleshooter"
+EXTENSION_ROOM_PREFIX = "interra-camera-"  # agent.troubleshooting.EXTENSION_ROOM_PREFIX; this script runs uninstalled
 MEET = "https://meet.livekit.io/custom"
 REQUIRED = ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
 
@@ -148,7 +149,7 @@ def command_benchmark(args: argparse.Namespace) -> None:
 
 
 def command_camera(args: argparse.Namespace) -> None:
-    room = args.room or f"interra-camera-{uuid.uuid4().hex[:8]}"
+    room = args.room or f"{EXTENSION_ROOM_PREFIX}{uuid.uuid4().hex[:8]}"
     asyncio.run(dispatch(CAMERA_AGENT, room))
     print(f"Dispatched {CAMERA_AGENT} to room {room}.")
     print("Open this link, allow camera and microphone, and talk to the agent:")

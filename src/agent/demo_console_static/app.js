@@ -154,7 +154,9 @@
       case "request_superseded":
         $("request-version").hidden = false;
         $("request-version").textContent = `request v${event.request_version}`;
-        addEvent("warn", `Correction: request is now v${event.request_version}`, `“${event.transcript}”`);
+        addEvent("warn", `Correction: request is now v${event.request_version}`, event.transcript
+          ? `“${event.transcript}” arrived while a lookup ran; its answer is for the old request.`
+          : "The person started speaking while a lookup ran; its answer is for the old request.");
         break;
       case "turn_held":
         bump("held");
@@ -244,7 +246,7 @@
       case "camera_linked": addEvent("ok", "Camera linked", "Only this participant's camera is used."); break;
       case "camera_unlinked": addEvent("warn", "Camera unlinked", "Pending frame discarded."); break;
       case "session_error": addEvent("bad", "Session error", event.error || ""); break;
-      case "session_closed": case "session_cleanup": addEvent("agent", "Session closed", ""); break;
+      case "session_closed": addEvent("agent", "Session closed", ""); break;
       default: break;
     }
   }
@@ -273,7 +275,13 @@
   }
 
   async function connect(session) {
-    const room = new LK.Room({ adaptiveStream: true, dynacast: true });
+    // Camera mode: publish one full-resolution layer, so the frame the agent
+    // reads is never a low simulcast layer chosen for bandwidth.
+    const room = new LK.Room(session.mode === "camera"
+      ? { adaptiveStream: true, dynacast: false,
+          videoCaptureDefaults: { resolution: LK.VideoPresets.h720.resolution },
+          publishDefaults: { simulcast: false, videoEncoding: LK.VideoPresets.h720.encoding } }
+      : { adaptiveStream: true, dynacast: true });
     state.room = room;
     state.roomName = session.room;
     room.on(LK.RoomEvent.TrackSubscribed, (track) => {
@@ -291,15 +299,16 @@
     });
     room.on(LK.RoomEvent.Disconnected, () => setConnection("Disconnected", "bad"));
     room.registerTextStreamHandler("lk.transcription", async (reader, participantInfo) => {
-      const attrs = reader.info.attributes || {};
-      const id = attrs["lk.segment_id"] || reader.info.id;
-      const final = attrs["lk.transcription_final"] === "true";
+      const attrs = () => reader.info.attributes || {};
+      const id = attrs()["lk.segment_id"] || reader.info.id;
+      const final = () => attrs()["lk.transcription_final"] === "true";
       let text = "";
       for await (const chunk of reader) {
         text += chunk;
-        upsertSegment(id, participantInfo.identity, text, final);
+        upsertSegment(id, participantInfo.identity, text, final());
       }
-      upsertSegment(id, participantInfo.identity, text, final);
+      // The agent's own speech opens with final=false; the stream trailer sets it to true.
+      upsertSegment(id, participantInfo.identity, text, final());
     });
     setConnection("Connecting…", "warn");
     await room.connect(session.url, session.token);
@@ -393,15 +402,64 @@
       }
       setConnection("Waiting for the troubleshooter…", "warn");
     } catch (error) {
+      // A later "Agent in room" status would hide this, so keep it in the timeline too.
+      addEvent("bad", "Camera or microphone unavailable", `${error.name || "Error"}: ${error.message}`);
       setConnection(error.message, "bad");
       $("cam-start").disabled = false;
     }
+  }
+
+  /* ---------- results mode: the published official-evaluator run ---------- */
+  const pct = (value) => `${(value * 100).toFixed(1)}%`;
+  const pretty = (key) => key.toLowerCase().replace(/_/g, " ");
+
+  function bars(container, entries, overall, sort) {
+    const rows = sort ? [...entries].sort((a, b) => b[1] - a[1]) : entries;
+    container.replaceChildren(...rows.map(([label, value]) => {
+      const track = el("div", { class: "bar-track" },
+        el("div", { class: "fill", style: `width: ${Math.max(0, Math.min(1, value)) * 100}%` }),
+        el("div", { class: "ref", style: `left: ${overall * 100}%` }));
+      return el("div", { class: "bar-row", title: `${label}: ${pct(value)} strict pass (overall ${pct(overall)})` },
+        el("span", { class: "label", text: label }), track, el("span", { class: "value", text: pct(value) }));
+    }));
+    container.after(el("div", { class: "ref-key", text: `Dashed line: overall ${pct(overall)}` }));
+  }
+
+  async function loadResults() {
+    if (state.results) return;
+    try {
+      state.results = await api("/api/results");
+    } catch (error) {
+      $("results-sub").textContent = error.message;
+      return;
+    }
+    const r = state.results;
+    const overall = r.passed / r.total;
+    $("results-sub").textContent = `${r.benchmark} · ${r.total} released recordings · evaluated ${r.evaluated_at.slice(0, 10)} · run ${r.run}`;
+    const tile = (value, label, note) => el("div", { class: "tile" }, el("b", { text: value }), el("span", { text: label }), note ? el("small", { text: note }) : null);
+    $("results-tiles").replaceChildren(
+      tile(`${r.passed}/${r.total}`, "Strict pass", "tools and arguments all correct"),
+      tile(`${r.turn_taken}/${r.total}`, "Turn-take", "agent answered every recording"),
+      tile(pct(r.tool_selection), "Tool selection"),
+      tile(pct(r.argument_accuracy), "Argument accuracy"),
+      tile(`${r.latency_mean_s.toFixed(2)} s`, "Mean response latency", `std ${r.latency_std_s.toFixed(2)} s`),
+      tile(String(r.early_interruptions), "Early interruptions", "agent spoke before the person finished"));
+    bars($("bd-feature"), Object.entries(r.by_feature).map(([k, v]) => [pretty(k), v]), overall, true);
+    bars($("bd-domain"), Object.entries(r.by_domain).map(([k, v]) => [pretty(k), v]), overall, true);
+    bars($("bd-tools"), Object.entries(r.by_num_tools).map(([k, v]) => [`${k} call${k === "1" ? "" : "s"}`, v]), overall, false);
+    const failures = Object.entries(r.failures).map(([k, v]) => `${v} ${pretty(k)}`).join(", ");
+    $("results-note").textContent = `Failures: ${failures}. Numbers are read from the evaluator reports in docs/results/${r.run}/.`;
   }
 
   /* ---------- setup ---------- */
   function selectMode(mode) {
     state.mode = mode;
     document.querySelectorAll(".tab").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.mode === mode)));
+    const results = mode === "results";
+    document.querySelector("main").hidden = results;
+    document.querySelector(".metrics").hidden = results;
+    $("results-view").hidden = !results;
+    if (results) { loadResults(); return; }
     $("stage-benchmark").hidden = mode !== "benchmark";
     $("stage-camera").hidden = mode !== "camera";
     $("user-label").textContent = mode === "camera" ? "You" : "Recording";

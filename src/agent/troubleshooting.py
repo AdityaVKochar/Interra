@@ -26,6 +26,11 @@ from typing import Callable
 import uuid
 
 
+# Rooms created for the camera extension. The troubleshooter is dispatched to
+# them by name, and the auto-dispatched benchmark agent declines them.
+EXTENSION_ROOM_PREFIX = "interra-camera-"
+
+
 @dataclass(frozen=True)
 class Guide:
     device: str

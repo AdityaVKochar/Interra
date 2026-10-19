@@ -1,3 +1,35 @@
+# First live run of the console and camera extension — 2026-10-06
+
+Run on a local machine (WSL2 + Docker Desktop, `Dockerfile.demo`, repository
+mounted at `/app`), against LiveKit Cloud with Inference. Part 1 was driven by
+the official recorder plus a hidden viewer; Part 2 by headless Chromium with a
+fake camera and a microphone fed by synthesized speech of the DEMO.md script.
+
+- Part 1 (housing_09, ecommerce_19, finance_19): hidden viewer receives the
+  data topic and both transcript streams; corrected values reach the tool calls
+  (e.g. `search_products("tablet")` then `add_to_cart(PROD1, 1)`).
+- Orchestration fixes, each with a regression test:
+  - Speech during a lookup: LiveKit pauses the reply and only interrupts on the
+    final transcript, so the lookup finished as "ok" and its output was committed
+    to the chat history. `TroubleshootingTools.supersede_running_lookups` now
+    advances the request version when the person starts speaking (or a final
+    transcript arrives) while a lookup for the current version runs; the lookup
+    returns "discarded". (`SpeechDuringLookupTests`, 5 tests.)
+  - Ticket writes: `disallow_interruptions()` left the whole confirmation
+    uninterruptible and LiveKit fed silence to STT meanwhile, losing the next
+    request. Interruptions are now held only while the write runs.
+    (`ScopedWriteTests`, 3 tests.)
+  - The auto-dispatched benchmark agent joined camera-extension rooms; it now
+    declines `interra-camera-*` rooms. (`test_agent_room_routing.py`, 3 tests.)
+- Prompt: the troubleshooter must call `look_up_fix` instead of answering from
+  memory, and the ticket desk (not chat memory) decides whether a ticket is open.
+- Console: final flag read from the stream trailer; camera/mic errors kept in
+  the timeline; `[hidden]` honoured; camera published without simulcast at 720p;
+  single "Session closed"; Results tab reading the official evaluator reports;
+  `--host` for container use.
+- 273 tests pass on Python 3.11 (container).
+- Not done: the human-recorded demo video and the slide/link updates.
+
 # Live console and fuller camera extension — 2026-10-06
 
 - `python -m agent.demo_console` (aiohttp, 127.0.0.1:8787): a browser console for

@@ -8,25 +8,29 @@ Coordination rules, each visible in the live console (``agent.demo_console``):
 
 * Only the linked participant's camera is used, and each spoken turn carries
   only the newest frame; older images are removed from the model history.
-* Every completed turn and every correction spoken while a tool runs advances a
-  request version. A lookup that finishes for an older version is discarded and
-  never answers the obsolete request; a lookup cancelled by an interruption is
-  reported as cancelled and the cancellation propagates.
-* Ticket writes cannot be interrupted once started, are skipped if the turn was
-  already interrupted, and never run twice: the desk returns the open ticket
-  for a repeated request.
+* Every completed turn advances a request version, and so does the person
+  starting to speak while a lookup runs. A lookup that finishes for an older
+  version returns "discarded" instead of its answer, so the obsolete answer is
+  never spoken and never enters the chat history (LiveKit commits the output of
+  a tool that finished on an interrupted turn). A lookup cancelled by an
+  interruption is reported as cancelled and the cancellation propagates.
+* Ticket writes cannot be interrupted while they run, are skipped if the turn
+  was already interrupted, and never run twice: the desk returns the open
+  ticket for a repeated request. Interruptions are allowed again once the
+  write is done, so the person can still talk over the confirmation.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 from dataclasses import asdict
 import json
 import os
 from pathlib import Path
 import time
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 import uuid
 
 from agent.fdb_livekit import FdbConfig, livekit_llm_model, livekit_speech_models
@@ -46,11 +50,16 @@ which lights are on, their colours, labels and cables. Ask for a closer view
 when labels or controls are unclear.
 
 Tools:
-- look_up_fix(device, symptom): call it once you know the device and the
-  problem, before giving steps. Give the person one check at a time, in order,
-  and wait for their answer before the next one.
+- look_up_fix(device, symptom): call it as soon as the person names a device
+  and a problem, even if the device is not on camera yet. Never give
+  troubleshooting checks from memory; give only checks a look_up_fix result
+  returned, one at a time, in order, and wait for their answer before the next
+  one. After a correction to the device or the problem, call it again.
 - open_support_ticket(device, problem, summary): only when the person asks for
   help from a technician or agrees to it, or when the guide says to escalate.
+  The ticket desk, not your memory, knows which tickets are open: every time
+  the person asks for a ticket, call it, even if you think one is open. It
+  returns the existing ticket instead of opening a duplicate.
 - cancel_support_ticket(ticket_id, reason): when the person says a ticket is
   wrong or no longer needed.
 
@@ -197,15 +206,31 @@ class TroubleshootingTools:
         self.lookup_seconds = lookup_seconds
         self._sleep = sleep
         self._clock = clock
+        self._in_flight: dict[str, int] = {}  # running lookup call id -> its request version
 
     def _elapsed_ms(self, started: float) -> int:
         return int((self._clock() - started) * 1000)
+
+    def supersede_running_lookups(self, reason: str) -> int | None:
+        """The person spoke while a lookup for the current request ran: advance the request.
+
+        LiveKit only pauses the reply when the person starts talking during a
+        tool call and interrupts it once their words are final, so a lookup
+        can finish in between and its output is still committed to the chat
+        history. Advancing here makes that lookup return "discarded". A
+        false start costs one repeated lookup, which runs for the new version.
+        Returns the new version, or ``None`` when no lookup is affected.
+        """
+        if self.guard.version not in self._in_flight.values():
+            return None
+        return self.guard.advance(reason)
 
     async def look_up_fix(self, device: str, symptom: str) -> str:
         call_id, version, started = _call_id(), self.guard.version, self._clock()
         args = {"device": device, "symptom": symptom}
         self.publish("tool_started", call_id=call_id, function="look_up_fix", args=args,
                      read_only=True, request_version=version, simulated_latency_s=self.lookup_seconds)
+        self._in_flight[call_id] = version
         try:
             # Stands in for a remote guide service, so the lookup takes time and
             # the person can interrupt it.
@@ -215,13 +240,15 @@ class TroubleshootingTools:
             self.publish("tool_cancelled", call_id=call_id, function="look_up_fix", args=args,
                          elapsed_ms=self._elapsed_ms(started), reason="interrupted by the person")
             raise
+        finally:
+            del self._in_flight[call_id]
         if not self.guard.is_current(version):
             self.publish("stale_result_discarded", call_id=call_id, function="look_up_fix", args=args,
                          request_version=version, current_version=self.guard.version,
                          elapsed_ms=self._elapsed_ms(started), result=result)
             return json.dumps({"status": "discarded", "reason": (
-                "The person changed the request while this lookup ran. "
-                "Use their latest words and look up again if needed.")})
+                "The person spoke while this lookup ran, so its answer may be for an old request. "
+                "Use their latest words; if the device and problem are unchanged, look up again.")})
         self.publish("tool_finished", call_id=call_id, function="look_up_fix", args=args, status="ok",
                      elapsed_ms=self._elapsed_ms(started), result=result)
         return json.dumps({"status": "ok", **result})
@@ -255,6 +282,28 @@ class TroubleshootingTools:
         self.publish("tool_finished", call_id=call_id, function="cancel_support_ticket", args=args,
                      status=status, elapsed_ms=self._elapsed_ms(started))
         return json.dumps({"status": status, "ticket_id": ticket_id})
+
+    async def write_without_interruption(
+        self, context: Any, function: str, args: dict[str, Any], write: Callable[[], Awaitable[str]],
+    ) -> str:
+        """Run one write with interruptions held, then allow them again.
+
+        ``RunContext.disallow_interruptions()`` covers the rest of the reply,
+        including the spoken confirmation, and while a reply cannot be
+        interrupted LiveKit feeds silence to STT: the person's next words would
+        be lost. The hold therefore lasts only as long as the write.
+        """
+        handle = context.speech_handle
+        previous = handle.allow_interruptions
+        try:
+            context.disallow_interruptions()
+        except RuntimeError:  # the turn was already interrupted
+            return self.write_skipped(function, args)
+        try:
+            return await write()
+        finally:
+            with contextlib.suppress(RuntimeError):
+                handle.allow_interruptions = previous
 
     def write_skipped(self, function: str, args: dict[str, Any]) -> str:
         self.publish("write_skipped", function=function, args=args,
@@ -372,7 +421,10 @@ async def entrypoint(ctx: Any) -> None:
             """
             return await tools.look_up_fix(device, symptom)
 
-        @function_tool(description="Open a support ticket for a technician. Only when the person asks or agrees.")
+        @function_tool(description=(
+            "Open a support ticket for a technician, only when the person asks or agrees. Call it every "
+            "time they ask for a ticket, even if one may already be open: the desk is the record of open "
+            "tickets and returns the existing ticket (status already_open) instead of a duplicate."))
         async def open_support_ticket(self, context: RunContext, device: str, problem: str, summary: str) -> str:
             """
             Args:
@@ -380,12 +432,9 @@ async def entrypoint(ctx: Any) -> None:
                 problem: The problem in a few words.
                 summary: One sentence with what was tried and what the camera showed.
             """
-            args = {"device": device, "problem": problem, "summary": summary}
-            try:
-                context.disallow_interruptions()
-            except RuntimeError:
-                return tools.write_skipped("open_support_ticket", args)
-            return await tools.open_support_ticket(device, problem, summary)
+            return await tools.write_without_interruption(
+                context, "open_support_ticket", {"device": device, "problem": problem, "summary": summary},
+                lambda: tools.open_support_ticket(device, problem, summary))
 
         @function_tool(description="Cancel a support ticket that the person says is wrong or no longer needed.")
         async def cancel_support_ticket(self, context: RunContext, ticket_id: str, reason: str) -> str:
@@ -394,12 +443,9 @@ async def entrypoint(ctx: Any) -> None:
                 ticket_id: The ticket id returned by open_support_ticket, e.g. "T-3F2A1C".
                 reason: Why it is cancelled, in a few words.
             """
-            args = {"ticket_id": ticket_id, "reason": reason}
-            try:
-                context.disallow_interruptions()
-            except RuntimeError:
-                return tools.write_skipped("cancel_support_ticket", args)
-            return await tools.cancel_support_ticket(ticket_id, reason)
+            return await tools.write_without_interruption(
+                context, "cancel_support_ticket", {"ticket_id": ticket_id, "reason": reason},
+                lambda: tools.cancel_support_ticket(ticket_id, reason))
 
     speech_stt, speech_tts = livekit_speech_models(inference, config)
     session = AgentSession(
@@ -409,11 +455,8 @@ async def entrypoint(ctx: Any) -> None:
         tts=speech_tts,
         max_tool_steps=4,
     )
-    tool_running: dict[str, bool] = {"value": False}
-
     @session.on("agent_state_changed")
     def on_agent_state(event: Any) -> None:
-        tool_running["value"] = str(event.new_state) == "thinking"
         console.publish("agent_state", state=str(event.new_state))
 
     @session.on("user_state_changed")
@@ -422,15 +465,19 @@ async def entrypoint(ctx: Any) -> None:
         console.publish("user_state", state=state)
         if state == "speaking" and str(session.agent_state) in {"thinking", "speaking"}:
             console.publish("interruption", agent_state=str(session.agent_state))
+        if state == "speaking":
+            # A lookup still running answers the request the person is now changing.
+            version = tools.supersede_running_lookups("the person spoke while a lookup ran")
+            if version is not None:
+                console.publish("request_superseded", request_version=version, transcript="")
 
     @session.on("user_input_transcribed")
     def on_transcript(event: Any) -> None:
         console.publish("transcript", transcript=event.transcript, is_final=event.is_final)
-        # Words spoken while a tool runs are a correction: results for the old
-        # request must not answer it.
-        if event.is_final and event.transcript.strip() and tool_running["value"]:
-            version = guard.advance("correction while a tool was running")
-            console.publish("request_superseded", request_version=version, transcript=event.transcript)
+        if event.is_final and event.transcript.strip():
+            version = tools.supersede_running_lookups("a correction arrived while a lookup ran")
+            if version is not None:
+                console.publish("request_superseded", request_version=version, transcript=event.transcript)
 
     @session.on("conversation_item_added")
     def on_item(event: Any) -> None:
