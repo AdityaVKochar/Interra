@@ -30,6 +30,24 @@ export function callNode(call) {
   return fragment;
 }
 
+/** The call as a block: the function name, then one cell per argument.
+ *  Keys in ``changed`` differ from the call the gate dropped just before. */
+export function callBlock(call, changed = new Set()) {
+  const wrap = h("div", "call");
+  wrap.append(h("code", "call-fn", (call && call.function) || "tool"));
+  const list = h("dl", "call-args");
+  const entries = Object.entries((call && call.args) || {});
+  if (!entries.length) list.append(h("div", "none", "No arguments"));
+  for (const [key, value] of entries) {
+    const cell = h("div", changed.has(key) ? "changed" : null);
+    const shown = typeof value === "string" ? value : typeof value === "number" ? fmtNumber(value) : JSON.stringify(value);
+    cell.append(h("dt", null, key.replace(/_/g, " ")), h("dd", null, shown));
+    list.append(cell);
+  }
+  wrap.append(list);
+  return wrap;
+}
+
 export function callKey(call) {
   return ((call && call.function) || "") + " " + JSON.stringify((call && call.args) || {});
 }
@@ -115,23 +133,23 @@ const KINDS = {
   transcript: { cat: "speech", icon: "ear", label: (r) => (r.is_final ? "Heard" : "Hearing"), msg: (r) => r.transcript || "" },
   conversation_item: {
     cat: (r) => (r.role === "assistant" ? "agent" : "speech"),
-    icon: (r) => (r.role === "assistant" ? "audio" : "message"),
+    icon: (r) => (r.role === "assistant" ? "volume" : "message"),
     label: (r) => (r.role === "assistant" ? "Said" : "Turn"),
     msg: (r) => r.text || "",
     sub: (r) => (r.role === "assistant" ? (r.interrupted ? "Interrupted" : "") : "Committed user turn"),
   },
-  turn_held: { cat: "gate", icon: "hourglass", label: "Turn held", msg: (r) => "“" + (r.transcript || "") + "”", sub: () => "Sounds unfinished; waiting for the rest" },
+  turn_held: { cat: "gate", icon: "typing", label: "Turn held", msg: (r) => "“" + (r.transcript || "") + "”", sub: () => "Sounds unfinished; waiting for the rest" },
   turn_released: { cat: "gate", icon: "corner", label: "Released", msg: (r) => "“" + (r.transcript || "") + "”", sub: (r) => "Held turn released after " + (r.reason || "silence") },
   turn_release_failed: { cat: "error", icon: "alert", label: "Release failed", msg: (r) => r.error || "", sub: (r) => r.reason || "" },
   tool_call_pending: {
-    cat: "gate", icon: "loader", label: "Holding", call: true,
+    cat: "gate", icon: "timer", label: "Holding", call: true,
     sub: (r) => "Runs after " + fmtNumber(r.quiet_seconds ?? 0.6) + " s of quiet",
   },
-  tool_call_dropped: { cat: "gate", icon: "x-circle", label: "Dropped", call: true, sub: (r) => "Not logged · " + (r.reason || "user continued") },
-  tool_call_deduplicated: { cat: "gate", icon: "repeat", label: "Reused", call: true, sub: () => "Identical call in this room · not run again" },
+  tool_call_dropped: { cat: "gate", icon: "ban", label: "Dropped", call: true, sub: (r) => "Not logged · " + (r.reason || "user continued") },
+  tool_call_deduplicated: { cat: "gate", icon: "history", label: "Reused", call: true, sub: () => "Identical call in this room · not run again" },
   tool_call: {
     cat: (r) => (r.status === "failed" ? "error" : "tool"),
-    icon: (r) => (r.status === "failed" ? "alert" : "zap"),
+    icon: (r) => (r.status === "failed" ? "alert" : "check-circle"),
     label: (r) => (r.status === "failed" ? "Tool failed" : "Executed"),
     call: true,
     sub: (r) => [callDuration(r.call), resultSummary(r.result)].filter(Boolean).join(" · "),

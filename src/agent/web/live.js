@@ -1,7 +1,7 @@
 // Voice and camera pages: one LiveKit room per session, the worker trace for
 // that room, and the agent's own transcription streams.
 
-import { $, errorText, loadConfig, nowSeconds, setConn } from "./shell.js";
+import { $, errorText, loadConfig, nowSeconds } from "./shell.js";
 import { Conversation, Meter, getAudioContext } from "./conversation.js";
 import { storeBrowserEvent } from "./trace.js";
 
@@ -25,14 +25,18 @@ const app = {
   speakerMuted: false,
   audioBlocked: false,
   traceWatch: 0,
+  link: "",
+  quality: "",
 };
 
 const convo = new Conversation({ mode, onEvent: (event) => storeBrowserEvent(app.roomName, event) });
 const agentName = () => (mode === "camera" ? cfg.camera_agent : cfg.voice_agent);
 
 function setBadge(text, on) {
+  // Shown only once captions flow; an idle session has nothing to label.
   el.txBadgeText.textContent = text;
   el.txBadge.dataset.on = String(on);
+  el.txBadge.hidden = !text;
 }
 
 function setPhase(phase) {
@@ -46,16 +50,22 @@ function setPhase(phase) {
   el.elapsed.hidden = !live;
   el.mic.disabled = !live;
   if (el.cam) el.cam.disabled = !live;
-  const project = cfg.livekit_host ? "LiveKit project " + cfg.livekit_host : "LiveKit";
-  if (live) setConn("live", "Live", project + " · room " + app.roomName);
-  else if (connecting) setConn("connecting", "Connecting", project);
-  else setConn(cfg.livekit_configured === false ? "missing" : "ready", cfg.livekit_configured === false ? "LiveKit not set" : "LiveKit", project);
-  if (!live) setBadge(connecting ? "waiting" : "idle", false);
+  app.link = live ? "live" : connecting ? "connecting" : "";
+  showRoom();
+  if (!live) setBadge("", false);
+}
+
+function showRoom() {
+  if (!app.roomName) { el.room.textContent = ""; return; }
+  const parts = [app.link, "room " + app.roomName];
+  if (app.link === "live" && app.quality && !["excellent", "good", "unknown"].includes(app.quality)) parts.push(app.quality + " connection");
+  el.room.textContent = parts.filter(Boolean).join(" · ");
 }
 
 function setRoom(name) {
   app.roomName = name;
-  el.room.textContent = name ? "room " + name : "";
+  app.quality = "";
+  showRoom();
   el.logs.href = name ? "/logs?room=" + encodeURIComponent(name) : "/logs";
   el.logs.removeAttribute("aria-disabled");
 }
@@ -105,7 +115,7 @@ async function startCall() {
     if (session !== app.session) { room.disconnect(); return; }
     convo.connectedAt = performance.now();
     setPhase("live");
-    setBadge("live", true);
+    setBadge("Live", true);
     convo.note("room_connected", "Connected to " + hostOf(url), { icon: "link", label: "Connected", data: { room: app.roomName, livekit: hostOf(url) } });
     try { await room.startAudio(); } catch (error) { /* allowed after the next click */ }
     await room.localParticipant.setMicrophoneEnabled(true);
@@ -157,12 +167,14 @@ function wireRoom(LK, room, session) {
   room.on(E.AudioPlaybackStatusChanged, () => { if (alive()) setAudioBlocked(!room.canPlaybackAudio); });
   room.on(E.Reconnecting, () => {
     if (!alive()) return;
-    setConn("reconnecting", "Reconnecting");
+    app.link = "reconnecting";
+    showRoom();
     convo.note("reconnecting", "Connection lost; reconnecting", { cat: "error", icon: "alert", label: "Reconnecting" });
   });
   room.on(E.Reconnected, () => {
     if (!alive()) return;
-    setConn("live", "Live");
+    app.link = "live";
+    showRoom();
     convo.note("reconnected", "Reconnected", { icon: "check", label: "Reconnected" });
   });
   room.on(E.Disconnected, (reason) => {
@@ -176,7 +188,7 @@ function wireRoom(LK, room, session) {
     });
   });
   room.on(E.ConnectionQualityChanged, (quality, participant) => {
-    if (alive() && participant === room.localParticipant) $("conn").dataset.quality = String(quality);
+    if (alive() && participant === room.localParticipant) { app.quality = String(quality); showRoom(); }
   });
   room.on(E.MediaDevicesError, (error) => {
     if (!alive()) return;
@@ -246,7 +258,7 @@ async function onTranscription(room, session, reader, participant) {
   const time = info.timestamp ? info.timestamp / 1000 : nowSeconds();
   if (convo.useStreamTranscript()) {
     convo.note("transcript_source", "Live transcription from LiveKit text streams", { icon: "message", label: "Transcript" });
-    setBadge("live", true);
+    setBadge("Live captions", true);
   }
   let text = "";
   try {
@@ -298,7 +310,7 @@ function openTrace(roomName, session) {
     try { record = JSON.parse(message.data); } catch (error) { return; }
     convo.onRecord(record, "worker");
     if (record.kind === "transcript" || record.kind === "conversation_item") {
-      if (convo.txSource === "trace") setBadge("trace", true);
+      if (convo.txSource === "trace") setBadge("From the worker trace", true);
     }
   };
   source.onerror = () => {
@@ -407,6 +419,7 @@ convo.hint(mode === "camera"
 loadConfig().then((config) => {
   Object.assign(cfg, config);
   convo.agentLabel = agentName();
+  convo.setQuietSeconds(config.commit_quiet_seconds);
   if (convo.phase === "idle") setPhase("idle");
   if (config.livekit_configured === false) {
     convo.hint("LiveKit is not configured here. Set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env, then restart the page server.", true);

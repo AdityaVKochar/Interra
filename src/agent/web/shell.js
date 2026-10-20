@@ -128,14 +128,6 @@ export function applyTheme(theme) {
   window.dispatchEvent(new CustomEvent("interra:theme", { detail: theme }));
 }
 
-export function setConn(state, text, title) {
-  const conn = $("conn");
-  if (!conn) return;
-  conn.dataset.state = state;
-  $("conn-text").textContent = text;
-  if (title) conn.title = title;
-}
-
 function initShell() {
   const page = document.body.dataset.page;
   for (const link of document.querySelectorAll(".nav a")) {
@@ -152,13 +144,6 @@ function initShell() {
       if (!saved) applyTheme(event.matches ? "light" : "dark");
     });
   }
-  // Session pages own the indicator once a call starts; elsewhere it shows the project.
-  loadConfig().then((config) => {
-    const conn = $("conn");
-    if (!conn || conn.dataset.state !== "idle") return;
-    if (config.livekit_configured) setConn("ready", "LiveKit", "LiveKit project " + (config.livekit_host || ""));
-    else setConn("missing", "LiveKit not set", "Set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env");
-  });
   for (const button of document.querySelectorAll("[data-copy]")) {
     button.addEventListener("click", () => copyText(button.parentElement.querySelector("pre").textContent.trim() + "\n", "Commands copied"));
   }

@@ -2,7 +2,7 @@
 // Idle gaps longer than GAP seconds are shortened, and the page says so.
 // No model runs here; the verdict shown is the pinned evaluator's.
 
-import { $, clamp, fmtShort, h, setConn, svgIcon, toast } from "./shell.js";
+import { $, clamp, fmtShort, h, svgIcon, toast } from "./shell.js";
 import { Conversation } from "./conversation.js";
 import { describeResult, fmtValue } from "./trace.js";
 
@@ -30,6 +30,10 @@ const player = {
 
 const convo = new Conversation({ mode: "voice", clock: () => replayClock() });
 convo.agentLabel = "the recording";
+// The 4 October run predates the commit gate (added 17 October): its call was never held.
+convo.waitingOverride = "This run predates the commit gate, so its tool call ran as soon as the model planned it. The steps still show where the turn was.";
+$("gate-window").parentElement.textContent = "Recorded before the gate";
+convo.setGate("Waiting");
 
 function replayClock() {
   const step = player.lastStep;
@@ -110,7 +114,6 @@ function setPlaying(playing) {
   el.playLabel.textContent = playing ? "Pause" : player.finished ? "Play again" : player.position > 0 ? "Resume" : "Play the recording";
   convo.phase = playing || (player.position > 0 && !player.finished) ? "replay" : player.finished ? "ended" : "idle";
   convo.statusPrefix = !playing && player.position > 0 && !player.finished ? "Paused · " : "";
-  setConn(playing ? "replay" : "ready", playing ? "Replay" : "LiveKit");
 }
 
 function play() {

@@ -3,8 +3,8 @@
 // replay feed it the same records; neither invents one.
 
 import { Orb } from "./orb.js";
-import { $, clamp, fmtClock, fmtNumber, fmtShort, nowSeconds, reduceMotion, restartAnimation, svgIcon } from "./shell.js";
-import { callDuration, callKey, callNode, resultSummary } from "./trace.js";
+import { $, clamp, fmtClock, fmtNumber, fmtShort, h, nowSeconds, reduceMotion, restartAnimation, svgIcon } from "./shell.js";
+import { callBlock, callDuration, callKey, callNode, callText, resultSummary } from "./trace.js";
 import { TranscriptView } from "./transcript.js";
 
 const BAR_COUNT = 24;
@@ -76,15 +76,40 @@ export class Meter {
 }
 
 const NOW_ICONS = {
-  Waiting: "gate", Heard: "ear", Held: "hourglass", Holding: "loader", Released: "corner",
-  Dropped: "x-circle", Executed: "zap", Reused: "repeat", Said: "audio", Error: "alert",
+  Waiting: "gate", Heard: "ear", Held: "typing", Holding: "timer", Released: "corner",
+  Dropped: "ban", Executed: "check-circle", Reused: "history", Said: "volume", Error: "alert",
+};
+
+const GATE_LABELS = {
+  Waiting: "Waiting for a request",
+  Heard: "Heard",
+  Held: "Turn held",
+  Released: "Turn released",
+  Holding: "Holding the call",
+  Executed: "Executed",
+  Dropped: "Dropped before it was logged",
+  Reused: "Reused, not run again",
+  Error: "Tool failed",
+  Said: "Said",
+};
+
+// Which of the four steps a gate state lights. "skip" marks a turn that never needed a tool.
+const STEPS = {
+  Heard: { heard: "on" },
+  Held: { heard: "done", hold: "on" },
+  Released: { heard: "done", hold: "done" },
+  Holding: { heard: "done", hold: "on" },
+  Executed: { heard: "done", hold: "done", decide: "on" },
+  Dropped: { heard: "done", hold: "done", decide: "on" },
+  Reused: { heard: "done", hold: "done", decide: "on" },
+  Error: { heard: "done", hold: "done", decide: "on" },
 };
 
 const OUTCOMES = {
-  dropped: { chip: "dropped", title: "Dropped", icon: "x-circle", now: "Dropped", pulse: "dropped" },
-  executed: { chip: "executed", title: "Executed", icon: "zap", now: "Executed", pulse: "executed" },
-  failed: { chip: "dropped", title: "Tool failed", icon: "alert", now: "Error", pulse: "dropped" },
-  reused: { chip: "reused", title: "Reused", icon: "repeat", now: "Reused", pulse: "reused" },
+  dropped: { chip: "dropped", title: "Dropped", word: "Dropped", icon: "ban", now: "Dropped", pulse: "dropped" },
+  executed: { chip: "executed", title: "Executed", word: "Executed", icon: "check-circle", now: "Executed", pulse: "executed" },
+  failed: { chip: "dropped", title: "Tool failed", word: "Failed", icon: "alert", now: "Error", pulse: "dropped" },
+  reused: { chip: "reused", title: "Reused", word: "Reused", icon: "history", now: "Reused", pulse: "reused" },
 };
 
 function wobble(time, seed) {
@@ -108,6 +133,7 @@ export class Conversation {
       bars: $("bars"), hint: $("status"),
       now: $("now"), nowKind: $("now-kind"), nowText: $("now-text"), nowTime: $("now-time"), nowIcon: $("now-icon"),
       pipeline: $("pipeline"), toolStep: $("tool-step"),
+      gateWindow: $("gate-window"), gateHistory: $("gate-history"), gateHistoryEmpty: $("gate-history-empty"),
       quiet: $("quiet"), quietBar: $("quiet-bar"), quietValue: $("quiet-value"), quietLabel: $("quiet-label"),
       micWave: $("mic-wave"), elapsed: $("elapsed"),
     };
@@ -137,6 +163,8 @@ export class Conversation {
     this.connectedAt = 0;
     this.agentLabel = "the agent";
     this.statusPrefix = "";
+    this.quietSeconds = 0.6;
+    this.waitingOverride = "";
     this.pending = new Map();
     this.quiet = { active: false, seconds: 0.6, state: "holding", shownUntil: 0, value: 0, tool: "" };
     this.readPalette();
@@ -155,6 +183,9 @@ export class Conversation {
     this.userSpeaking = false;
     this.quietSince = null;
     this.turnHadTool = false;
+    this.turnOutcome = null;
+    this.turnHeld = false;
+    this.lastDropped = null;
     this.txSource = null;
     this.txBuffer = [];
     this.txTimer = 0;
@@ -169,7 +200,18 @@ export class Conversation {
     this.transcript.clear();
     this.transcript.setBase(base);
     this.base = base;
-    this.setNow("Waiting", "Nothing has been decided yet.");
+    if (this.el.gateHistory) this.el.gateHistory.replaceChildren();
+    if (this.el.gateHistoryEmpty) this.el.gateHistoryEmpty.hidden = false;
+    this.setGate("Waiting");
+  }
+
+  /** The configured quiet window, shown before the first held call reports its own. */
+  setQuietSeconds(seconds) {
+    const value = Number(seconds);
+    if (!Number.isFinite(value) || value <= 0) return;
+    this.quietSeconds = value;
+    if (this.el.gateWindow) this.el.gateWindow.textContent = fmtNumber(value) + " s";
+    if (this.lastNowKind === "Waiting") this.setGate("Waiting");
   }
 
   start() {
@@ -193,7 +235,7 @@ export class Conversation {
     switch (record.kind) {
       case "user_state": {
         const speaking = record.state === "speaking";
-        if (speaking && !this.userSpeaking && this.lastNowKind === "Said") this.turnHadTool = false;
+        if (speaking && !this.userSpeaking && this.lastNowKind === "Said") { this.turnHadTool = false; this.turnOutcome = null; this.turnHeld = false; }
         this.userSpeaking = speaking;
         this.quietSince = speaking ? null : record.time;
         break;
@@ -203,25 +245,26 @@ export class Conversation {
         break;
       case "transcript":
         if (record.is_final && !this.userSpeaking) this.quietSince = record.time;
-        if (record.transcript) this.setNow("Heard", record.transcript, record.time);
+        if (record.transcript) this.setGate("Heard", { text: record.transcript, quote: true, time: record.time });
         this.traceTranscript(record);
         break;
       case "conversation_item":
         if (record.role === "assistant" && record.text) {
-          this.setNow("Said", record.text, record.time);
+          this.setGate("Said", { text: record.text, quote: true, time: record.time });
           if (this.txSource === "stream" && record.interrupted) this.transcript.markInterrupted("agent");
         }
         this.traceTranscript(record);
         break;
       case "turn_held":
-        this.setNow("Held", "Holding the call until you finish. " + (record.transcript || ""), record.time);
+        this.turnHeld = true;
+        this.setGate("Held", { text: record.transcript || "", quote: true, time: record.time, note: "It sounded unfinished, so the agent waits for the rest before it plans a call." });
         this.transcript.chip("held:" + ++this.sequence, "held", "Turn held", "“" + (record.transcript || "") + "”", {
-          icon: "hourglass", time: record.time, note: "It sounded unfinished, so the agent waits for the rest.",
+          icon: "typing", time: record.time, note: "It sounded unfinished, so the agent waits for the rest.",
         });
         this.pulse("held");
         break;
       case "turn_released":
-        this.setNow("Released", "Released the held turn (" + (record.reason || "silence") + "). " + (record.transcript || ""), record.time);
+        this.setGate("Released", { text: record.transcript || "", quote: true, time: record.time, note: "Released after " + (record.reason || "silence") + "." });
         break;
       case "tool_call_pending":
         this.startPending(record);
@@ -258,11 +301,12 @@ export class Conversation {
 
   startPending(record) {
     this.turnHadTool = true;
+    this.turnHeld = true;
     const key = callKey(record.call);
     const chipKey = "call:" + ++this.sequence;
     const seconds = Number(record.quiet_seconds ?? 0.6) || 0.6;
     this.transcript.chip(chipKey, "holding", "Holding", callNode(record.call), {
-      icon: "loader", time: record.time, note: "Runs after " + fmtNumber(seconds) + " s of quiet. If you keep speaking it is dropped.",
+      icon: "timer", time: record.time, note: "Runs after " + fmtNumber(seconds) + " s of quiet. If you keep speaking it is dropped.",
     });
     const waiting = this.pending.get(key) || [];
     waiting.push(chipKey);
@@ -270,7 +314,11 @@ export class Conversation {
     Object.assign(this.quiet, { active: true, seconds, state: "holding", value: 0, tool: (record.call && record.call.function) || "the call" });
     this.el.quiet.dataset.state = "holding";
     this.el.quiet.classList.add("keep");
-    this.setNow("Holding", callNode(record.call), record.time, "Holding until you have been quiet for " + fmtNumber(seconds) + " s: ");
+    this.setQuietSeconds(seconds);
+    this.setGate("Holding", {
+      call: record.call, changed: this.changedFrom(record.call), time: record.time,
+      note: "Runs after " + fmtNumber(seconds) + " s of quiet. If you keep speaking, it is dropped before it is logged.",
+    });
   }
 
   resolvePending(record, outcome) {
@@ -291,9 +339,17 @@ export class Conversation {
       icon: meta.icon, time: record.time, note: notes[outcome],
       details: outcome === "executed" || outcome === "failed" ? record.result : undefined,
     });
-    const leads = { dropped: "Dropped ", executed: "Executed ", failed: "Failed ", reused: "Reused " };
-    const tails = { dropped: ". You kept speaking, so this call was not logged.", executed: ".", failed: ".", reused: ". It was not run again." };
-    this.setNow(meta.now, callNode(record.call), record.time, leads[outcome], tails[outcome]);
+    const focusNotes = {
+      dropped: "You kept speaking, so this call never reached the tool log.",
+      reused: "An identical call already ran in this room; its result was reused.",
+      executed: notes.executed,
+      failed: notes.failed,
+    };
+    this.turnOutcome = outcome;
+    const changed = outcome === "dropped" ? new Set() : this.changedFrom(record.call);
+    this.setGate(meta.now, { call: record.call, changed, time: record.time, note: focusNotes[outcome] });
+    this.addHistory(outcome, record.call, record.time, changed);
+    if (outcome === "dropped") this.lastDropped = record.call;
     this.pulse(meta.pulse);
     if (held && this.pending.size === 0) {
       this.quiet.active = false;
@@ -369,43 +425,87 @@ export class Conversation {
 
   // ---------- gate card ----------
 
-  pipelineFor(kind) {
-    const tool = this.turnHadTool ? "done" : "";
-    return {
-      Heard: { heard: "on" },
-      Held: { heard: "done", gate: "on" },
-      Released: { heard: "done", gate: "done" },
-      Holding: { heard: "done", gate: "on" },
-      Dropped: { heard: "done", gate: "done", tool: "on" },
-      Executed: { heard: "done", gate: "done", tool: "on" },
-      Reused: { heard: "done", gate: "done", tool: "on" },
-      Said: { heard: "done", gate: this.turnHadTool ? "done" : "", tool, said: "on" },
-      Error: { tool: "on" },
-    }[kind] || {};
+  waitingText() {
+    if (this.waitingOverride) return this.waitingOverride;
+    return "When you ask for something, the tool call waits here until you have been quiet for "
+      + fmtNumber(this.quietSeconds) + " s. Keep talking and it is dropped before it is logged.";
   }
 
-  /** content is text or a node; lead and tail wrap a call node in words. */
-  setNow(kind, content, time, lead = "", tail = "") {
+  /** Show one gate state: a quote, a structured call, or the waiting explanation. */
+  /** Argument keys that differ from the call the gate dropped last, for the same tool. */
+  changedFrom(call) {
+    const previous = this.lastDropped;
+    const changed = new Set();
+    if (!previous || !call || previous.function !== call.function) return changed;
+    const before = previous.args || {};
+    const after = call.args || {};
+    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) changed.add(key);
+    }
+    return changed;
+  }
+
+  setGate(kind, { text = "", call = null, changed = new Set(), note = "", time, label, quote = false } = {}) {
     const el = this.el;
-    const changed = this.lastNowKind !== kind;
+    const kindChanged = this.lastNowKind !== kind;
     this.lastNowKind = kind;
     el.now.dataset.kind = kind;
-    el.nowKind.textContent = kind;
-    const parts = [];
-    if (lead) parts.push(lead);
-    parts.push(content instanceof Node ? content : String(content));
-    if (tail) parts.push(tail);
+    el.nowKind.textContent = label || GATE_LABELS[kind] || kind;
     const before = el.nowText.textContent;
+    const parts = [];
+    if (call) parts.push(callBlock(call, changed));
+    else parts.push(kind === "Waiting" ? this.waitingText() : text);
+    if (note) parts.push(h("div", "focus-note", note));
+    el.nowText.className = "focus-body" + (kind === "Waiting" ? " muted" : "") + (quote && text && !call ? " quote" : "");
     el.nowText.replaceChildren(...parts);
-    if (changed && before !== el.nowText.textContent) restartAnimation(el.nowText, "swap");
-    if (changed) el.nowIcon.replaceChildren(svgIcon(NOW_ICONS[kind] || "gate"));
+    if (kindChanged && before !== el.nowText.textContent) restartAnimation(el.nowText, "swap");
+    if (kindChanged) el.nowIcon.replaceChildren(svgIcon(NOW_ICONS[kind] || "gate"));
     el.nowTime.textContent = typeof time === "number" && this.base !== null ? fmtClock(time - this.base) : "";
-    const steps = this.pipelineFor(kind);
-    for (const step of el.pipeline.children) {
-      const state = steps[step.dataset.step];
-      step.dataset.on = state === "on" ? "true" : state === "done" ? "done" : "false";
+    this.updateSteps(kind);
+  }
+
+  updateSteps(kind) {
+    const tool = this.turnHadTool;
+    const steps = { ...(kind === "Said"
+      ? { heard: "done", hold: tool ? "done" : "skip", decide: tool ? "done" : "skip", said: "on" }
+      : STEPS[kind] || {}) };
+    // A call that ran without being held (no gate, or a run from before it) skips the hold step.
+    if (steps.hold === "done" && !this.turnHeld) steps.hold = "skip";
+    const outcome = steps.decide === "on" || steps.decide === "done" ? this.turnOutcome : null;
+    for (const step of this.el.pipeline.children) {
+      step.dataset.state = steps[step.dataset.step] || "";
+      if (step.dataset.step === "decide") {
+        if (outcome) step.dataset.outcome = outcome;
+        else delete step.dataset.outcome;
+      }
     }
-    el.toolStep.textContent = ["Dropped", "Executed", "Reused"].includes(kind) ? kind : "Tool";
+    this.el.toolStep.textContent = outcome ? OUTCOMES[outcome].word : "Decision";
+  }
+
+  addHistory(outcome, call, time, changed = new Set()) {
+    const list = this.el.gateHistory;
+    if (!list) return;
+    const meta = OUTCOMES[outcome];
+    const item = h("li");
+    item.dataset.outcome = outcome;
+    const tag = h("span", "h-tag");
+    tag.append(svgIcon(meta.icon, "ic xs"), meta.word);
+    const name = h("code", "h-fn", (call && call.function) || "tool");
+    const detail = h("span", "h-args");
+    const entries = Object.entries((call && call.args) || {});
+    // What changed since the dropped call leads, so it survives truncation.
+    entries.sort(([a], [b]) => Number(changed.has(b)) - Number(changed.has(a)));
+    entries.forEach(([key, value], index) => {
+      if (index) detail.append(" · ");
+      const text = key.replace(/_/g, " ") + " " + (typeof value === "string" ? value : JSON.stringify(value));
+      detail.append(changed.has(key) ? h("b", null, text) : text);
+    });
+    if (!entries.length) detail.textContent = "no arguments";
+    item.title = callText(call);
+    item.append(tag, name, h("time", null, typeof time === "number" && this.base !== null ? fmtClock(time - this.base) : ""), detail);
+    list.prepend(item);
+    while (list.children.length > 12) list.lastElementChild.remove();
+    this.el.gateHistoryEmpty.hidden = true;
   }
 
   pulse(kind) {

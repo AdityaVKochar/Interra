@@ -4,8 +4,14 @@
   Overview (`/`), Voice (`/voice`), Camera (`/camera`), Replay (`/replay`),
   Logs (`/logs`) and Results (`/results`). They share a head, icon sprite,
   header and footer from `src/agent/web/partials`, filled in by the server.
-- Type: Geist for the interface, Instrument Serif for titles and figures, and
-  Geist Mono only for timestamps, ids, code and JSON.
+- Type: DM Sans for the interface, DM Serif Display for titles and figures,
+  and DM Mono only for timestamps, ids, code and JSON. The pages no longer
+  carry the "Samsung PRISM · Theme 05" label.
+- Commit gate panel: four steps (heard, holding, decision, said), the held or
+  decided call as its function and argument cells, the quiet-window meter, and
+  this session's decisions newest first. An argument that differs from the call
+  dropped just before is marked "changed". A call that was never held, such as
+  the 4 October run, which predates the gate, shows the holding step skipped.
 - Logs is its own page: a sidebar of every room in the local trace (newest
   first, with executed and dropped counts and a live marker) plus the recorded
   run; two-line rows with pill tags, turn dividers, filters, search, interim

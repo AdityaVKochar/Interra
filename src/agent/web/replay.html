@@ -34,28 +34,6 @@
       <div class="bars" id="bars" data-tone="idle" aria-hidden="true"></div>
       <p class="hint" id="status">Loading the recorded trace.</p>
 
-      <article class="gate-card glass" id="now" data-kind="Waiting" aria-live="polite">
-        <div class="gate-head">
-          <span class="gate-icon" id="now-icon"><svg class="ic sm"><use href="#i-gate"/></svg></span>
-          <div>
-            <span class="gate-label">The gate decides</span>
-            <b id="now-kind">Waiting</b>
-          </div>
-          <span class="gate-time" id="now-time"></span>
-        </div>
-        <p class="gate-text" id="now-text">Nothing has been decided yet.</p>
-        <ol class="pipeline" id="pipeline" aria-label="Decision path">
-          <li data-step="heard"><svg class="ic"><use href="#i-ear"/></svg>Heard</li>
-          <li data-step="gate"><svg class="ic"><use href="#i-gate"/></svg>Gate</li>
-          <li data-step="tool"><svg class="ic"><use href="#i-wrench"/></svg><span id="tool-step">Tool</span></li>
-          <li data-step="said"><svg class="ic"><use href="#i-audio"/></svg>Said</li>
-        </ol>
-        <div class="quiet" id="quiet" data-state="holding">
-          <span id="quiet-label">Quiet window</span>
-          <div class="quiet-track"><i id="quiet-bar"></i></div>
-          <span id="quiet-value">0.0 / 0.6 s</span>
-        </div>
-      </article>
     </div>
 
     <div class="player glass" aria-label="Playback">
@@ -76,6 +54,39 @@
         <div class="track"></div>
         <div class="fill" id="scrub-fill"></div>
       </div>
+    </div>
+  </section>
+
+  <section class="gate-panel glass" id="now" data-kind="Waiting" aria-label="Commit gate" aria-live="polite">
+    <header class="gate-bar">
+      <span class="gate-title"><svg class="ic sm"><use href="#i-gate"/></svg>Commit gate</span>
+      <span class="spacer"></span>
+      <span class="gate-window">Quiet window <b id="gate-window">0.6 s</b></span>
+    </header>
+    <ol class="steps" id="pipeline" aria-label="Where this turn is">
+      <li data-step="heard"><span class="step-n">1</span><span class="step-name">Heard</span></li>
+      <li data-step="hold"><span class="step-n">2</span><span class="step-name">Holding</span></li>
+      <li data-step="decide"><span class="step-n">3</span><span class="step-name" id="tool-step">Decision</span></li>
+      <li data-step="said"><span class="step-n">4</span><span class="step-name">Said</span></li>
+    </ol>
+    <div class="gate-focus">
+      <div class="focus-head">
+        <span class="gate-icon" id="now-icon"><svg class="ic sm"><use href="#i-gate"/></svg></span>
+        <b id="now-kind">Waiting for a request</b>
+        <span class="spacer"></span>
+        <time class="gate-time" id="now-time"></time>
+      </div>
+      <div class="focus-body muted" id="now-text">When you ask for something, the tool call waits here until you have been quiet for the whole window. Keep talking and it is dropped before it is logged.</div>
+      <div class="quiet" id="quiet" data-state="holding">
+        <span id="quiet-label">Quiet window</span>
+        <div class="quiet-track"><i id="quiet-bar"></i></div>
+        <span id="quiet-value">0.0 / 0.6 s</span>
+      </div>
+    </div>
+    <div class="gate-log">
+      <span class="gate-log-title">Decisions this session</span>
+      <ol id="gate-history"></ol>
+      <p class="gate-log-empty" id="gate-history-empty">Each held call lands here as executed, dropped or reused, newest first.</p>
     </div>
   </section>
 
