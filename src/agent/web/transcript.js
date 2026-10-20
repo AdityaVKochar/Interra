@@ -134,9 +134,13 @@ export class TranscriptView {
     else text.textContent = content;
     chip.text = text.textContent;
     chip.node.dataset.kind = kind;
+    const compact = !note && (details === undefined || details === null);
+    chip.node.classList.toggle("compact", compact);
     const head = h("div", "chip-head");
-    head.append(h("b", null, title), h("time", null, this.stamp(chip.time)));
-    const parts = [svgIcon(icon, "ic sm"), head, text];
+    head.append(h("b", null, title));
+    if (compact && chip.text) head.append(text);
+    head.append(h("time", null, this.stamp(chip.time)));
+    const parts = compact ? [svgIcon(icon, "ic sm"), head] : [svgIcon(icon, "ic sm"), head, text];
     if (note) parts.push(h("div", "chip-note", note));
     if (details !== undefined && details !== null) {
       const more = h("details");

@@ -2,16 +2,21 @@
 
 .session {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.66fr) minmax(340px, 0.86fr);
-  grid-template-areas: "stage gate transcript";
+  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
+  grid-template-areas: "stage side";
+  grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   padding: 16px 20px 20px;
   height: calc(100vh - var(--topbar-h));
   min-height: 700px;
+  flex: none; /* main is a flex item; without this, content after it would let the grid grow */
 }
-.session[data-mode="camera"] { grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.64fr) minmax(330px, 0.8fr); }
+.session[data-mode="camera"] { grid-template-columns: minmax(0, 1.3fr) minmax(360px, 0.7fr); }
 .stage { grid-area: stage; }
-.transcript { grid-area: transcript; }
+/* The gate sits above the transcript; one column, so neither stretches the stage. */
+.side { grid-area: side; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.side .gate-panel { flex: none; }
+.side .transcript { flex: 1 1 auto; min-height: 0; }
 
 .panel {
   position: relative;
@@ -214,7 +219,6 @@
 
 .gate-panel {
   --k: var(--session);
-  grid-area: gate;
   border-radius: var(--radius-lg);
   position: relative;
   display: flex; flex-direction: column;
@@ -477,6 +481,10 @@
 .event-chip .chip-text { overflow-wrap: anywhere; color: var(--text); }
 .event-chip .chip-text code { font-size: 0.9em; }
 .event-chip .chip-note { grid-column: 2; font-size: 14px; color: var(--text-3); }
+.event-chip.compact { width: auto; max-width: 92%; grid-template-columns: auto auto; align-items: center; padding: 7px 14px; border-radius: 999px; }
+.event-chip.compact > .ic { grid-row: auto; margin-top: 0; }
+.event-chip.compact .chip-head { align-items: center; gap: 9px; }
+.event-chip.compact .chip-text { font-family: var(--font-mono); font-size: 13.5px; color: var(--text-2); }
 .event-chip[data-kind="holding"] { --k: var(--holding); }
 .event-chip[data-kind="held"] { --k: var(--held); }
 .event-chip[data-kind="dropped"] { --k: var(--dropped); }
@@ -557,25 +565,18 @@
 
 /* ---------- responsive ---------- */
 
-@media (max-width: 1240px) {
-  .session, .session[data-mode="camera"] {
-    grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr);
-    grid-template-areas: "stage transcript" "gate transcript";
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-  .gate-log ol { max-height: 180px; }
-}
+.gate-log ol { max-height: 150px; }
 
 @media (max-width: 980px) {
   .session, .session[data-mode="camera"] {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "stage" "gate" "transcript";
+    grid-template-areas: "stage" "side";
     grid-template-rows: auto;
     height: auto; min-height: 0; padding: 12px;
   }
   .stage-main { overflow: visible; }
   .orb-zone { flex: none; height: min(44vh, 380px); }
-  .transcript { height: 70vh; }
+  .side .transcript { flex: none; height: 70vh; }
   .result-card { margin: 0 12px 24px; }
   .check-row { grid-template-columns: 22px 1fr; }
   .check-row > :nth-child(n+3) { grid-column: 2; }

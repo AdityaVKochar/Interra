@@ -25,6 +25,15 @@
 - Tests: `tests.unit.test_demo_page` covers every page's shell and links, static
   file containment, the Results table against the README table, the sessions
   index, and whole-room event streams. 257 tests pass (1 skipped).
+- Kept minimal: text-only navigation; the Overview is the headline, three
+  figures and two session links; session pages keep mic, Start and the camera
+  toggle (the speaker button appears only when the browser blocks audio); the
+  gate sits above the transcript; transcript tool cards are one line; Logs has
+  search, four filters and download; Results keeps the figures, the scored run,
+  the README comparison table and the run commands behind a fold.
+- Fixed: a page with content after its session grid (Replay) let the grid grow
+  past the window, because `main` is a flex item; the session and logs layouts
+  now keep their window height.
 - Not verified: a live LiveKit call from these pages; the workers were not run.
 
 # Judge console redesign — 2026-10-20

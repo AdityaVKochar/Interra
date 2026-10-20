@@ -3,7 +3,7 @@
 <head>
 {{head}}
 <title>Interra — overview</title>
-<meta name="description" content="A voice agent that keeps up when you change your mind: live sessions, the commit gate, and the measured Full-Duplex-Bench v3 run.">
+<meta name="description" content="A voice agent that keeps up when you change your mind.">
 <link rel="stylesheet" href="/static/home.css">
 </head>
 <body data-page="home">
@@ -13,17 +13,11 @@
 <main class="page">
   <section class="hero">
     <div class="hero-copy">
-      <span class="eyebrow"><svg class="ic xs"><use href="#i-sparkles"/></svg>Interruptible real-time voice agent</span>
       <h1>A voice agent that keeps up when you <em>change your mind.</em></h1>
-      <p class="lede">Interra listens while it works. Correct yourself mid-sentence and it holds the tool call, drops the stale one before it is logged, and runs the one you meant, once.</p>
+      <p class="lede">Correct yourself mid-sentence and Interra holds the tool call until you finish. The stale call is dropped before it is logged; the one you meant runs once.</p>
       <div class="btn-row">
         <a class="btn primary" href="/voice"><svg class="ic sm"><use href="#i-phone"/></svg>Start a voice session</a>
         <a class="btn" href="/replay"><svg class="ic sm"><use href="#i-play"/></svg>Watch the recorded run</a>
-      </div>
-      <div class="hero-meta">
-        <span class="chip"><b>70/100</b>&nbsp;strict</span>
-        <span class="chip"><b>100/100</b>&nbsp;turn-take</span>
-        <span class="chip"><b>4.452 s</b>&nbsp;average</span>
       </div>
     </div>
     <div class="hero-visual">
@@ -37,109 +31,29 @@
     </div>
   </section>
 
-  <section class="section" id="gate">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">The commit gate</span>
-        <h2>Every tool call waits for <em>quiet.</em></h2>
-      </div>
-      <span class="spacer"></span>
-      <p>You speak. The model may plan a tool. The gate holds that call until you have been quiet. If you continue, the call is dropped before it is logged. If you finish, it runs once.</p>
-    </div>
-    <ol class="flow">
-      <li class="glass" data-step="heard">
-        <span class="step-no">01</span>
-        <span class="step-icon"><svg class="ic"><use href="#i-ear"/></svg></span>
-        <h3>Heard</h3>
-        <p>Your words stream in while you are still talking. A turn that sounds unfinished is held for the rest.</p>
-      </li>
-      <li class="glass" data-step="holding">
-        <span class="step-no">02</span>
-        <span class="step-icon"><svg class="ic"><use href="#i-timer"/></svg></span>
-        <h3>Holding</h3>
-        <p>A call the model plans waits at the gate until you have been quiet for the whole window, 0.6 s by default.</p>
-      </li>
-      <li class="glass" data-step="decided">
-        <span class="step-no">03</span>
-        <span class="step-icon"><svg class="ic"><use href="#i-gate"/></svg></span>
-        <h3>Decided</h3>
-        <p>Keep talking and the call is dropped before it reaches the tool log. Stay quiet and it runs once; a repeat is reused, not re-run.</p>
-        <div class="split"><span class="ok">Executed</span><span class="bad">Dropped</span></div>
-      </li>
-      <li class="glass" data-step="said">
-        <span class="step-no">04</span>
-        <span class="step-icon"><svg class="ic"><use href="#i-volume"/></svg></span>
-        <h3>Said</h3>
-        <p>The reply is grounded in the tool result. A call that never ran comes back as superseded, so the agent cannot claim it.</p>
-      </li>
-    </ol>
-  </section>
-
   <section class="section" id="measured">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">Full-Duplex-Bench v3 · 4 October 2026</span>
-        <h2>Measured on 100 recorded conversations</h2>
-      </div>
-      <span class="spacer"></span>
-      <a class="btn sm" href="/results">All results<svg class="ic xs"><use href="#i-arrow-right"/></svg></a>
+    <div class="stats three">
+      <div class="stat"><span class="num">70<small>/100</small></span><span class="label">Strict passes</span></div>
+      <div class="stat"><span class="num">100<small>/100</small></span><span class="label">Turn-takes</span></div>
+      <div class="stat"><span class="num">4.452<small> s</small></span><span class="label">Average latency</span></div>
     </div>
-    <div class="stats">
-      <div class="stat glass"><span class="num">70<small>/100</small></span><span class="label">Strict passes</span><span class="note">Pinned official evaluator</span></div>
-      <div class="stat glass"><span class="num">100<small>/100</small></span><span class="label">Turn-takes</span><span class="note">An answer on every recording</span></div>
-      <div class="stat glass"><span class="num">4.452<small> s</small></span><span class="label">Average latency</span><span class="note">Excluding early interruptions</span></div>
-      <div class="stat glass"><span class="num">93.4<small>%</small></span><span class="label">Tool selection</span><span class="note">Turn-taken recordings</span></div>
-      <div class="stat glass"><span class="num">76.3<small>%</small></span><span class="label">Argument accuracy</span><span class="note">Turn-taken recordings</span></div>
-    </div>
-    <div class="caveats">
-      <span class="chip">Organizer LLM judge off</span>
-      <span class="chip">29 of 100 re-recorded after the Inference credit outage</span>
-      <span class="chip">Not an organizer-normalized score</span>
-    </div>
+    <p class="stats-note">Full-Duplex-Bench v3, 100 recordings, 4 October 2026 · pinned official evaluator · Organizer LLM judge off · <a href="/results">Details</a></p>
   </section>
 
   <section class="section" id="sessions">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">Two live sessions</span>
-        <h2>Try a correction <em>yourself</em></h2>
-      </div>
-      <span class="spacer"></span>
-      <a class="btn sm" href="/logs"><svg class="ic xs"><use href="#i-terminal"/></svg>Session logs</a>
-    </div>
     <div class="modes">
       <a class="mode-card glass" href="/voice">
         <span class="mode-icon"><svg class="ic"><use href="#i-audio"/></svg></span>
         <h3>Voice correction</h3>
-        <p>The benchmark agent and its twelve mock tools. Change a detail mid-sentence and watch the stale call drop.</p>
-        <blockquote>Find flights to Las Vegas on August fifth. Oh, wait. Make it August eighth.</blockquote>
-        <span class="worker">worker · interra-benchmark</span>
-        <span class="go">Open the voice session<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+        <p>Ask for something, change a detail mid-sentence, and watch the stale call drop.</p>
+        <span class="go">Open<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
       </a>
       <a class="mode-card glass camera" href="/camera">
         <span class="mode-icon"><svg class="ic"><use href="#i-camera"/></svg></span>
         <h3>Camera correction</h3>
-        <p>Show a device code to the webcam. The latest frame joins your next turn, and a booking you correct is dropped before it is stored.</p>
-        <blockquote>What does this code mean? Book a check for Friday. Oh, wait. Make it Saturday.</blockquote>
-        <span class="worker">worker · interra-camera-troubleshooter</span>
-        <span class="go">Open the camera session<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+        <p>Show a device code to the webcam, then correct the booking while the agent works.</p>
+        <span class="go">Open<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
       </a>
-    </div>
-  </section>
-
-  <section class="section" id="stack">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">Stack</span>
-        <h2>One cascaded LiveKit session</h2>
-      </div>
-    </div>
-    <div class="stack" id="models">
-      <span class="chip"><i>vad</i>Silero VAD</span>
-      <span class="chip"><i>stt</i>Deepgram Nova-3</span>
-      <span class="chip"><i>llm</i>GPT-4.1 mini · temperature 0</span>
-      <span class="chip"><i>tts</i>Cartesia Sonic-3</span>
-      <span class="chip"><i>gate</i>Quiet window 0.6 s</span>
     </div>
   </section>
 </main>

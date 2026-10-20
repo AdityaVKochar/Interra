@@ -4,7 +4,7 @@
 
 import { Orb } from "./orb.js";
 import { $, clamp, fmtClock, fmtNumber, fmtShort, h, nowSeconds, reduceMotion, restartAnimation, svgIcon } from "./shell.js";
-import { callBlock, callDuration, callKey, callNode, callText, resultSummary } from "./trace.js";
+import { callBlock, callDuration, callKey, callText, resultSummary } from "./trace.js";
 import { TranscriptView } from "./transcript.js";
 
 const BAR_COUNT = 24;
@@ -133,7 +133,7 @@ export class Conversation {
       bars: $("bars"), hint: $("status"),
       now: $("now"), nowKind: $("now-kind"), nowText: $("now-text"), nowTime: $("now-time"), nowIcon: $("now-icon"),
       pipeline: $("pipeline"), toolStep: $("tool-step"),
-      gateWindow: $("gate-window"), gateHistory: $("gate-history"), gateHistoryEmpty: $("gate-history-empty"),
+      gateWindow: $("gate-window"), gateHistory: $("gate-history"), gateLog: $("gate-log"),
       quiet: $("quiet"), quietBar: $("quiet-bar"), quietValue: $("quiet-value"), quietLabel: $("quiet-label"),
       micWave: $("mic-wave"), elapsed: $("elapsed"),
     };
@@ -201,7 +201,7 @@ export class Conversation {
     this.transcript.setBase(base);
     this.base = base;
     if (this.el.gateHistory) this.el.gateHistory.replaceChildren();
-    if (this.el.gateHistoryEmpty) this.el.gateHistoryEmpty.hidden = false;
+    if (this.el.gateLog) this.el.gateLog.hidden = true;
     this.setGate("Waiting");
   }
 
@@ -258,9 +258,7 @@ export class Conversation {
       case "turn_held":
         this.turnHeld = true;
         this.setGate("Held", { text: record.transcript || "", quote: true, time: record.time, note: "It sounded unfinished, so the agent waits for the rest before it plans a call." });
-        this.transcript.chip("held:" + ++this.sequence, "held", "Turn held", "“" + (record.transcript || "") + "”", {
-          icon: "typing", time: record.time, note: "It sounded unfinished, so the agent waits for the rest.",
-        });
+        this.transcript.chip("held:" + ++this.sequence, "held", "Turn held", "", { icon: "typing", time: record.time });
         this.pulse("held");
         break;
       case "turn_released":
@@ -305,9 +303,7 @@ export class Conversation {
     const key = callKey(record.call);
     const chipKey = "call:" + ++this.sequence;
     const seconds = Number(record.quiet_seconds ?? 0.6) || 0.6;
-    this.transcript.chip(chipKey, "holding", "Holding", callNode(record.call), {
-      icon: "timer", time: record.time, note: "Runs after " + fmtNumber(seconds) + " s of quiet. If you keep speaking it is dropped.",
-    });
+    this.transcript.chip(chipKey, "holding", "Holding", (record.call && record.call.function) || "tool", { icon: "timer", time: record.time });
     const waiting = this.pending.get(key) || [];
     waiting.push(chipKey);
     this.pending.set(key, waiting);
@@ -317,7 +313,7 @@ export class Conversation {
     this.setQuietSeconds(seconds);
     this.setGate("Holding", {
       call: record.call, changed: this.changedFrom(record.call), time: record.time,
-      note: "Runs after " + fmtNumber(seconds) + " s of quiet. If you keep speaking, it is dropped before it is logged.",
+      note: "Runs after " + fmtNumber(seconds) + " s of quiet; keep talking and it is dropped.",
     });
   }
 
@@ -335,13 +331,10 @@ export class Conversation {
       executed: [callDuration(record.call), resultSummary(record.result)].filter(Boolean).join(" · "),
       failed: resultSummary(record.result),
     };
-    this.transcript.chip(chipKey, meta.chip, meta.title, callNode(record.call), {
-      icon: meta.icon, time: record.time, note: notes[outcome],
-      details: outcome === "executed" || outcome === "failed" ? record.result : undefined,
-    });
+    this.transcript.chip(chipKey, meta.chip, meta.title, (record.call && record.call.function) || "tool", { icon: meta.icon, time: record.time });
     const focusNotes = {
-      dropped: "You kept speaking, so this call never reached the tool log.",
-      reused: "An identical call already ran in this room; its result was reused.",
+      dropped: "You kept speaking, so it was not logged.",
+      reused: "Identical call; the first result was reused.",
       executed: notes.executed,
       failed: notes.failed,
     };
@@ -375,7 +368,7 @@ export class Conversation {
         this.el.frameNote.textContent = "Your latest frame joins your next spoken turn.";
       }, 2400);
     }
-    this.transcript.chip("frame:" + ++this.sequence, record.attached ? "frame" : "system", record.attached ? "Frame" : "No frame", text, { icon: "image", time: record.time });
+    this.transcript.chip("frame:" + ++this.sequence, record.attached ? "frame" : "system", record.attached ? "Frame attached" : "No frame", "", { icon: "image", time: record.time });
     if (record.attached) this.pulse("frame");
   }
 
@@ -427,8 +420,7 @@ export class Conversation {
 
   waitingText() {
     if (this.waitingOverride) return this.waitingOverride;
-    return "When you ask for something, the tool call waits here until you have been quiet for "
-      + fmtNumber(this.quietSeconds) + " s. Keep talking and it is dropped before it is logged.";
+    return "A tool call waits here until you have been quiet for " + fmtNumber(this.quietSeconds) + " s.";
   }
 
   /** Show one gate state: a quote, a structured call, or the waiting explanation. */
@@ -505,7 +497,7 @@ export class Conversation {
     item.append(tag, name, h("time", null, typeof time === "number" && this.base !== null ? fmtClock(time - this.base) : ""), detail);
     list.prepend(item);
     while (list.children.length > 12) list.lastElementChild.remove();
-    this.el.gateHistoryEmpty.hidden = true;
+    if (this.el.gateLog) this.el.gateLog.hidden = false;
   }
 
   pulse(kind) {

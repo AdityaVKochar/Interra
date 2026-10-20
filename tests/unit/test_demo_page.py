@@ -49,9 +49,11 @@ class DemoPageTests(unittest.TestCase):
 
     def test_overview_states_the_same_figures_and_the_gate(self):
         page = page_html("index")
-        for text in ("70/100", "100/100", "4.452 s", "Organizer LLM judge off", "dropped before it is logged",
-                     "interra-benchmark", "interra-camera-troubleshooter"):
-            self.assertIn(text, page)
+        text = re.sub(r"<[^>]+>", "", page)
+        for phrase in ("70/100", "100/100", "4.452 s", "Organizer LLM judge off", "dropped before it is logged"):
+            self.assertIn(phrase, text)
+        for route in ("/voice", "/camera", "/replay", "/results"):
+            self.assertIn('href="' + route + '"', page)
 
     def test_results_table_matches_the_readme(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

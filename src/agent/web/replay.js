@@ -8,10 +8,9 @@ import { describeResult, fmtValue } from "./trace.js";
 
 const GAP = 2.5;
 const el = {
-  play: $("play"), playLabel: $("play-label"), restart: $("restart"),
+  play: $("play"), playLabel: $("play-label"),
   time: $("play-time"), scrub: $("scrub"), fill: $("scrub-fill"),
-  speeds: document.querySelectorAll(".speed button"),
-  result: $("result"), meta: $("replay-meta"),
+  result: $("result"),
 };
 
 const player = {
@@ -31,8 +30,7 @@ const player = {
 const convo = new Conversation({ mode: "voice", clock: () => replayClock() });
 convo.agentLabel = "the recording";
 // The 4 October run predates the commit gate (added 17 October): its call was never held.
-convo.waitingOverride = "This run predates the commit gate, so its tool call ran as soon as the model planned it. The steps still show where the turn was.";
-$("gate-window").parentElement.textContent = "Recorded before the gate";
+convo.waitingOverride = "This run predates the commit gate, so its tool call ran as soon as the model planned it.";
 convo.setGate("Waiting");
 
 function replayClock() {
@@ -74,10 +72,7 @@ function build(data) {
     node.dataset.at = String(step.at);
     el.scrub.append(node);
   }
-  const shortened = player.steps.filter((step) => step.shortened).length;
-  el.meta.textContent = data.scenario + " · room " + data.room + " · " + records.length + " recorded events"
-    + (shortened ? " · " + shortened + " idle gaps over " + GAP + " s shortened" : "");
-  renderResult(data.result, data.report);
+  renderResult(data.result);
 }
 
 function resetView() {
@@ -141,7 +136,7 @@ function finish() {
   convo.agentState = null;
   convo.userSpeaking = false;
   setPlaying(false);
-  convo.hint("Replay finished. The official result for this recording is below the player and at the end of the transcript.");
+  convo.hint("Replay finished. The official result is below.");
 }
 
 function seek(target) {
@@ -163,15 +158,6 @@ convo.onFrame = (now) => {
 };
 
 el.play.addEventListener("click", () => (player.playing ? pause() : play()));
-el.restart.addEventListener("click", () => { resetView(); player.position = 0; render(); play(); });
-for (const button of el.speeds) {
-  button.addEventListener("click", () => {
-    player.anchor = player.position;
-    player.anchorAt = performance.now();
-    player.speed = Number(button.dataset.speed) || 1;
-    for (const other of el.speeds) other.setAttribute("aria-pressed", String(other === button));
-  });
-}
 el.scrub.addEventListener("click", (event) => {
   const rect = el.scrub.getBoundingClientRect();
   seek(((event.clientX - rect.left) / rect.width) * player.total);
@@ -196,7 +182,7 @@ function checkRow(ok, label, expected, actual) {
   return row;
 }
 
-function renderResult(result, report) {
+function renderResult(result) {
   const body = $("result-body");
   if (!result) {
     body.replaceChildren(h("p", null, "The official report does not hold exactly one entry for this scenario, so no verdict is shown."));
@@ -227,8 +213,7 @@ function renderResult(result, report) {
   }
   const checksNode = h("div", "checks");
   checksNode.append(...rows);
-  const note = h("p", null, (result.failure_reason ? result.failure_reason + ". " : "") + "From " + (report || "the official report") + ". This page compares nothing itself; it shows the evaluator's checks.");
-  body.replaceChildren(checksNode, note);
+  body.replaceChildren(checksNode);
 }
 
 async function load() {
@@ -239,7 +224,7 @@ async function load() {
     resetView();
     render();
     setPlaying(false);
-    convo.hint("Press play. The recording's own trace drives the orb, the transcript and the gate card. No model runs during the replay.");
+    convo.hint("Played from its own trace; no model runs. Idle gaps over " + GAP + " s are shortened.");
     const query = new URLSearchParams(location.search);
     const at = Number(query.get("t"));
     if (Number.isFinite(at) && at > 0) seek(at);

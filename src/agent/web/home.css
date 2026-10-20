@@ -140,3 +140,23 @@
   .flow li::after { display: none; }
   .timeline li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
+
+/* ---------- minimal figures ---------- */
+
+.stats.three, .stats.plain { gap: 0; }
+.stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stats.three .stat, .stats.plain .stat { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 0; padding: 6px 28px 6px 0; }
+.stats.three .stat + .stat, .stats.plain .stat + .stat { border-left: 1px solid var(--line); padding-left: 28px; }
+.stats-note { margin: 18px 0 0; color: var(--text-3); font-size: 14px; }
+.stats-note a { color: var(--text-2); text-underline-offset: 3px; }
+.run summary { cursor: pointer; font-weight: 600; font-size: 16px; list-style: none; display: inline-flex; align-items: center; gap: 10px; }
+.run summary::-webkit-details-marker { display: none; }
+.run summary::after { content: "+"; color: var(--text-3); font-weight: 400; }
+.run[open] summary::after { content: "–"; }
+.run[open] .cmd-tabs { margin-top: 14px; }
+@media (max-width: 760px) {
+  .stats.three { grid-template-columns: minmax(0, 1fr); }
+  .stats.three .stat + .stat { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 16px; }
+}
+
+.stack-cards { display: grid; gap: 16px; }

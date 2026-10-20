@@ -14,8 +14,6 @@
   <aside class="sessions glass" aria-label="Sessions">
     <div class="sessions-head">
       <h2><svg class="ic sm"><use href="#i-list"/></svg>Sessions</h2>
-      <span class="spacer"></span>
-      <button class="icon-btn sm" id="sessions-refresh" type="button" aria-label="Refresh sessions" title="Refresh sessions"><svg class="ic sm"><use href="#i-rotate"/></svg></button>
     </div>
     <ol class="session-list" id="session-list"></ol>
   </aside>
@@ -28,15 +26,11 @@
         <p id="room-meta"></p>
       </div>
       <div class="viewer-actions">
-        <button class="icon-btn" id="log-follow" type="button" aria-pressed="true" aria-label="Follow new events" title="Follow new events"><svg class="ic sm"><use href="#i-scroll"/></svg></button>
-        <button class="icon-btn" id="log-copy" type="button" aria-label="Copy shown events as JSON lines" title="Copy shown events as JSON lines"><svg class="ic sm"><use href="#i-copy"/></svg></button>
         <button class="icon-btn" id="log-download" type="button" aria-label="Download events" title="Download events (.jsonl)"><svg class="ic sm"><use href="#i-download"/></svg></button>
-        <button class="icon-btn" id="log-clear" type="button" aria-label="Clear the view" title="Clear the view"><svg class="ic sm"><use href="#i-trash"/></svg></button>
       </div>
     </header>
     <div class="viewer-tools">
       <div class="filters" id="filters" role="group" aria-label="Filter events"></div>
-      <button class="toggle-chip" id="interim" type="button" aria-pressed="false" title="Show interim transcripts"><svg class="ic xs"><use href="#i-ear"/></svg>Interim</button>
       <label class="search">
         <svg class="ic sm"><use href="#i-search"/></svg>
         <input id="log-search" type="search" placeholder="Filter by tool, word or kind" autocomplete="off" spellcheck="false">
@@ -49,7 +43,7 @@
       </div>
       <div class="empty" id="log-empty">
         <span class="empty-icon"><svg class="ic lg"><use href="#i-terminal"/></svg></span>
-        <p><b>No events yet</b>Pick a session on the left. A live session's events stream in as the worker writes them.</p>
+        <p><b>No events yet</b>Pick a session on the left.</p>
       </div>
       <button class="paused-pill" id="log-paused" type="button">0 new events</button>
     </div>

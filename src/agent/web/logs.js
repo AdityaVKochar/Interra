@@ -1,18 +1,23 @@
 // Logs: pick a session, read its worker trace and the browser's own notes,
 // one roomy row per event.
 
-import { $, copyText, fmtClock, fmtDuration, fmtWhen, h, params, svgIcon, toast } from "./shell.js";
-import {
-  CATEGORIES, callNode, entryFromBrowserEvent, entryFromRecord, jsonBlock, loadBrowserEvents, onBrowserEvent,
-} from "./trace.js";
+import { $, fmtClock, fmtDuration, fmtWhen, h, params, svgIcon, toast } from "./shell.js";
+import { callNode, entryFromBrowserEvent, entryFromRecord, jsonBlock, loadBrowserEvents, onBrowserEvent } from "./trace.js";
+
+// Four filters are enough: tool calls and the gate's decisions read together.
+const FILTERS = [
+  ["all", "All", null, null],
+  ["speech", "Speech", "var(--heard)", ["speech"]],
+  ["gate", "Tool calls", "var(--executed)", ["gate", "tool", "result"]],
+  ["error", "Errors", "var(--error)", ["error"]],
+];
 
 const MAX_ROWS = 4000;
 const el = {
-  list: $("session-list"), refresh: $("sessions-refresh"),
+  list: $("session-list"),
   kind: $("room-kind"), title: $("room-title"), meta: $("room-meta"), liveBadge: $("live-badge"),
   log: $("log"), scroll: $("log-scroll"), empty: $("log-empty"), paused: $("log-paused"),
-  filters: $("filters"), search: $("log-search"), interim: $("interim"),
-  follow: $("log-follow"), copy: $("log-copy"), download: $("log-download"), clear: $("log-clear"),
+  filters: $("filters"), search: $("log-search"), download: $("log-download"),
 };
 
 const view = {
@@ -102,7 +107,7 @@ function updateHeader() {
   if (!view.room) {
     el.kind.textContent = "Logs";
     el.title.textContent = "Pick a session";
-    el.meta.textContent = "Every session this machine's workers wrote to the trace, plus the recorded scored run.";
+    el.meta.textContent = "";
     el.liveBadge.hidden = true;
     return;
   }
@@ -112,21 +117,20 @@ function updateHeader() {
   el.liveBadge.hidden = !live;
   el.liveBadge.dataset.on = String(live);
   el.meta.textContent = view.recorded
-    ? "Room " + view.room + " · read from docs/results/kaggle-20261004/livekit-agent.jsonl"
-    : session ? fmtWhen(session.first) + " · " + fmtDuration(session.last - session.first) + " · " + session.events + " worker events" + (live ? " · following new events" : "") : "Following new events for this room";
+    ? "Room " + view.room
+    : session ? fmtWhen(session.first) + " · " + fmtDuration(session.last - session.first) : "";
 }
 
 // ---------- entries ----------
 
 function buildFilters() {
-  for (const [id, label, color] of CATEGORIES) {
+  for (const [id, label, color] of FILTERS) {
     const button = h("button");
     button.type = "button";
     button.setAttribute("aria-pressed", String(id === view.filter));
     if (color) { button.style.setProperty("--c", color); button.append(h("i")); }
     button.append(label);
-    const count = h("em", null, "0");
-    button.append(count);
+    const count = h("em", null, "");
     button.addEventListener("click", () => {
       view.filter = id;
       for (const [key, item] of view.buttons) item.button.setAttribute("aria-pressed", String(key === id));
@@ -140,8 +144,8 @@ function buildFilters() {
 function matches(entry) {
   if (entry.interim && !view.showInterim) return false;
   if (view.filter !== "all") {
-    const cat = entry.cat === "result" ? "tool" : entry.cat;
-    if (cat !== view.filter) return false;
+    const wanted = FILTERS.find(([id]) => id === view.filter)[3];
+    if (!wanted.includes(entry.cat)) return false;
   }
   if (view.query) {
     if (!entry.haystack) entry.haystack = (entry.label + " " + entry.kind + " " + entry.msg + " " + entry.sub + " " + entry.src + " " + JSON.stringify(entry.data || {})).toLowerCase();
@@ -179,7 +183,7 @@ function renderRow(entry) {
   else msg.textContent = entry.msg;
   body.append(msg);
   if (entry.sub) body.append(h("div", "lrow-sub", entry.sub));
-  row.append(time, tag, body, h("span", "lrow-src", entry.src));
+  row.append(time, tag, body);
   return row;
 }
 
@@ -227,21 +231,11 @@ function refilter() {
 }
 
 function updateCounts() {
-  const shown = (cat) => (view.total[cat] || 0) - (view.showInterim ? 0 : view.interim[cat] || 0);
-  let all = 0;
-  for (const [id] of CATEGORIES) {
-    if (id === "all") continue;
-    const count = shown(id) + (id === "tool" ? shown("result") : 0);
-    view.buttons.get(id).count.textContent = String(count);
-    all += count;
-  }
-  view.buttons.get("all").count.textContent = String(all);
   el.empty.hidden = view.entries.length > 0;
 }
 
 function setFollow(follow, scroll) {
   view.follow = follow;
-  el.follow.setAttribute("aria-pressed", String(follow));
   if (follow) { view.unseen = 0; if (scroll) scrollToEnd(); }
   updatePaused();
 }
@@ -328,22 +322,11 @@ document.addEventListener("keydown", (event) => {
   const typing = event.target instanceof HTMLElement && (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName));
   if (event.key === "/" && !typing) { event.preventDefault(); el.search.focus(); }
 });
-el.interim.addEventListener("click", () => {
-  view.showInterim = !view.showInterim;
-  el.interim.setAttribute("aria-pressed", String(view.showInterim));
-  refilter();
-});
 el.scroll.addEventListener("scroll", () => {
   const atBottom = el.scroll.scrollHeight - el.scroll.scrollTop - el.scroll.clientHeight < 28;
   if (atBottom !== view.follow) setFollow(atBottom, false);
 });
-el.follow.addEventListener("click", () => setFollow(!view.follow, true));
 el.paused.addEventListener("click", () => setFollow(true, true));
-el.copy.addEventListener("click", () => {
-  const shown = view.entries.filter((entry) => !entry.row.hidden);
-  if (!shown.length) { toast("No events to copy"); return; }
-  copyText(shown.map((entry) => JSON.stringify(exportable(entry))).join("\n") + "\n", "Copied " + shown.length + " events");
-});
 el.download.addEventListener("click", () => {
   if (!view.entries.length) { toast("No events to download"); return; }
   const body = view.entries.map((entry) => JSON.stringify(exportable(entry))).join("\n") + "\n";
@@ -355,7 +338,6 @@ el.download.addEventListener("click", () => {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 4000);
 });
-el.clear.addEventListener("click", () => clearView());
 el.log.addEventListener("click", (event) => {
   const row = event.target.closest(".lrow");
   if (!row || event.target.closest("pre")) return;
@@ -364,7 +346,6 @@ el.log.addEventListener("click", (event) => {
   if (!entry.pre) { entry.pre = jsonBlock(exportable(entry)); row.append(entry.pre); }
   row.classList.toggle("open");
 });
-el.refresh.addEventListener("click", () => loadSessions());
 window.addEventListener("popstate", () => select(new URLSearchParams(location.search).get("room") || "", false));
 window.addEventListener("beforeunload", closeSource);
 

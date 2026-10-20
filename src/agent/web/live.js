@@ -9,8 +9,8 @@ const LIVEKIT_CLIENT = "https://cdn.jsdelivr.net/npm/livekit-client@2.15.8/+esm"
 const mode = document.querySelector(".session").dataset.mode;
 const el = {
   start: $("start"), startLabel: $("start-label"), elapsed: $("elapsed"),
-  mic: $("mic"), cam: $("cam"), speaker: $("speaker"), logs: $("open-logs"),
-  room: $("room-label"), preview: $("preview"), videoFrame: $("video-frame"),
+  mic: $("mic"), cam: $("cam"), speaker: $("speaker"),
+  preview: $("preview"), videoFrame: $("video-frame"),
   agentAudio: $("agent-audio"), txBadge: $("tx-badge"), txBadgeText: $("tx-badge-text"),
 };
 
@@ -56,18 +56,14 @@ function setPhase(phase) {
 }
 
 function showRoom() {
-  if (!app.roomName) { el.room.textContent = ""; return; }
-  const parts = [app.link, "room " + app.roomName];
-  if (app.link === "live" && app.quality && !["excellent", "good", "unknown"].includes(app.quality)) parts.push(app.quality + " connection");
-  el.room.textContent = parts.filter(Boolean).join(" · ");
+  // A poor link is the only connection detail worth a word on screen.
+  if (app.link === "reconnecting") convo.hint("Connection lost; reconnecting…", true);
+  else if (app.link === "live" && app.quality === "poor") convo.hint("The connection is poor; speech may arrive late.", true);
 }
 
 function setRoom(name) {
   app.roomName = name;
   app.quality = "";
-  showRoom();
-  el.logs.href = name ? "/logs?room=" + encodeURIComponent(name) : "/logs";
-  el.logs.removeAttribute("aria-disabled");
 }
 
 function randomId(length = 8) {
@@ -128,9 +124,7 @@ async function startCall() {
       attachPreview(room, LK);
     }
     for (const participant of room.remoteParticipants.values()) if (participant.isAgent) agentJoined(participant);
-    convo.hint(mode === "camera"
-      ? "Connected. The mic waveform must move while you talk. Hold E1 in the picture, then say the line."
-      : "Connected. The mic waveform must move while you talk. Say the line, pause after fifth, then correct it.");
+    convo.hint(mode === "camera" ? "Listening. Hold E1 in view, then say the line." : "Listening. Say the line, pause, then correct it.");
   } catch (error) {
     if (session !== app.session) return;
     convo.note("start_failed", "Did not start: " + errorText(error), { cat: "error", icon: "alert", label: "Start failed" });
@@ -244,6 +238,7 @@ function attachPreview(room, LK) {
 
 function setAudioBlocked(blocked) {
   app.audioBlocked = blocked;
+  el.speaker.hidden = !blocked;
   el.speaker.classList.toggle("attention", blocked);
   el.speaker.title = blocked ? "Allow agent audio" : app.speakerMuted ? "Unmute agent audio" : "Mute agent audio";
 }
@@ -413,20 +408,15 @@ window.addEventListener("beforeunload", () => {
 });
 
 setPhase("idle");
-convo.hint(mode === "camera"
-  ? "The camera worker must be running. Press Start, then hold E1 up to the webcam."
-  : "The benchmark worker must be running. Press Start and use headphones so the agent does not hear itself.");
+const idleHint = mode === "camera" ? "Press Start and hold the code up to the webcam." : "Press Start and say the line. Headphones help.";
+convo.hint(idleHint);
 loadConfig().then((config) => {
   Object.assign(cfg, config);
   convo.agentLabel = agentName();
   convo.setQuietSeconds(config.commit_quiet_seconds);
   if (convo.phase === "idle") setPhase("idle");
   if (config.livekit_configured === false) {
-    convo.hint("LiveKit is not configured here. Set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env, then restart the page server.", true);
-  } else if (convo.phase === "idle") {
-    convo.hint(mode === "camera"
-      ? "The camera worker " + cfg.camera_agent + " must be running. Press Start, then hold E1 up to the webcam."
-      : "The benchmark worker " + cfg.voice_agent + " must be running. Press Start and use headphones so the agent does not hear itself.");
+    convo.hint("LiveKit is not configured. Set LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env.", true);
   }
 });
 convo.start();

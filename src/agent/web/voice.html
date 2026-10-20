@@ -17,8 +17,6 @@
         <div class="status-pill" id="status-pill" data-tone="idle" role="status" aria-live="polite">
           <span class="dot"></span><span class="shimmer" id="status-text">Ready</span>
         </div>
-        <span class="spacer"></span>
-        <span class="room" id="room-label"></span>
       </div>
 
       <div class="orb-zone">
@@ -48,23 +46,18 @@
         <span id="start-label">Start</span>
         <span class="elapsed" id="elapsed" hidden>00:00</span>
       </button>
-      <button class="dock-btn" id="speaker" type="button" aria-pressed="false" title="Mute agent audio">
+      <button class="dock-btn" id="speaker" type="button" aria-pressed="false" title="Allow agent audio" hidden>
         <svg class="ic on-icon"><use href="#i-volume"/></svg>
         <svg class="ic off-icon"><use href="#i-volume-x"/></svg>
       </button>
-      <span class="dock-sep" aria-hidden="true"></span>
-      <a class="dock-btn" id="open-logs" href="/logs" target="_blank" rel="noopener" title="Open this session's logs in a new tab">
-        <svg class="ic"><use href="#i-terminal"/></svg><span class="lbl">Logs</span><svg class="ic xs lbl"><use href="#i-external"/></svg>
-      </a>
     </nav>
     <div id="agent-audio" hidden></div>
   </section>
 
+  <div class="side">
   <section class="gate-panel glass" id="now" data-kind="Waiting" aria-label="Commit gate" aria-live="polite">
     <header class="gate-bar">
       <span class="gate-title"><svg class="ic sm"><use href="#i-gate"/></svg>Commit gate</span>
-      <span class="spacer"></span>
-      <span class="gate-window">Quiet window <b id="gate-window">0.6 s</b></span>
     </header>
     <ol class="steps" id="pipeline" aria-label="Where this turn is">
       <li data-step="heard"><span class="step-n">1</span><span class="step-name">Heard</span></li>
@@ -79,17 +72,16 @@
         <span class="spacer"></span>
         <time class="gate-time" id="now-time"></time>
       </div>
-      <div class="focus-body muted" id="now-text">When you ask for something, the tool call waits here until you have been quiet for the whole window. Keep talking and it is dropped before it is logged.</div>
+      <div class="focus-body muted" id="now-text">A tool call waits here until you have been quiet.</div>
       <div class="quiet" id="quiet" data-state="holding">
         <span id="quiet-label">Quiet window</span>
         <div class="quiet-track"><i id="quiet-bar"></i></div>
         <span id="quiet-value">0.0 / 0.6 s</span>
       </div>
     </div>
-    <div class="gate-log">
-      <span class="gate-log-title">Decisions this session</span>
+    <div class="gate-log" id="gate-log" hidden>
+      <span class="gate-log-title">Decisions</span>
       <ol id="gate-history"></ol>
-      <p class="gate-log-empty" id="gate-history-empty">Each held call lands here as executed, dropped or reused, newest first.</p>
     </div>
   </section>
 
@@ -97,9 +89,6 @@
     <header class="panel-head">
       <h2><svg class="ic sm"><use href="#i-message"/></svg>Transcript</h2>
       <span class="badge" id="tx-badge" data-on="false" hidden><i></i><span id="tx-badge-text"></span></span>
-      <span class="spacer"></span>
-      <button class="icon-btn sm" id="tx-copy" type="button" aria-label="Copy transcript" title="Copy transcript"><svg class="ic sm"><use href="#i-copy"/></svg></button>
-      <button class="icon-btn sm" id="tx-clear" type="button" aria-label="Clear transcript" title="Clear transcript"><svg class="ic sm"><use href="#i-trash"/></svg></button>
     </header>
     <figure class="script-card">
       <figcaption class="eyebrow"><svg class="ic xs"><use href="#i-message"/></svg>Say this line</figcaption>
@@ -111,11 +100,12 @@
       </div>
       <div class="empty" id="tx-empty">
         <span class="empty-icon"><svg class="ic lg"><use href="#i-message"/></svg></span>
-        <p><b>Live transcription</b>Your words and the agent's reply appear here as they are spoken. Tool calls show up between them.</p>
+        <p><b>Live transcription</b>What you and the agent say appears here.</p>
       </div>
       <button class="jump" id="tx-jump" type="button"><svg class="ic xs"><use href="#i-arrow-down"/></svg>Latest</button>
     </div>
   </section>
+  </div>
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
