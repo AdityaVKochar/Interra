@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{head}}
+<title>Interra — recorded run</title>
+<meta name="description" content="The scored 4 October 2026 housing self-correction, played from its own trace with the original timestamps.">
+<link rel="stylesheet" href="/static/session.css">
+</head>
+<body data-page="replay">
+{{sprite}}
+{{header}}
+
+<main class="session" data-mode="voice">
+  <section class="stage glass" aria-label="Recorded run">
+    <div class="stage-main">
+      <div class="stage-top">
+        <div class="status-pill" id="status-pill" data-tone="idle" role="status" aria-live="polite">
+          <span class="dot"></span><span class="shimmer" id="status-text">Ready</span>
+        </div>
+      </div>
+
+      <div class="orb-zone">
+        <div class="orb-wrap" id="orb-wrap" data-user="quiet">
+          <div class="orb-shadow"></div>
+          <div class="orb-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="orb-fallback" aria-hidden="true"></div>
+          <canvas id="orb" aria-hidden="true"></canvas>
+          <div class="orb-pulse" id="orb-pulse" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="viz-picker" id="viz-picker" role="group" aria-label="Visualizer style"></div>
+      <div class="bars" id="bars" data-tone="idle" aria-hidden="true"></div>
+      <p class="hint" id="status">Loading the recorded trace.</p>
+
+    </div>
+
+    <div class="player glass" aria-label="Playback">
+      <div class="player-row">
+        <button class="call-btn" id="play" type="button" data-state="idle">
+          <svg class="ic"><use href="#i-play"/></svg><span id="play-label">Play the recording</span>
+        </button>
+        <span class="spacer"></span>
+        <span class="time" id="play-time">00:00 / 00:00</span>
+      </div>
+      <div class="scrub" id="scrub" title="Jump to a moment">
+        <div class="track"></div>
+        <div class="fill" id="scrub-fill"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="side">
+  <section class="gate-panel glass" id="now" data-kind="Waiting" aria-label="Commit gate" aria-live="polite">
+    <header class="gate-bar">
+      <span class="gate-title">Commit gate</span>
+    </header>
+    <ol class="steps" id="pipeline" aria-label="Where this turn is">
+      <li data-step="heard"><span class="step-n">1</span><span class="step-name">Heard</span></li>
+      <li data-step="hold"><span class="step-n">2</span><span class="step-name">Holding</span></li>
+      <li data-step="decide"><span class="step-n">3</span><span class="step-name" id="tool-step">Decision</span></li>
+      <li data-step="said"><span class="step-n">4</span><span class="step-name">Said</span></li>
+    </ol>
+    <div class="gate-focus">
+      <div class="focus-head">
+        <span class="gate-icon" id="now-icon" hidden></span>
+        <b id="now-kind">Waiting for a request</b>
+        <span class="spacer"></span>
+        <time class="gate-time" id="now-time"></time>
+      </div>
+      <div class="focus-body muted" id="now-text">A tool call waits here until you have been quiet.</div>
+      <div class="quiet" id="quiet" data-state="holding">
+        <span id="quiet-label">Quiet window</span>
+        <div class="quiet-track"><i id="quiet-bar"></i></div>
+        <span id="quiet-value">0.0 / 0.6 s</span>
+      </div>
+    </div>
+    <div class="gate-log" id="gate-log" hidden>
+      <span class="gate-log-title">Decisions</span>
+      <ol id="gate-history"></ol>
+    </div>
+  </section>
+
+  <section class="panel transcript glass" aria-label="Transcript">
+    <header class="panel-head">
+      <h2><svg class="ic sm"><use href="#i-message"/></svg>Transcript</h2>
+      <span class="badge" data-source="replay"><i></i>recorded</span>
+    </header>
+    <figure class="script-card">
+      <figcaption class="eyebrow"><svg class="ic xs"><use href="#i-file"/></svg>Scored run · 4 October 2026 · in short</figcaption>
+      <blockquote>One bedroom, then “actually, no. Wait,” then two bedrooms and sixteen hundred.</blockquote>
+    </figure>
+    <div class="panel-body">
+      <div class="tx-scroll" id="tx-scroll">
+        <ol class="tx-list" id="tx"></ol>
+      </div>
+      <div class="empty" id="tx-empty">
+        <span class="empty-icon"><svg class="ic lg"><use href="#i-play"/></svg></span>
+        <p><b>Press play</b>The recorded conversation appears here.</p>
+      </div>
+      <button class="jump" id="tx-jump" type="button"><svg class="ic xs"><use href="#i-arrow-down"/></svg>Latest</button>
+    </div>
+  </section>
+  </div>
+</main>
+
+<section class="result-card card glass" id="result" aria-label="Official result">
+  <h3><span>Official result · <span id="result-title">housing_11</span></span><span class="spacer"></span><span id="result-verdict"></span></h3>
+  <div id="result-body"><p>Loading the evaluator's checks.</p></div>
+</section>
+
+{{footer}}
+<script type="module" src="/static/shell.js"></script>
+<script type="module" src="/static/replay.js"></script>
+</body>
+</html>

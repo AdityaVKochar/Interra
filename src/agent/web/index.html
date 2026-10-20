@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{head}}
+<title>Interra — overview</title>
+<meta name="description" content="A voice agent that keeps up when you change your mind.">
+<link rel="stylesheet" href="/static/home.css">
+</head>
+<body data-page="home">
+{{sprite}}
+{{header}}
+
+<main class="page">
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>A voice agent that keeps up when you <em>change your mind.</em></h1>
+      <p class="lede">Correct yourself mid-sentence and Interra holds the tool call until you finish. The stale call is dropped before it is logged; the one you meant runs once.</p>
+      <div class="btn-row">
+        <a class="btn primary" href="/voice"><svg class="ic sm"><use href="#i-phone"/></svg>Start a voice session</a>
+        <a class="btn" href="/replay"><svg class="ic sm"><use href="#i-play"/></svg>Watch the recorded run</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-orb" id="hero-orb-wrap">
+        <div class="orb-fallback"></div>
+        <canvas id="hero-orb" aria-hidden="true"></canvas>
+      </div>
+      <div class="hero-state glass" id="hero-state" data-tone="idle" title="An illustration of the session states">
+        <span class="dot"></span><span id="hero-state-text">Ready</span>
+      </div>
+      <div class="viz-picker" id="viz-picker" role="group" aria-label="Visualizer style"></div>
+    </div>
+  </section>
+
+  <section class="section" id="measured">
+    <div class="stats three">
+      <div class="stat"><span class="num">70<small>/100</small></span><span class="label">Strict passes</span></div>
+      <div class="stat"><span class="num">100<small>/100</small></span><span class="label">Turn-takes</span></div>
+      <div class="stat"><span class="num">4.452<small> s</small></span><span class="label">Average latency</span></div>
+    </div>
+    <p class="stats-note">Full-Duplex-Bench v3, 100 recordings, 4 October 2026 · pinned official evaluator · Organizer LLM judge off · <a href="/results">Details</a></p>
+  </section>
+
+  <section class="section" id="sessions">
+    <div class="modes">
+      <a class="mode-card glass" href="/voice">
+        <span class="mode-icon"><svg class="ic"><use href="#i-audio"/></svg></span>
+        <h3>Voice correction</h3>
+        <p>Ask for something, change a detail mid-sentence, and watch the stale call drop.</p>
+        <span class="go">Open<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+      </a>
+      <a class="mode-card glass camera" href="/camera">
+        <span class="mode-icon"><svg class="ic"><use href="#i-camera"/></svg></span>
+        <h3>Camera correction</h3>
+        <p>Show a device code to the webcam, then correct the booking while the agent works.</p>
+        <span class="go">Open<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+      </a>
+    </div>
+  </section>
+</main>
+
+{{footer}}
+<script type="module" src="/static/shell.js"></script>
+<script type="module" src="/static/home.js"></script>
+</body>
+</html>

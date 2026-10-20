@@ -19,6 +19,8 @@ from agent.fdb_livekit import (
     livekit_llm_model,
     livekit_speech_models,
     load_local_env,
+    trace_conversation_item,
+    trace_session_error,
 )
 
 
@@ -119,6 +121,20 @@ def camera_matches(participant: Any, publication: Any, identity: str, camera_sou
     return participant.identity == identity and publication.source == camera_source
 
 
+def trace_frame_decision(trace: Any, room_name: str, frame: Any | None) -> None:
+    """Record whether this turn carried a camera frame, so the judge page can show it."""
+    if frame is None:
+        trace.append("camera_frame", room=room_name, attached=False)
+        return
+    trace.append(
+        "camera_frame",
+        room=room_name,
+        attached=True,
+        width=getattr(frame, "width", None),
+        height=getattr(frame, "height", None),
+    )
+
+
 async def entrypoint(ctx: Any) -> None:
     load_local_env()
     missing = [
@@ -217,6 +233,7 @@ async def entrypoint(ctx: Any) -> None:
         ) -> None:
             clear_previous_images(turn_ctx, llm.ImageContent)
             frame = frames.take()
+            trace_frame_decision(trace, ctx.room.name, frame)
             if frame is not None:
                 content = new_message.content
                 if not isinstance(content, list):
@@ -246,12 +263,39 @@ async def entrypoint(ctx: Any) -> None:
     @session.on("user_state_changed")
     def on_user_state(event: Any) -> None:
         gate.set_speaking(str(event.new_state) == "speaking")
+        trace.append("user_state", room=ctx.room.name, state=str(event.new_state))
 
     @session.on("user_input_transcribed")
     def on_transcript(event: Any) -> None:
         if event.is_final:
             gate.note_transcript()
+        trace.append(
+            "transcript",
+            room=ctx.room.name,
+            transcript=event.transcript,
+            is_final=event.is_final,
+        )
 
+    @session.on("agent_state_changed")
+    def on_agent_state(event: Any) -> None:
+        trace.append("agent_state", room=ctx.room.name, state=str(event.new_state))
+
+    @session.on("conversation_item_added")
+    def on_item(event: Any) -> None:
+        trace_conversation_item(trace, ctx.room.name, event.item)
+
+    @session.on("error")
+    def on_error(event: Any) -> None:
+        trace_session_error(trace, ctx.room.name, event)
+
+    @session.on("close")
+    def on_close(event: Any) -> None:
+        trace.append(
+            "session_closed", room=ctx.room.name,
+            reason=str(event.reason), failed=event.error is not None,
+        )
+
+    trace.append("session_started", room=ctx.room.name)
     await session.start(
         room=ctx.room,
         agent=CameraTroubleshooter(),

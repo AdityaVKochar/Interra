@@ -29,9 +29,12 @@ Start the agent independently when rehearsing:
 python scripts/fdb_v3.py agent
 ```
 
-Open the judge page after both workers are running. Voice uses the name
-`interra-benchmark`. Camera keeps its own name. The page shows the live gate
-decision beside the scored 4 October 2026 run:
+Open the judge pages after both workers are running. Voice uses the name
+`interra-benchmark`. Camera keeps its own name. `/voice` and `/camera` show
+live captions and the gate decision; the session's Logs button opens its worker
+trace in a second tab. Without workers, `/replay` plays the scored 4 October
+2026 run from its recorded trace; label it as a replay if it appears in the
+video:
 
 ```bash
 # voice worker

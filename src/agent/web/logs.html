@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{head}}
+<title>Interra — logs</title>
+<meta name="description" content="Every session the workers wrote to the local trace: speech, gate decisions, tool calls and session events.">
+<link rel="stylesheet" href="/static/logs.css">
+</head>
+<body data-page="logs">
+{{sprite}}
+{{header}}
+
+<main class="logs-page">
+  <aside class="sessions glass" aria-label="Sessions">
+    <div class="sessions-head">
+      <h2><svg class="ic sm"><use href="#i-list"/></svg>Sessions</h2>
+    </div>
+    <ol class="session-list" id="session-list"></ol>
+  </aside>
+
+  <section class="viewer glass" aria-label="Session log">
+    <header class="viewer-head">
+      <div class="viewer-title">
+        <span class="eyebrow" id="room-kind">Logs</span>
+        <h1><span class="mono" id="room-title">Pick a session</span><span class="badge" id="live-badge" data-on="true" hidden><i></i>live</span></h1>
+        <p id="room-meta"></p>
+      </div>
+      <div class="viewer-actions">
+        <button class="icon-btn" id="log-download" type="button" aria-label="Download events" title="Download events (.jsonl)"><svg class="ic sm"><use href="#i-download"/></svg></button>
+      </div>
+    </header>
+    <div class="viewer-tools">
+      <div class="filters" id="filters" role="group" aria-label="Filter events"></div>
+      <label class="search">
+        <svg class="ic sm"><use href="#i-search"/></svg>
+        <input id="log-search" type="search" placeholder="Filter by tool, word or kind" autocomplete="off" spellcheck="false">
+        <kbd>/</kbd>
+      </label>
+    </div>
+    <div class="viewer-body">
+      <div class="log-scroll" id="log-scroll">
+        <ol class="log-list" id="log"></ol>
+      </div>
+      <div class="empty" id="log-empty">
+        <span class="empty-icon"><svg class="ic lg"><use href="#i-terminal"/></svg></span>
+        <p><b>No events yet</b>Pick a session on the left.</p>
+      </div>
+      <button class="paused-pill" id="log-paused" type="button">0 new events</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/static/shell.js"></script>
+<script type="module" src="/static/logs.js"></script>
+</body>
+</html>

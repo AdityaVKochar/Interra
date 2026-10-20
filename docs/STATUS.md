@@ -1,3 +1,88 @@
+# Judge pages restyled after LiveKit Agents UI — 2026-10-20
+
+- Near-black surfaces, a hairline square grid and one cyan accent (`#1fd5f9`)
+  replace the orange-to-violet gradient, aurora backdrop, sunrise arc and grain.
+  White is the person and cyan is the agent. Public Sans (light weight for
+  titles) replaces DM Sans and DM Serif Display; DM Mono stays for data.
+- `orb.js` is now a 2D-canvas visualizer with five styles, after LiveKit's
+  Agents UI: aura, wave, radial, grid and bars. It keeps the old interface
+  (`set`, `render`, `radius`, `light`), so the pages that drive it did not
+  change. A row of tiles under it switches style and remembers the choice per
+  browser; the Overview cycles through the styles until one is picked.
+- The visualizer canvas overhangs its box and could cover the picker on Replay;
+  it no longer takes clicks.
+- New mark: a lowercase i with a cyan ring, in the header, footer and favicon.
+- Tests: `tests.unit.test_demo_page` passes. Checked in a browser at desktop
+  width on Overview, Voice, Camera and Replay; not checked with a live LiveKit
+  call.
+
+# Judge pages split and retyped — 2026-10-20
+
+- The single judge page is now six pages served by `python -m agent.demo_page`:
+  Overview (`/`), Voice (`/voice`), Camera (`/camera`), Replay (`/replay`),
+  Logs (`/logs`) and Results (`/results`). They share a head, icon sprite,
+  header and footer from `src/agent/web/partials`, filled in by the server.
+- Type: DM Sans for the interface, DM Serif Display for titles and figures,
+  and DM Mono only for timestamps, ids, code and JSON. The pages no longer
+  carry the "Samsung PRISM · Theme 05" label.
+- Commit gate panel: four steps (heard, holding, decision, said), the held or
+  decided call as its function and argument cells, the quiet-window meter, and
+  this session's decisions newest first. An argument that differs from the call
+  dropped just before is marked "changed". A call that was never held, such as
+  the 4 October run, which predates the gate, shows the holding step skipped.
+- Logs is its own page: a sidebar of every room in the local trace (newest
+  first, with executed and dropped counts and a live marker) plus the recorded
+  run; two-line rows with pill tags, turn dividers, filters, search, interim
+  toggle, copy and download. Browser-side notes from a session tab reach an
+  open Logs tab through BroadcastChannel and are kept per room in localStorage.
+- Replay has play, pause, speed, a scrubber with event markers, `?t=` deep links,
+  and the evaluator's checks for housing_11 (city expected "Austin", got
+  "my city"; bedrooms and price matched).
+- APIs moved under `/api/`: `token`, `events` (now `since=0` for a whole room and
+  any trace room name for reading), `replay`, `config`, and new `sessions`.
+- Tests: `tests.unit.test_demo_page` covers every page's shell and links, static
+  file containment, the Results table against the README table, the sessions
+  index, and whole-room event streams. 257 tests pass (1 skipped).
+- Kept minimal: text-only navigation; the Overview is the headline, three
+  figures and two session links; session pages keep mic, Start and the camera
+  toggle (the speaker button appears only when the browser blocks audio); the
+  gate sits above the transcript; transcript tool cards are one line; Logs has
+  search, four filters and download; Results keeps the figures, the scored run,
+  the README comparison table and the run commands behind a fold.
+- Fixed: a page with content after its session grid (Replay) let the grid grow
+  past the window, because `main` is a flex item; the session and logs layouts
+  now keep their window height.
+- Not verified: a live LiveKit call from these pages; the workers were not run.
+
+# Judge console redesign — 2026-10-20
+
+- Branch `ui-rework` from `parent-main`. `python -m agent.demo_page` now serves
+  `src/agent/web/` (index.html, app.css, app.js, orb.js, logo.svg) instead of an
+  inline string: Geist Mono throughout, glass panels, a WebGL orb (warm = person,
+  cool = agent) with a CSS fallback, a state-sequenced bar visualizer, a mic
+  waveform, dark and light themes, and a new logo.
+- Transcript: live captions from the agent's `lk.transcription` text streams;
+  the worker trace is the fallback. Logs: every trace record for the room with
+  filters, search, expandable JSON, copy and `.jsonl` download. `/events`
+  resumes from `Last-Event-ID`.
+- Gate: `ToolExecutor` and `GatedAction` trace `tool_call_pending` before the
+  quiet-window wait, so the page shows the hold before Executed or Dropped. The
+  camera worker now traces user/agent state, transcripts, replies, errors,
+  close, and `camera_frame` per turn.
+- `/replay` plays room `eval-31fcf764` (housing_11) from the 4 October trace
+  with original timestamps (idle gaps over 2.5 s shortened, labelled). The
+  pinned evaluator did not pass this recording (city expected "Austin", got
+  "my city"); the page now says so. The earlier line "the city was heard as
+  my city" is not supported by the trace and was replaced by the verbatim reply.
+- Fixed: `/config` imported the worker module from a request thread, where
+  LiveKit refuses to register plugins; it is now imported at module load.
+- Tests: `tests.unit.test_demo_page` (served assets, SSE resume, replay result,
+  config without secrets, fresh-process thread regression),
+  `test_extension_livekit` (frame trace), updated pending-order assertions in
+  `test_fdb_turns` and `test_device_catalog`.
+- Not verified: a live LiveKit call from this page (no microphone in this
+  environment). No new FDB score.
+
 # Judge page — 2026-10-18
 
 - `python -m agent.demo_page` serves one local page at

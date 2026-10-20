@@ -199,6 +199,14 @@ class ToolExecutor:
     async def call(self, name: str, **arguments: Any) -> str:
         if self.gate is not None:
             epoch = self.gate.epoch
+            # Recorded before the wait, so a viewer sees the call held at the
+            # gate before it learns whether the call ran or was dropped.
+            self.trace.append(
+                "tool_call_pending",
+                room=self.room_name,
+                call={"function": name, "args": arguments},
+                quiet_seconds=self.gate.quiet_seconds,
+            )
             if not await self.gate.allow(epoch):
                 self.trace.append(
                     "tool_call_dropped",

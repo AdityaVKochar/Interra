@@ -291,6 +291,15 @@ scored 4 October 2026 run on one screen:
 python -m agent.demo_page
 ```
 
+Open `http://127.0.0.1:8780/`. The pages are separate: Overview, Voice and
+Camera (a live session with captions from the agent's LiveKit transcription and
+the gate's latest decision, including a call held during the quiet window
+before it runs or is dropped), Replay (the recorded housing_11 run played from
+its own trace, with the pinned evaluator's result for it, which was not a
+pass), Logs (every session in the local trace, filterable, with `.jsonl`
+download) and Results. Replay and Results need no LiveKit room. The pages live
+in `src/agent/web/`; `--port` and `--host` change where the server listens.
+
 ## Tests
 
 ```bash

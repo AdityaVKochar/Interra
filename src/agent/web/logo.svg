@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Interra">
+  <!-- Interra mark: a lowercase i. The stem is the person's turn; the cyan ring is the agent listening. -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0b0b0b" stroke="#2a2a2a" stroke-width="1.5"/>
+  <circle cx="32" cy="21" r="6.6" fill="none" stroke="#1fd5f9" stroke-width="3.8"/>
+  <rect x="28.8" y="31" width="6.4" height="21" rx="3.2" fill="#f5f5f5"/>
+</svg>

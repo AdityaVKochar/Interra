@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{head}}
+<title>Interra — results</title>
+<meta name="description" content="Full-Duplex-Bench v3 results for Interra: 70/100 strict passes and 100/100 turn-takes on the 4 October 2026 run.">
+<link rel="stylesheet" href="/static/home.css">
+</head>
+<body data-page="results">
+{{sprite}}
+{{header}}
+
+<main class="page">
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">Full-Duplex-Bench v3 · run of 4 October 2026</span>
+      <h1>Results</h1>
+      <p>70/100 strict and 100/100 turn-take from the pinned official evaluator on all 100 FDB-v3 recordings. 4.452 s average response latency excludes early interruptions. The gate holds a planned tool call until you are quiet; if you continue, the call is dropped before it is logged.</p>
+    </div>
+  </header>
+
+  <div class="stats plain">
+    <div class="stat"><span class="num">70<small>/100</small></span><span class="label">Strict passes</span></div>
+    <div class="stat"><span class="num">100<small>/100</small></span><span class="label">Turn-takes</span></div>
+    <div class="stat"><span class="num">4.452<small> s</small></span><span class="label">Average latency</span></div>
+    <div class="stat"><span class="num">93.4<small>%</small></span><span class="label">Tool selection</span></div>
+    <div class="stat"><span class="num">76.3<small>%</small></span><span class="label">Argument accuracy</span></div>
+  </div>
+  <p class="stats-note">Organizer LLM judge off · 29 of 100 re-recorded after the Inference credit outage · not an organizer-normalized score</p>
+
+  <section class="section stack-cards">
+    <article class="card glass">
+      <h3>Scored run · housing self-correction</h3>
+      <p>Kept here so a live failure does not replace it. Exact match with the organizer LLM judge off.</p>
+      <ol class="timeline">
+        <li class="Heard"><b><svg class="ic xs"><use href="#i-ear"/></svg>Heard</b><span>One bedroom, then “actually, no. Wait,” then two bedrooms and sixteen hundred.</span></li>
+        <li class="Executed"><b><svg class="ic xs"><use href="#i-check-circle"/></svg>Executed</b><span><code>search_apartments</code> · city “my city” · bedrooms 2 · max price 1600</span></li>
+        <li class="Result"><b><svg class="ic xs"><use href="#i-x-circle"/></svg>Result</b><span>Strict check not passed: the corrected bedrooms and price matched, the city did not (expected “Austin”, got “my city”).</span></li>
+      </ol>
+      <a class="btn primary" href="/replay"><svg class="ic sm"><use href="#i-play"/></svg>Replay this recording</a>
+    </article>
+
+    <article class="card glass table-wrap">
+      <h3>Three runs on the same 100 recordings</h3>
+      <table class="compare">
+        <thead>
+          <tr><th>Metric</th><th>2026-10-04</th><th>2026-10-01</th><th>Previous main baseline</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Strict pass</td><td class="now">70/100</td><td>43/100</td><td>31/100</td></tr>
+          <tr><td>Turn-take</td><td class="now">100/100</td><td>90/100</td><td>58/100</td></tr>
+          <tr><td>No response</td><td class="now">0/100</td><td>10/100</td><td>42/100</td></tr>
+          <tr><td>Wrong tools</td><td class="now">13</td><td>28</td><td>50</td></tr>
+          <tr><td>Wrong arguments</td><td class="now">17</td><td>29</td><td>19</td></tr>
+          <tr><td>Tool selection, turn-taken</td><td class="now">93.4%</td><td>85.7%</td><td>88.5%</td></tr>
+          <tr><td>Argument accuracy, turn-taken</td><td class="now">76.3%</td><td>56.3%</td><td>58.6%</td></tr>
+          <tr><td>Tool selection, all recordings</td><td class="now">93.4%</td><td>77.2%</td><td>51.3%</td></tr>
+          <tr><td>Argument accuracy, all recordings</td><td class="now">76.3%</td><td>50.7%</td><td>34.0%</td></tr>
+          <tr><td>Average response latency, excluding interruptions</td><td class="now">4.452 seconds</td><td>4.175 seconds</td><td>4.545 seconds</td></tr>
+          <tr><td>Early interruptions among turn-taken recordings</td><td class="now">3/100</td><td>11/90</td><td>6/58</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="section">
+    <details class="run card glass">
+      <summary>Run it locally</summary>
+      <div class="cmd-tabs" role="tablist" aria-label="Shell">
+        <button type="button" role="tab" aria-selected="true" data-shell="bash">bash</button>
+        <button type="button" role="tab" aria-selected="false" data-shell="powershell">PowerShell</button>
+      </div>
+      <div class="cmd" data-shell="bash">
+        <pre><span class="c"># voice worker, named interra-benchmark</span>
+INTERRA_FDB_AGENT_NAME=interra-benchmark .venv/bin/python -m agent.fdb_livekit dev
+<span class="c"># camera worker, second terminal; it keeps the name interra-camera-troubleshooter</span>
+.venv/bin/python -m agent.extension_livekit dev
+<span class="c"># these pages</span>
+.venv/bin/python -m agent.demo_page</pre>
+        <button class="icon-btn sm" type="button" data-copy aria-label="Copy commands"><svg class="ic sm"><use href="#i-copy"/></svg></button>
+      </div>
+      <div class="cmd" data-shell="powershell" hidden>
+        <pre><span class="c"># voice worker, named interra-benchmark</span>
+$env:INTERRA_FDB_AGENT_NAME = "interra-benchmark"
+.\.venv\Scripts\python.exe -m agent.fdb_livekit dev
+<span class="c"># camera worker, second window; it keeps the name interra-camera-troubleshooter</span>
+.\.venv\Scripts\python.exe -m agent.extension_livekit dev
+<span class="c"># these pages</span>
+.\.venv\Scripts\python.exe -m agent.demo_page</pre>
+        <button class="icon-btn sm" type="button" data-copy aria-label="Copy commands"><svg class="ic sm"><use href="#i-copy"/></svg></button>
+      </div>
+    </details>
+  </section>
+</main>
+
+{{footer}}
+<script type="module" src="/static/shell.js"></script>
+</body>
+</html>
