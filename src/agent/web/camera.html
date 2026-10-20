@@ -13,12 +13,6 @@
 <main class="session" data-mode="camera">
   <section class="stage glass" aria-label="Live session">
     <div class="stage-main">
-      <div class="stage-top">
-        <div class="status-pill" id="status-pill" data-tone="idle" role="status" aria-live="polite">
-          <span class="dot"></span><span class="shimmer" id="status-text">Ready</span>
-        </div>
-      </div>
-
       <div class="orb-zone">
         <div class="orb-wrap" id="orb-wrap" data-user="quiet">
           <div class="orb-shadow"></div>
@@ -68,7 +62,7 @@
   <div class="side">
   <section class="gate-panel glass" id="now" data-kind="Waiting" aria-label="Commit gate" aria-live="polite">
     <header class="gate-bar">
-      <span class="gate-title"><svg class="ic sm"><use href="#i-gate"/></svg>Commit gate</span>
+      <span class="gate-title">Commit gate</span>
     </header>
     <ol class="steps" id="pipeline" aria-label="Where this turn is">
       <li data-step="heard"><span class="step-n">1</span><span class="step-name">Heard</span></li>
@@ -78,7 +72,7 @@
     </ol>
     <div class="gate-focus">
       <div class="focus-head">
-        <span class="gate-icon" id="now-icon"><svg class="ic sm"><use href="#i-gate"/></svg></span>
+        <span class="gate-icon" id="now-icon" hidden></span>
         <b id="now-kind">Waiting for a request</b>
         <span class="spacer"></span>
         <time class="gate-time" id="now-time"></time>

@@ -76,7 +76,7 @@ export class Meter {
 }
 
 const NOW_ICONS = {
-  Waiting: "gate", Heard: "ear", Held: "typing", Holding: "timer", Released: "corner",
+  Heard: "ear", Held: "typing", Holding: "timer", Released: "corner",
   Dropped: "ban", Executed: "check-circle", Reused: "history", Said: "volume", Error: "alert",
 };
 
@@ -451,7 +451,11 @@ export class Conversation {
     el.nowText.className = "focus-body" + (kind === "Waiting" ? " muted" : "") + (quote && text && !call ? " quote" : "");
     el.nowText.replaceChildren(...parts);
     if (kindChanged && before !== el.nowText.textContent) restartAnimation(el.nowText, "swap");
-    if (kindChanged) el.nowIcon.replaceChildren(svgIcon(NOW_ICONS[kind] || "gate"));
+    if (kindChanged) {
+      // Waiting has no state to show, so it gets no icon.
+      el.nowIcon.hidden = kind === "Waiting";
+      el.nowIcon.replaceChildren(...(kind === "Waiting" ? [] : [svgIcon(NOW_ICONS[kind] || "check-circle")]));
+    }
     el.nowTime.textContent = typeof time === "number" && this.base !== null ? fmtClock(time - this.base) : "";
     this.updateSteps(kind);
   }
@@ -660,6 +664,7 @@ export class Conversation {
     }
     if (this.statusPrefix) { text = this.statusPrefix + text; shimmer = false; }
     const status = this.status;
+    if (!this.el.pill) return; // the live pages show state through the orb, bars and hint instead
     if (status.tone !== tone) { status.tone = tone; this.el.pill.dataset.tone = tone; }
     if (status.text !== text) { status.text = text; this.el.pillText.textContent = text; }
     if (status.shimmer !== shimmer) { status.shimmer = shimmer; this.el.pillText.classList.toggle("on", shimmer && !reduceMotion); }
