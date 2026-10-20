@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{head}}
+<title>Interra — voice session</title>
+<meta name="description" content="Say a request, correct it mid-sentence, and watch the commit gate hold and drop the stale tool call.">
+<link rel="stylesheet" href="/static/session.css">
+</head>
+<body data-page="voice">
+{{sprite}}
+{{header}}
+
+<main class="session" data-mode="voice">
+  <section class="stage glass" aria-label="Live session">
+    <div class="stage-main">
+      <div class="stage-top">
+        <div class="status-pill" id="status-pill" data-tone="idle" role="status" aria-live="polite">
+          <span class="dot"></span><span class="shimmer" id="status-text">Ready</span>
+        </div>
+        <span class="spacer"></span>
+        <span class="room" id="room-label"></span>
+      </div>
+
+      <div class="orb-zone">
+        <div class="orb-wrap" id="orb-wrap" data-user="quiet">
+          <div class="orb-shadow"></div>
+          <div class="orb-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="orb-fallback" aria-hidden="true"></div>
+          <canvas id="orb" aria-hidden="true"></canvas>
+          <div class="orb-pulse" id="orb-pulse" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="bars" id="bars" data-tone="idle" aria-hidden="true"></div>
+      <p class="hint" id="status">Press Start. Use headphones so the agent does not hear itself.</p>
+
+      <article class="gate-card glass" id="now" data-kind="Waiting" aria-live="polite">
+        <div class="gate-head">
+          <span class="gate-icon" id="now-icon"><svg class="ic sm"><use href="#i-gate"/></svg></span>
+          <div>
+            <span class="gate-label">The gate decides</span>
+            <b id="now-kind">Waiting</b>
+          </div>
+          <span class="gate-time" id="now-time"></span>
+        </div>
+        <p class="gate-text" id="now-text">Nothing has been decided yet.</p>
+        <ol class="pipeline" id="pipeline" aria-label="Decision path">
+          <li data-step="heard"><svg class="ic"><use href="#i-ear"/></svg>Heard</li>
+          <li data-step="gate"><svg class="ic"><use href="#i-gate"/></svg>Gate</li>
+          <li data-step="tool"><svg class="ic"><use href="#i-wrench"/></svg><span id="tool-step">Tool</span></li>
+          <li data-step="said"><svg class="ic"><use href="#i-audio"/></svg>Said</li>
+        </ol>
+        <div class="quiet" id="quiet" data-state="holding">
+          <span id="quiet-label">Quiet window</span>
+          <div class="quiet-track"><i id="quiet-bar"></i></div>
+          <span id="quiet-value">0.0 / 0.6 s</span>
+        </div>
+      </article>
+    </div>
+
+    <nav class="dock glass" aria-label="Call controls">
+      <button class="dock-btn" id="mic" type="button" aria-pressed="false" disabled title="Mute microphone">
+        <svg class="ic on-icon"><use href="#i-mic"/></svg>
+        <svg class="ic off-icon"><use href="#i-mic-off"/></svg>
+        <canvas class="mic-wave" id="mic-wave" width="148" height="52" aria-hidden="true"></canvas>
+      </button>
+      <button class="call-btn" id="start" type="button" data-state="idle">
+        <svg class="ic phone"><use href="#i-phone"/></svg>
+        <svg class="ic spin"><use href="#i-loader"/></svg>
+        <span id="start-label">Start</span>
+        <span class="elapsed" id="elapsed" hidden>00:00</span>
+      </button>
+      <button class="dock-btn" id="speaker" type="button" aria-pressed="false" title="Mute agent audio">
+        <svg class="ic on-icon"><use href="#i-volume"/></svg>
+        <svg class="ic off-icon"><use href="#i-volume-x"/></svg>
+      </button>
+      <span class="dock-sep" aria-hidden="true"></span>
+      <a class="dock-btn" id="open-logs" href="/logs" target="_blank" rel="noopener" title="Open this session's logs in a new tab">
+        <svg class="ic"><use href="#i-terminal"/></svg><span class="lbl">Logs</span><svg class="ic xs lbl"><use href="#i-external"/></svg>
+      </a>
+    </nav>
+    <div id="agent-audio" hidden></div>
+  </section>
+
+  <section class="panel transcript glass" aria-label="Transcript">
+    <header class="panel-head">
+      <h2><svg class="ic sm"><use href="#i-message"/></svg>Transcript</h2>
+      <span class="badge" id="tx-badge" data-on="false"><i></i><span id="tx-badge-text">idle</span></span>
+      <span class="spacer"></span>
+      <button class="icon-btn sm" id="tx-copy" type="button" aria-label="Copy transcript" title="Copy transcript"><svg class="ic sm"><use href="#i-copy"/></svg></button>
+      <button class="icon-btn sm" id="tx-clear" type="button" aria-label="Clear transcript" title="Clear transcript"><svg class="ic sm"><use href="#i-trash"/></svg></button>
+    </header>
+    <figure class="script-card">
+      <figcaption class="eyebrow"><svg class="ic xs"><use href="#i-message"/></svg>Say this line</figcaption>
+      <blockquote>Find flights to Las Vegas on August fifth. Oh, wait. Make it August eighth.</blockquote>
+    </figure>
+    <div class="panel-body">
+      <div class="tx-scroll" id="tx-scroll">
+        <ol class="tx-list" id="tx"></ol>
+      </div>
+      <div class="empty" id="tx-empty">
+        <span class="empty-icon"><svg class="ic lg"><use href="#i-message"/></svg></span>
+        <p><b>Live transcription</b>Your words and the agent's reply appear here as they are spoken. Tool calls show up between them.</p>
+      </div>
+      <button class="jump" id="tx-jump" type="button"><svg class="ic xs"><use href="#i-arrow-down"/></svg>Latest</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/static/shell.js"></script>
+<script type="module" src="/static/live.js"></script>
+</body>
+</html>

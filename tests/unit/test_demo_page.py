@@ -1,8 +1,9 @@
-"""The judge page shows the gate decision and does not invent a score."""
+"""The judge pages show the gate decision and do not invent a score."""
 
 import http.client
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -14,44 +15,85 @@ from unittest.mock import Mock, patch
 
 from agent import demo_page
 from agent.demo_page import (
-    ASSETS,
     CAMERA_AGENT,
+    PAGES,
+    ROOT,
     SCORED_ROOM,
     VOICE_AGENT,
     WEB_ROOT,
     config_payload,
+    list_sessions,
     mint_token,
     page_html,
     read_trace_since,
     resume_offset,
     scored_replay,
+    static_file,
 )
 from agent.fdb_livekit import benchmark_dispatch_name, register_benchmark_session
 
 
 class DemoPageTests(unittest.TestCase):
-    def test_page_states_the_scored_run_and_the_gate(self):
-        page = page_html().lower()
-        self.assertIn("70/100 strict", page_html())
-        self.assertIn("100/100 turn-take", page_html())
-        self.assertIn("4.452 s average", page_html())
-        self.assertIn("organizer llm judge off", page)
-        self.assertIn("29 of 100 re-recorded", page)
-        self.assertIn("dropped before it is logged", page)
-        self.assertIn("interra-benchmark", page)
-        self.assertIn("interra-camera-troubleshooter", page)
+    def test_results_page_states_the_scored_run_and_the_gate(self):
+        page = page_html("results")
+        lower = page.lower()
+        self.assertIn("70/100 strict", page)
+        self.assertIn("100/100 turn-take", page)
+        self.assertIn("4.452 s average", page)
+        self.assertIn("organizer llm judge off", lower)
+        self.assertIn("29 of 100 re-recorded", lower)
+        self.assertIn("dropped before it is logged", lower)
+        self.assertIn("interra-benchmark", lower)
+        self.assertIn("interra-camera-troubleshooter", lower)
+        self.assertIn("Strict check not passed", page)
 
-    def test_page_uses_only_files_this_server_sends(self):
-        for name, _ in ASSETS.values():
-            self.assertTrue((WEB_ROOT / name).is_file(), name)
-        page = page_html()
-        for path in ("/app.css", "/app.js", "/favicon.svg"):
-            self.assertIn('"' + path + '"', page)
-        script = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
-        self.assertIn('from "./orb.js"', script)
+    def test_overview_states_the_same_figures_and_the_gate(self):
+        page = page_html("index")
+        for text in ("70/100", "100/100", "4.452 s", "Organizer LLM judge off", "dropped before it is logged",
+                     "interra-benchmark", "interra-camera-troubleshooter"):
+            self.assertIn(text, page)
+
+    def test_results_table_matches_the_readme(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        table = readme[readme.index("| Metric | 2026-10-04 |"):]
+        rows = [line for line in table.splitlines()[2:] if line.startswith("|")]
+        self.assertGreater(len(rows), 8)
+        page = page_html("results")
+        for line in rows:
+            cells = [cell.strip().strip("*") for cell in line.strip("|").split("|")]
+            expected = "<tr><td>" + cells[0] + '</td><td class="now">' + "</td><td>".join(cells[1:]) + "</td></tr>"
+            self.assertIn(expected, page, cells[0])
+
+    def test_every_page_shares_the_shell_and_links_the_others(self):
+        for route, name in PAGES.items():
+            with self.subTest(page=name):
+                page = page_html(name)
+                self.assertNotIn("{{", page)
+                self.assertIn('id="logo-mark"', page)
+                for other in PAGES:
+                    self.assertIn('href="' + other + '"', page)
+                self.assertIn('/static/base.css', page)
+                self.assertIn('data-page="', page)
+
+    def test_pages_use_only_files_this_server_sends(self):
+        for name in PAGES.values():
+            page = page_html(name)
+            for asset in re.findall(r'"/static/([^"]+)"', page):
+                with self.subTest(page=name, asset=asset):
+                    self.assertIsNotNone(static_file(asset))
+        for script in WEB_ROOT.glob("*.js"):
+            for imported in re.findall(r'from "\./([^"]+)"', script.read_text(encoding="utf-8")):
+                self.assertTrue((WEB_ROOT / imported).is_file(), script.name + " imports " + imported)
+        live = (WEB_ROOT / "live.js").read_text(encoding="utf-8")
         # Live captions come from the agent's own transcription streams.
-        self.assertIn('registerTextStreamHandler("lk.transcription"', script)
-        self.assertIn('"/events?room="', script)
+        self.assertIn('registerTextStreamHandler("lk.transcription"', live)
+        self.assertIn('"/api/events?room="', live)
+
+    def test_static_files_stay_inside_the_web_folder(self):
+        self.assertEqual(static_file("base.css")[1], "text/css; charset=utf-8")
+        self.assertEqual(static_file("live.js")[1], "text/javascript; charset=utf-8")
+        for name in ("../README.md", "partials", "head.html", "index.html", "missing.js", ".hidden.js"):
+            self.assertIsNone(static_file(name), name)
 
     def test_scored_recording_is_shown_with_its_official_result(self):
         replay = scored_replay()
@@ -63,10 +105,29 @@ class DemoPageTests(unittest.TestCase):
         self.assertEqual((calls[0]["args"]["bedrooms"], calls[0]["args"]["max_price"]), (2, 1600.0))
         result = replay["result"]
         self.assertEqual(result["scenario_id"], "housing_11")
-        # The pinned evaluator did not pass this recording; the page must say so.
+        # The pinned evaluator did not pass this recording; the pages must say so.
         self.assertFalse(result["passed"])
         self.assertIn("search_apartments", result["failure_reason"])
-        self.assertIn("Strict check not passed", page_html())
+
+    def test_sessions_are_listed_newest_first_with_what_happened(self):
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / "livekit-agent.jsonl"
+            path.write_text(
+                '{"time": 100, "room": "demo-voice-aaaaaa", "kind": "session_started"}\n'
+                '{"time": 101, "room": "demo-voice-aaaaaa", "kind": "tool_call_dropped"}\n'
+                '{"time": 102, "room": "demo-voice-aaaaaa", "kind": "tool_call"}\n'
+                '{"time": 103, "room": "demo-voice-aaaaaa", "kind": "session_cleanup"}\n'
+                '{"time": 200, "room": "demo-camera-bbbbbb", "kind": "session_started"}\n'
+                'not json\n',
+                encoding="utf-8",
+            )
+            sessions = list_sessions(path, now=230)
+        self.assertEqual([session["room"] for session in sessions], ["demo-camera-bbbbbb", "demo-voice-aaaaaa"])
+        camera, voice = sessions
+        self.assertEqual((camera["mode"], camera["live"]), ("camera", True))
+        self.assertEqual((voice["mode"], voice["live"], voice["closed"]), ("voice", False, True))
+        self.assertEqual((voice["events"], voice["executed"], voice["dropped"]), (4, 1, 1))
+        self.assertEqual((voice["first"], voice["last"]), (100, 103))
 
     def test_config_names_the_project_and_no_secret(self):
         environment = {
@@ -116,6 +177,8 @@ class DemoPageTests(unittest.TestCase):
         with patch.dict(os.environ, {"LIVEKIT_URL": "wss://x", "LIVEKIT_API_KEY": "k", "LIVEKIT_API_SECRET": "s"}):
             with self.assertRaises(ValueError):
                 mint_token("voice", "demo-camera-abc123")
+            with self.assertRaises(ValueError):
+                mint_token("voice", SCORED_ROOM)
 
     def test_trace_reader_keeps_one_room_and_an_unfinished_line(self):
         with TemporaryDirectory() as folder:
@@ -134,11 +197,14 @@ class DemoPageTests(unittest.TestCase):
             self.assertEqual(again, [])
             self.assertEqual(stuck, offset)
 
-    def test_a_reconnecting_stream_resumes_after_its_last_batch(self):
+    def test_a_stream_starts_where_it_should(self):
         self.assertEqual(resume_offset(None, 120), 120)
         self.assertEqual(resume_offset("64", 120), 64)
         self.assertEqual(resume_offset("500", 120), 120)
         self.assertEqual(resume_offset("-1", 120), 120)
+        # The Logs page asks for the whole room; a reconnect still resumes.
+        self.assertEqual(resume_offset(None, 120, "0"), 0)
+        self.assertEqual(resume_offset("64", 120, "0"), 64)
 
     def test_unnamed_benchmark_worker_stays_auto_dispatched(self):
         server = Mock()
@@ -163,8 +229,8 @@ class DemoServerTests(unittest.TestCase):
         self.addCleanup(folder.cleanup)
         self.trace = Path(folder.name) / "livekit-agent.jsonl"
         self.trace.write_text(
-            '{"room":"other","kind":"tool_call"}\n'
-            '{"room":"demo-voice-abc123","kind":"tool_call_pending","call":{"function":"search_flights","args":{}}}\n',
+            '{"time": 1, "room":"other","kind":"tool_call"}\n'
+            '{"time": 2, "room":"demo-voice-abc123","kind":"tool_call_pending","call":{"function":"search_flights","args":{}}}\n',
             encoding="utf-8",
         )
         patcher = patch.object(demo_page, "TRACE_PATH", self.trace)
@@ -186,43 +252,51 @@ class DemoServerTests(unittest.TestCase):
         connection.request("GET", path, headers=headers or {})
         return connection.getresponse()
 
-    def test_page_and_assets_are_served_with_their_types(self):
+    def test_pages_and_assets_are_served_with_their_types(self):
+        for path in PAGES:
+            response = self.open(path)
+            body = response.read().decode("utf-8")
+            self.assertEqual(response.status, 200, path)
+            self.assertTrue(response.getheader("Content-Type").startswith("text/html"), path)
+            self.assertNotIn("{{", body)
         for path, kind in (
-            ("/", "text/html"),
-            ("/app.js", "text/javascript"),
-            ("/orb.js", "text/javascript"),
-            ("/app.css", "text/css"),
+            ("/static/base.css", "text/css"),
+            ("/static/live.js", "text/javascript"),
+            ("/static/orb.js", "text/javascript"),
             ("/favicon.svg", "image/svg+xml"),
         ):
             response = self.open(path)
-            body = response.read()
+            self.assertTrue(response.read(), path)
             self.assertEqual(response.status, 200, path)
             self.assertTrue(response.getheader("Content-Type").startswith(kind), path)
-            self.assertTrue(body, path)
-        response = self.open("/../pyproject.toml")
-        response.read()
-        self.assertEqual(response.status, 404)
+        for path in ("/static/../README.md", "/static/partials/head.html", "/../pyproject.toml", "/token"):
+            response = self.open(path)
+            response.read()
+            self.assertEqual(response.status, 404, path)
 
-    def test_replay_and_config_are_json_without_secrets(self):
+    def test_api_answers_json_without_secrets(self):
         with patch.dict(os.environ, {"LIVEKIT_API_SECRET": "topsecret"}, clear=False):
-            config = self.open("/config")
+            config = self.open("/api/config")
             config_body = config.read().decode("utf-8")
         self.assertEqual(config.status, 200)
         self.assertNotIn("topsecret", config_body)
-        replay = self.open("/replay")
-        payload = json.loads(replay.read())
-        self.assertEqual(payload["room"], SCORED_ROOM)
-        self.assertFalse(payload["result"]["passed"])
+        replay = json.loads(self.open("/api/replay").read())
+        self.assertEqual(replay["room"], SCORED_ROOM)
+        self.assertFalse(replay["result"]["passed"])
+        sessions = json.loads(self.open("/api/sessions").read())["sessions"]
+        self.assertEqual(sessions[0]["room"], SCORED_ROOM)
+        self.assertTrue(sessions[0]["recorded"])
+        self.assertIn("demo-voice-abc123", [session["room"] for session in sessions])
 
     def test_token_without_livekit_settings_is_refused(self):
         with patch.dict(os.environ, {"LIVEKIT_URL": "", "LIVEKIT_API_KEY": "", "LIVEKIT_API_SECRET": ""}):
-            response = self.open("/token?mode=voice&room=demo-voice-abc123")
+            response = self.open("/api/token?mode=voice&room=demo-voice-abc123")
             body = response.read().decode("utf-8")
         self.assertEqual(response.status, 400)
         self.assertIn("missing LiveKit configuration", body)
 
     def test_events_replay_one_room_from_a_resume_point(self):
-        response = self.open("/events?room=demo-voice-abc123", {"Last-Event-ID": "0"})
+        response = self.open("/api/events?room=demo-voice-abc123", {"Last-Event-ID": "0"})
         self.assertEqual(response.getheader("Content-Type"), "text/event-stream")
         hello, record = _read_events(response, 2)
         self.assertEqual(hello["event"], "hello")
@@ -230,8 +304,18 @@ class DemoServerTests(unittest.TestCase):
         self.assertEqual(json.loads(record["data"])["kind"], "tool_call_pending")
         self.assertEqual(int(record["id"]), self.trace.stat().st_size)
 
+    def test_logs_page_reads_a_whole_room_then_follows_it(self):
+        response = self.open("/api/events?room=demo-voice-abc123&since=0")
+        hello, record = _read_events(response, 2)
+        self.assertFalse(json.loads(hello["data"])["resumed"])
+        self.assertEqual(json.loads(record["data"])["kind"], "tool_call_pending")
+        with self.trace.open("a", encoding="utf-8") as handle:
+            handle.write('{"time": 3, "room":"demo-voice-abc123","kind":"tool_call_dropped","call":{"function":"search_flights","args":{}}}\n')
+        followed = _read_events(response, 1)[0]
+        self.assertEqual(json.loads(followed["data"])["kind"], "tool_call_dropped")
+
     def test_events_start_at_the_end_and_follow_new_lines(self):
-        response = self.open("/events?room=demo-voice-abc123")
+        response = self.open("/api/events?room=demo-voice-abc123")
         hello = _read_events(response, 1)[0]
         self.assertFalse(json.loads(hello["data"])["resumed"])
         with self.trace.open("a", encoding="utf-8") as handle:
@@ -240,10 +324,11 @@ class DemoServerTests(unittest.TestCase):
         record = _read_events(response, 1)[0]
         self.assertEqual(json.loads(record["data"])["kind"], "tool_call_dropped")
 
-    def test_events_reject_a_room_the_page_did_not_name(self):
-        response = self.open("/events?room=eval-31fcf764")
-        response.read()
-        self.assertEqual(response.status, 400)
+    def test_events_reject_a_room_name_that_is_not_a_room(self):
+        for room in ("../trace", "a b", ""):
+            response = self.open("/api/events?room=" + room.replace(" ", "%20"))
+            response.read()
+            self.assertEqual(response.status, 400, room)
 
 
 def _read_events(response, count):

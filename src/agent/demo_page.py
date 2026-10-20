@@ -1,12 +1,13 @@
-"""One local page for the judge recording.
+"""Local pages for the judge recording.
 
-Voice and camera are two rooms on one screen. The page shows the live
-transcript, the worker trace as logs, and the gate's latest decision. A scored
-run from 4 October 2026 stays beside the live take so a dropped connection does
-not erase the evidence; its own trace can be replayed with original timestamps.
+Overview, Voice, Camera, Replay, Logs and Results are separate pages. The
+session pages show the live transcript and the gate's latest decision; Logs
+reads the worker trace for any session on this machine; the scored run from
+4 October 2026 can be replayed from its own trace with original timestamps.
 
-The page itself lives in ``agent/web``. This module serves it, mints LiveKit
-tokens, streams the worker trace for one room, and serves the recorded run.
+The pages live in ``agent/web`` and share partials from ``agent/web/partials``.
+This module renders them, mints LiveKit tokens, streams the worker trace for
+one room, lists the sessions in it, and serves the recorded run.
 
 Start the voice worker with INTERRA_FDB_AGENT_NAME=interra-benchmark, the
 camera worker in a second terminal, then this page:
@@ -43,16 +44,25 @@ PORT = 8780
 VOICE_AGENT = "interra-benchmark"
 CAMERA_AGENT = "interra-camera-troubleshooter"
 WEB_ROOT = Path(__file__).resolve().with_name("web")
-ASSETS = {
-    "/": ("index.html", "text/html; charset=utf-8"),
-    "/index.html": ("index.html", "text/html; charset=utf-8"),
-    "/app.css": ("app.css", "text/css; charset=utf-8"),
-    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-    "/orb.js": ("orb.js", "text/javascript; charset=utf-8"),
-    "/logo.svg": ("logo.svg", "image/svg+xml"),
-    "/favicon.svg": ("logo.svg", "image/svg+xml"),
+PAGES = {
+    "/": "index",
+    "/voice": "voice",
+    "/camera": "camera",
+    "/replay": "replay",
+    "/logs": "logs",
+    "/results": "results",
 }
+PARTIALS = ("head", "sprite", "header", "footer")
+STATIC_TYPES = {
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".svg": "image/svg+xml",
+}
+STATIC_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*\.(css|js|svg)$")
+# Tokens are only minted for rooms this page names.
 ROOM_NAME = re.compile(r"^demo-(voice|camera)-[a-z0-9]{6,16}$")
+# Any room in the trace can be read back.
+TRACE_ROOM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$")
 LIVEKIT_NAMES = ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET")
 
 # The recording shown beside the live take: housing_11, a bedroom and price
@@ -82,8 +92,22 @@ def _shown_path(path: Path) -> str:
         return str(path)
 
 
-def page_html() -> str:
-    return (WEB_ROOT / "index.html").read_text(encoding="utf-8")
+def page_html(name: str = "index") -> str:
+    """One page with its shared head, icons, header and footer filled in."""
+    text = (WEB_ROOT / (name + ".html")).read_text(encoding="utf-8")
+    for part in PARTIALS:
+        text = text.replace("{{" + part + "}}", (WEB_ROOT / "partials" / (part + ".html")).read_text(encoding="utf-8"))
+    return text
+
+
+def static_file(name: str) -> tuple[bytes, str] | None:
+    """A top-level stylesheet, script or icon from ``agent/web``; nothing else."""
+    if not STATIC_NAME.match(name):
+        return None
+    path = WEB_ROOT / name
+    if not path.is_file():
+        return None
+    return path.read_bytes(), STATIC_TYPES[path.suffix]
 
 
 def mint_token(mode: str, room: str) -> str:
@@ -176,6 +200,63 @@ def scored_replay() -> dict[str, Any]:
     }
 
 
+def _session_mode(room: str) -> str:
+    if room.startswith("demo-voice-"):
+        return "voice"
+    if room.startswith("demo-camera-"):
+        return "camera"
+    return "benchmark"
+
+
+def list_sessions(path: Path, *, now: float | None = None, limit: int = 60) -> list[dict[str, Any]]:
+    """Rooms in the local trace, newest first, with what happened in each."""
+    rooms: dict[str, dict[str, Any]] = {}
+    if path.is_file():
+        for record in _read_records(path):
+            room = record.get("room")
+            moment = record.get("time")
+            if not isinstance(room, str) or not isinstance(moment, (int, float)):
+                continue
+            entry = rooms.setdefault(room, {
+                "room": room, "mode": _session_mode(room), "first": moment, "last": moment,
+                "events": 0, "executed": 0, "dropped": 0, "closed": False,
+            })
+            entry["first"] = min(entry["first"], moment)
+            entry["last"] = max(entry["last"], moment)
+            entry["events"] += 1
+            kind = record.get("kind")
+            if kind == "tool_call":
+                entry["executed"] += 1
+            elif kind == "tool_call_dropped":
+                entry["dropped"] += 1
+            elif kind in {"session_closed", "session_cleanup"}:
+                entry["closed"] = True
+    current = time.time() if now is None else now
+    sessions = sorted(rooms.values(), key=lambda entry: entry["last"], reverse=True)[:limit]
+    for entry in sessions:
+        entry["live"] = not entry["closed"] and current - entry["last"] < 120
+    return sessions
+
+
+def sessions_payload() -> dict[str, Any]:
+    recorded: list[dict[str, Any]] = []
+    try:
+        replay = scored_replay()
+        records = replay["records"]
+        if records:
+            times = [record["time"] for record in records if isinstance(record.get("time"), (int, float))]
+            recorded.append({
+                "room": SCORED_ROOM, "mode": "recorded", "recorded": True, "scenario": SCORED_SCENARIO,
+                "first": min(times), "last": max(times), "events": len(records),
+                "executed": sum(1 for record in records if record.get("kind") == "tool_call"),
+                "dropped": sum(1 for record in records if record.get("kind") == "tool_call_dropped"),
+                "closed": True, "live": False,
+            })
+    except (OSError, ValueError):
+        pass
+    return {"trace": _shown_path(TRACE_PATH), "sessions": recorded + list_sessions(TRACE_PATH)}
+
+
 def read_trace_since(path: Path, room: str, start: int) -> tuple[list[dict[str, Any]], int]:
     """Read one room's complete trace lines after a byte offset. An unfinished line stays for later."""
     if not path.is_file():
@@ -199,10 +280,13 @@ def read_trace_since(path: Path, room: str, start: int) -> tuple[list[dict[str, 
                 found.append(record)
 
 
-def resume_offset(last_event_id: str | None, size: int) -> int:
-    """Where a reconnecting stream continues: after the last delivered batch, or at the end."""
+def resume_offset(last_event_id: str | None, size: int, since: str | None = None) -> int:
+    """Where a stream starts: after the last delivered batch on a reconnect,
+    at the start when the page asks for the whole room, otherwise at the end."""
     if last_event_id and last_event_id.isdigit() and int(last_event_id) <= size:
         return int(last_event_id)
+    if since == "0":
+        return 0
     return size
 
 
@@ -214,49 +298,48 @@ def _event(record: dict[str, Any], event_id: int | None = None) -> bytes:
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path in ASSETS:
-            self._asset(*ASSETS[parsed.path])
-        elif parsed.path == "/token":
-            self._token(parse_qs(parsed.query))
-        elif parsed.path == "/config":
+        path = parsed.path.rstrip("/") or "/"
+        query = parse_qs(parsed.query)
+        if path in PAGES:
+            self._send(200, page_html(PAGES[path]).encode("utf-8"), "text/html; charset=utf-8", "no-cache")
+        elif path.startswith("/static/"):
+            found = static_file(path[len("/static/"):])
+            if found is None:
+                self._text(404, "not found")
+            else:
+                self._send(200, found[0], found[1], "no-cache")
+        elif path == "/favicon.svg":
+            self._send(200, (WEB_ROOT / "logo.svg").read_bytes(), "image/svg+xml", "max-age=3600")
+        elif path == "/api/token":
+            self._token(query)
+        elif path == "/api/config":
             self._json(config_payload())
-        elif parsed.path == "/replay":
+        elif path == "/api/sessions":
+            self._json(sessions_payload())
+        elif path == "/api/replay":
             try:
                 self._json(scored_replay())
             except (OSError, ValueError) as exc:
                 self._text(500, "the recorded run could not be read: " + str(exc))
-        elif parsed.path == "/events":
-            self._events(parse_qs(parsed.query))
+        elif path == "/api/events":
+            self._events(query)
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._text(404, "not found")
 
-    def _asset(self, name: str, content_type: str) -> None:
-        body = (WEB_ROOT / name).read_bytes()
-        self.send_response(200)
+    def _send(self, status: int, body: bytes, content_type: str, cache: str) -> None:
+        self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", cache)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
     def _json(self, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(body)
+        self._send(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json", "no-store")
 
     def _text(self, status: int, message: str) -> None:
-        body = message.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        self._send(status, message.encode("utf-8"), "text/plain; charset=utf-8", "no-store")
 
     def _token(self, query: dict[str, list[str]]) -> None:
         mode = (query.get("mode") or [""])[0]
@@ -270,9 +353,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _events(self, query: dict[str, list[str]]) -> None:
         room = (query.get("room") or [""])[0]
-        if not ROOM_NAME.match(room):
-            self.send_response(400)
-            self.end_headers()
+        if not TRACE_ROOM.match(room):
+            self._text(400, "unknown room")
             return
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -281,7 +363,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         exists = TRACE_PATH.is_file()
         resumed = self.headers.get("Last-Event-ID")
-        offset = resume_offset(resumed, TRACE_PATH.stat().st_size if exists else 0)
+        since = (query.get("since") or [None])[0]
+        offset = resume_offset(resumed, TRACE_PATH.stat().st_size if exists else 0, since)
         hello = {"trace": _shown_path(TRACE_PATH), "exists": exists, "resumed": bool(resumed)}
         quiet_since = time.monotonic()
         try:
@@ -309,11 +392,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args: object) -> None:
         request = str(args[0]) if args else ""
-        if request.startswith("GET /token"):
-            print("GET /token")
+        if request.startswith("GET /api/token"):
+            print("GET /api/token")
             return
-        if request.startswith("GET /events"):
-            print("GET /events")
+        if request.startswith(("GET /api/events", "GET /static/", "GET /api/sessions")):
             return
         super().log_message(fmt, *args)
 

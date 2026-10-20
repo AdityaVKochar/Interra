@@ -38,4 +38,4 @@ interra-camera-agent = "agent.extension_livekit:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-agent = ["web/*"]
+agent = ["web/*", "web/partials/*"]

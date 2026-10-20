@@ -1,363 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Interra — judge console</title>
-<meta name="description" content="Live voice and camera sessions with the Interra commit gate, live transcription and worker logs.">
-<meta name="color-scheme" content="dark light">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300..700&display=swap">
-<link rel="stylesheet" href="/app.css">
-<script>
-  try {
-    var saved = localStorage.getItem("interra-theme");
-    var query = new URLSearchParams(location.search).get("theme");
-    var light = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches;
-    document.documentElement.dataset.theme = query || saved || (light ? "light" : "dark");
-  } catch (error) {
-    document.documentElement.dataset.theme = "dark";
-  }
-</script>
+{{head}}
+<title>Interra — overview</title>
+<meta name="description" content="A voice agent that keeps up when you change your mind: live sessions, the commit gate, and the measured Full-Duplex-Bench v3 run.">
+<link rel="stylesheet" href="/static/home.css">
 </head>
-<body data-mode="voice" data-tab="transcript">
+<body data-page="home">
+{{sprite}}
+{{header}}
 
-<!-- Icons: paths from Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <linearGradient id="mk-tile" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#23232d"/><stop offset="1" stop-color="#0c0c11"/></linearGradient>
-    <radialGradient id="mk-gw" cx="14" cy="34" r="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff7a1a" stop-opacity=".38"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
-    <radialGradient id="mk-gc" cx="50" cy="30" r="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7c7cff" stop-opacity=".38"/><stop offset="1" stop-color="#7c7cff" stop-opacity="0"/></radialGradient>
-    <linearGradient id="mk-warm" x1="8" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff6a1a"/><stop offset="1" stop-color="#ffb45e"/></linearGradient>
-    <linearGradient id="mk-cool" x1="37" y1="0" x2="56" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b4c0ff"/><stop offset="1" stop-color="#6d6af5"/></linearGradient>
-  </defs>
-  <symbol id="logo-mark" viewBox="0 0 64 64">
-    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#mk-tile)"/>
-    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#mk-gw)"/>
-    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#mk-gc)"/>
-    <rect x="2.5" y="2.5" width="59" height="59" rx="17.5" fill="none" stroke="#fff" stroke-opacity=".14"/>
-    <path d="M10 32c2-10 6-10 8 0s6 10 8 0" fill="none" stroke="url(#mk-warm)" stroke-width="5" stroke-linecap="round"/>
-    <rect x="29.25" y="14" width="5.5" height="36" rx="2.75" fill="#fff"/>
-    <path d="M38 32c2-6 6-6 8 0s6 6 8 0" fill="none" stroke="url(#mk-cool)" stroke-width="5" stroke-linecap="round"/>
-  </symbol>
-  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
-  <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><path d="M12 19v3"/></symbol>
-  <symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
-  <symbol id="i-video-off" viewBox="0 0 24 24"><path d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/></symbol>
-  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
-  <symbol id="i-phone-off" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><path d="M22 2 2 22"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L7.5 3.64A1 1 0 0 0 6 4.5z"/></symbol>
-  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="2.5"/></symbol>
-  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
-  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
-  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
-  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
-  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
-  <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
-  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
-  <symbol id="i-ear" viewBox="0 0 24 24"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/></symbol>
-  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></symbol>
-  <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
-  <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
-  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
-  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
-  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></symbol>
-  <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></symbol>
-  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></symbol>
-  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
-  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
-  <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
-  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
-  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
-  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
-  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
-  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
-  <symbol id="i-gate" viewBox="0 0 24 24"><path d="M2.5 12h5"/><path d="M16.5 12h5"/><rect x="9.5" y="3.5" width="5" height="17" rx="2.5"/></symbol>
-  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></symbol>
-  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
-  <symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
-  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
-  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
-  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
-  <symbol id="i-audio" viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></symbol>
-  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
-  <symbol id="i-corner" viewBox="0 0 24 24"><path d="m15 10 5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol>
-  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
-  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></symbol>
-</svg>
-
-<div class="backdrop" aria-hidden="true">
-  <div class="aurora a1"></div>
-  <div class="aurora a2"></div>
-  <div class="aurora a3"></div>
-  <div class="sunrise"></div>
-  <div class="grid"></div>
-  <div class="grain"></div>
-</div>
-
-<header class="topbar glass">
-  <a class="brand" href="/" aria-label="Interra judge console">
-    <svg class="mark" aria-hidden="true"><use href="#logo-mark"/></svg>
-    <span class="wordmark">interra</span>
-    <span class="crumb">/ <b>judge console</b> · theme 05</span>
-  </a>
-
-  <div class="segmented" role="tablist" aria-label="Session type">
-    <span class="seg-thumb" aria-hidden="true"></span>
-    <button id="mode-voice" type="button" role="tab" aria-selected="true"><svg class="ic sm"><use href="#i-audio"/></svg><span>Voice<span class="long"> correction</span></span></button>
-    <button id="mode-camera" type="button" role="tab" aria-selected="false"><svg class="ic sm"><use href="#i-camera"/></svg><span>Camera<span class="long"> correction</span></span></button>
-  </div>
-
-  <div class="top-right">
-    <div class="stat-chips" aria-label="Scored run">
-      <span><b>70/100</b> strict</span>
-      <span><b>100/100</b> turn-take</span>
-      <span><b>4.452 s</b> average</span>
+<main class="page">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow"><svg class="ic xs"><use href="#i-sparkles"/></svg>Samsung PRISM · Theme 05</span>
+      <h1>A voice agent that keeps up when you <em>change your mind.</em></h1>
+      <p class="lede">Interra listens while it works. Correct yourself mid-sentence and it holds the tool call, drops the stale one before it is logged, and runs the one you meant, once.</p>
+      <div class="btn-row">
+        <a class="btn primary" href="/voice"><svg class="ic sm"><use href="#i-phone"/></svg>Start a voice session</a>
+        <a class="btn" href="/replay"><svg class="ic sm"><use href="#i-play"/></svg>Watch the recorded run</a>
+      </div>
+      <div class="hero-meta">
+        <span class="chip"><b>70/100</b>&nbsp;strict</span>
+        <span class="chip"><b>100/100</b>&nbsp;turn-take</span>
+        <span class="chip"><b>4.452 s</b>&nbsp;average</span>
+      </div>
     </div>
-    <span class="conn" id="conn" data-state="idle" title="Not connected">
-      <i></i><span id="conn-text">Offline</span>
-      <span class="q" aria-hidden="true"><b></b><b></b><b></b></span>
-    </span>
-    <button class="icon-btn theme-toggle" id="theme" type="button" aria-label="Switch colour theme" title="Switch colour theme">
-      <svg class="ic ic-moon"><use href="#i-moon"/></svg>
-      <svg class="ic ic-sun"><use href="#i-sun"/></svg>
-    </button>
-  </div>
-</header>
-
-<main class="shell">
-  <section class="stage glass" aria-label="Live session">
-    <div class="stage-main">
-      <div class="status-pill" id="status-pill" data-tone="idle" role="status" aria-live="polite">
-        <span class="dot"></span><span class="shimmer" id="status-text">Ready</span>
+    <div class="hero-visual">
+      <div class="hero-orb" id="hero-orb-wrap">
+        <div class="orb-fallback"></div>
+        <canvas id="hero-orb" aria-hidden="true"></canvas>
       </div>
-
-      <div class="orb-zone">
-      <div class="orb-wrap" id="orb-wrap" data-user="quiet">
-        <div class="orb-shadow"></div>
-        <div class="orb-rings" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="video-frame" id="video-frame">
-          <video id="preview" autoplay playsinline muted></video>
-          <div class="placeholder"><svg class="ic lg"><use href="#i-camera"/></svg><span>The camera starts with the session.<br>Hold the code up to the webcam.</span></div>
-          <span class="rec"><i></i>CAMERA</span>
-          <div class="scanline"></div>
-          <span class="frame-note" id="frame-note">Your latest frame joins your next spoken turn.</span>
-        </div>
-        <div class="orb-fallback" aria-hidden="true"></div>
-        <canvas id="orb" aria-hidden="true"></canvas>
-        <div class="orb-pulse" id="orb-pulse" aria-hidden="true"></div>
+      <div class="hero-state glass" id="hero-state" data-tone="idle" title="An illustration of the session states">
+        <span class="dot"></span><span id="hero-state-text">Ready</span>
       </div>
-      </div>
-
-      <div class="bars" id="bars" data-tone="idle" aria-hidden="true"></div>
-
-      <p class="hint" id="status">Choose a mode, then start. Use headphones so the agent does not hear itself.</p>
-
-      <article class="gate-card glass" id="now" data-kind="Waiting" aria-live="polite">
-        <div class="gate-head">
-          <span class="gate-icon" id="now-icon"><svg class="ic sm"><use href="#i-gate"/></svg></span>
-          <div>
-            <span class="gate-label">The gate decides</span>
-            <b id="now-kind">Waiting</b>
-          </div>
-          <span class="gate-time" id="now-time"></span>
-        </div>
-        <p class="gate-text" id="now-text">Nothing has been decided yet.</p>
-        <ol class="pipeline" id="pipeline" aria-label="Decision path">
-          <li data-step="heard"><svg class="ic"><use href="#i-ear"/></svg>Heard</li>
-          <li data-step="gate"><svg class="ic"><use href="#i-gate"/></svg>Gate</li>
-          <li data-step="tool"><svg class="ic"><use href="#i-wrench"/></svg><span id="tool-step">Tool</span></li>
-          <li data-step="said"><svg class="ic"><use href="#i-audio"/></svg>Said</li>
-        </ol>
-        <div class="quiet" id="quiet" data-state="holding">
-          <span id="quiet-label">Quiet window</span>
-          <div class="quiet-track"><i id="quiet-bar"></i></div>
-          <span id="quiet-value">0.0 / 0.6 s</span>
-        </div>
-      </article>
-    </div>
-
-    <nav class="dock glass" aria-label="Call controls">
-      <button class="dock-btn" id="mic" type="button" aria-pressed="false" disabled title="Mute microphone">
-        <svg class="ic on-icon"><use href="#i-mic"/></svg>
-        <svg class="ic off-icon"><use href="#i-mic-off"/></svg>
-        <canvas class="mic-wave" id="mic-wave" width="148" height="52" aria-hidden="true"></canvas>
-      </button>
-      <button class="dock-btn only-camera" id="cam" type="button" aria-pressed="false" disabled title="Turn camera off">
-        <svg class="ic on-icon"><use href="#i-video"/></svg>
-        <svg class="ic off-icon"><use href="#i-video-off"/></svg>
-      </button>
-      <button class="call-btn" id="start" type="button" data-state="idle">
-        <svg class="ic phone"><use href="#i-phone"/></svg>
-        <svg class="ic spin"><use href="#i-loader"/></svg>
-        <span id="start-label">Start</span>
-        <span class="elapsed" id="elapsed" hidden>00:00</span>
-      </button>
-      <button class="dock-btn" id="speaker" type="button" aria-pressed="false" title="Mute agent audio">
-        <svg class="ic on-icon"><use href="#i-volume"/></svg>
-        <svg class="ic off-icon"><use href="#i-volume-x"/></svg>
-      </button>
-      <span class="dock-sep" aria-hidden="true"></span>
-      <button class="dock-btn" id="replay" type="button" title="Replay the recorded 4 October 2026 trace">
-        <svg class="ic"><use href="#i-rotate"/></svg><span class="lbl" id="replay-label">Replay scored run</span>
-      </button>
-    </nav>
-    <div id="agent-audio" hidden></div>
-  </section>
-
-  <div class="mobile-tabs" role="tablist" aria-label="Panels">
-    <button type="button" role="tab" id="tab-transcript" aria-selected="true"><svg class="ic sm"><use href="#i-message"/></svg>Transcript</button>
-    <button type="button" role="tab" id="tab-logs" aria-selected="false"><svg class="ic sm"><use href="#i-terminal"/></svg>Logs</button>
-  </div>
-
-  <section class="panel transcript glass" aria-label="Transcript">
-    <header class="panel-head">
-      <h2><svg class="ic sm"><use href="#i-message"/></svg>Transcript</h2>
-      <span class="badge" id="tx-badge" data-on="false"><i></i><span id="tx-badge-text">idle</span></span>
-      <span class="spacer"></span>
-      <button class="icon-btn sm" id="tx-copy" type="button" aria-label="Copy transcript" title="Copy transcript"><svg class="ic sm"><use href="#i-copy"/></svg></button>
-      <button class="icon-btn sm" id="tx-clear" type="button" aria-label="Clear transcript" title="Clear transcript"><svg class="ic sm"><use href="#i-trash"/></svg></button>
-    </header>
-    <figure class="script-card" id="script-card">
-      <figcaption><svg class="ic xs"><use href="#i-message"/></svg>Say this line</figcaption>
-      <blockquote id="prompt">Find flights to Las Vegas on August fifth. Oh, wait. Make it August eighth.</blockquote>
-      <div class="legend" id="legend">
-        <span class="code"><b>E1</b>door or lid not closed</span>
-        <span class="code"><b>E2</b>drain blocked</span>
-        <span class="code"><b>E3</b>water not reaching the machine</span>
-        <p>These are Interra’s demo labels, not a manufacturer manual. Hold the code on paper up to the webcam.</p>
-      </div>
-    </figure>
-    <div class="panel-body">
-      <div class="tx-scroll" id="tx-scroll">
-        <ol class="tx-list" id="tx"></ol>
-      </div>
-      <div class="empty" id="tx-empty">
-        <span class="empty-icon"><svg class="ic lg"><use href="#i-message"/></svg></span>
-        <p><b>Live transcription</b><br>Your words and the agent's reply appear here as they are spoken.</p>
-      </div>
-      <button class="jump" id="tx-jump" type="button"><svg class="ic xs"><use href="#i-arrow-down"/></svg>Latest</button>
     </div>
   </section>
 
-  <section class="panel logs glass" aria-label="Logs">
-    <header class="panel-head">
-      <h2><svg class="ic sm"><use href="#i-terminal"/></svg>Logs</h2>
-      <span class="count" id="log-count">0 events</span>
+  <section class="section" id="gate">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">The commit gate</span>
+        <h2>Every tool call waits for <em>quiet.</em></h2>
+      </div>
       <span class="spacer"></span>
-      <button class="icon-btn sm" id="log-follow" type="button" aria-pressed="true" aria-label="Follow new events" title="Follow new events"><svg class="ic sm"><use href="#i-scroll"/></svg></button>
-      <button class="icon-btn sm" id="log-copy" type="button" aria-label="Copy shown events as JSON lines" title="Copy shown events as JSON lines"><svg class="ic sm"><use href="#i-copy"/></svg></button>
-      <button class="icon-btn sm" id="log-download" type="button" aria-label="Download events" title="Download events (.jsonl)"><svg class="ic sm"><use href="#i-download"/></svg></button>
-      <button class="icon-btn sm" id="log-clear" type="button" aria-label="Clear logs" title="Clear logs"><svg class="ic sm"><use href="#i-trash"/></svg></button>
-    </header>
-    <div class="log-tools">
-      <div class="filters" id="filters" role="group" aria-label="Filter events"></div>
-      <label class="search">
-        <svg class="ic sm"><use href="#i-search"/></svg>
-        <input id="log-search" type="search" placeholder="Filter by tool, word or kind" autocomplete="off" spellcheck="false">
-        <kbd>/</kbd>
-      </label>
+      <p>You speak. The model may plan a tool. The gate holds that call until you have been quiet. If you continue, the call is dropped before it is logged. If you finish, it runs once.</p>
     </div>
-    <div class="panel-body">
-      <div class="log-scroll" id="log-scroll">
-        <ol class="log-list" id="log"></ol>
+    <ol class="flow">
+      <li class="glass" data-step="heard">
+        <span class="step-no">01</span>
+        <span class="step-icon"><svg class="ic"><use href="#i-ear"/></svg></span>
+        <h3>Heard</h3>
+        <p>Your words stream in while you are still talking. A turn that sounds unfinished is held for the rest.</p>
+      </li>
+      <li class="glass" data-step="holding">
+        <span class="step-no">02</span>
+        <span class="step-icon"><svg class="ic"><use href="#i-hourglass"/></svg></span>
+        <h3>Holding</h3>
+        <p>A call the model plans waits at the gate until you have been quiet for the whole window, 0.6 s by default.</p>
+      </li>
+      <li class="glass" data-step="decided">
+        <span class="step-no">03</span>
+        <span class="step-icon"><svg class="ic"><use href="#i-gate"/></svg></span>
+        <h3>Decided</h3>
+        <p>Keep talking and the call is dropped before it reaches the tool log. Stay quiet and it runs once; a repeat is reused, not re-run.</p>
+        <div class="split"><span class="ok">Executed</span><span class="bad">Dropped</span></div>
+      </li>
+      <li class="glass" data-step="said">
+        <span class="step-no">04</span>
+        <span class="step-icon"><svg class="ic"><use href="#i-audio"/></svg></span>
+        <h3>Said</h3>
+        <p>The reply is grounded in the tool result. A call that never ran comes back as superseded, so the agent cannot claim it.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="section" id="measured">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Full-Duplex-Bench v3 · 4 October 2026</span>
+        <h2>Measured on 100 recorded conversations</h2>
       </div>
-      <div class="empty" id="log-empty">
-        <span class="empty-icon"><svg class="ic lg"><use href="#i-terminal"/></svg></span>
-        <p><b>Worker trace</b><br>Speech, gate decisions, tool calls and session events stream here with their timestamps.</p>
+      <span class="spacer"></span>
+      <a class="btn sm" href="/results">All results<svg class="ic xs"><use href="#i-arrow-right"/></svg></a>
+    </div>
+    <div class="stats">
+      <div class="stat glass"><span class="num">70<small>/100</small></span><span class="label">Strict passes</span><span class="note">Pinned official evaluator</span></div>
+      <div class="stat glass"><span class="num">100<small>/100</small></span><span class="label">Turn-takes</span><span class="note">An answer on every recording</span></div>
+      <div class="stat glass"><span class="num">4.452<small> s</small></span><span class="label">Average latency</span><span class="note">Excluding early interruptions</span></div>
+      <div class="stat glass"><span class="num">93.4<small>%</small></span><span class="label">Tool selection</span><span class="note">Turn-taken recordings</span></div>
+      <div class="stat glass"><span class="num">76.3<small>%</small></span><span class="label">Argument accuracy</span><span class="note">Turn-taken recordings</span></div>
+    </div>
+    <div class="caveats">
+      <span class="chip">Organizer LLM judge off</span>
+      <span class="chip">29 of 100 re-recorded after the Inference credit outage</span>
+      <span class="chip">Not an organizer-normalized score</span>
+    </div>
+  </section>
+
+  <section class="section" id="sessions">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Two live sessions</span>
+        <h2>Try a correction <em>yourself</em></h2>
       </div>
-      <button class="paused-pill" id="log-paused" type="button">0 new events</button>
+      <span class="spacer"></span>
+      <a class="btn sm" href="/logs"><svg class="ic xs"><use href="#i-terminal"/></svg>Session logs</a>
+    </div>
+    <div class="modes">
+      <a class="mode-card glass" href="/voice">
+        <span class="mode-icon"><svg class="ic"><use href="#i-audio"/></svg></span>
+        <h3>Voice correction</h3>
+        <p>The benchmark agent and its twelve mock tools. Change a detail mid-sentence and watch the stale call drop.</p>
+        <blockquote>Find flights to Las Vegas on August fifth. Oh, wait. Make it August eighth.</blockquote>
+        <span class="worker">worker · interra-benchmark</span>
+        <span class="go">Open the voice session<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+      </a>
+      <a class="mode-card glass camera" href="/camera">
+        <span class="mode-icon"><svg class="ic"><use href="#i-camera"/></svg></span>
+        <h3>Camera correction</h3>
+        <p>Show a device code to the webcam. The latest frame joins your next turn, and a booking you correct is dropped before it is stored.</p>
+        <blockquote>What does this code mean? Book a check for Friday. Oh, wait. Make it Saturday.</blockquote>
+        <span class="worker">worker · interra-camera-troubleshooter</span>
+        <span class="go">Open the camera session<svg class="ic sm"><use href="#i-arrow-right"/></svg></span>
+      </a>
+    </div>
+  </section>
+
+  <section class="section" id="stack">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Stack</span>
+        <h2>One cascaded LiveKit session</h2>
+      </div>
+    </div>
+    <div class="stack" id="models">
+      <span class="chip"><i>vad</i>Silero VAD</span>
+      <span class="chip"><i>stt</i>Deepgram Nova-3</span>
+      <span class="chip"><i>llm</i>GPT-4.1 mini · temperature 0</span>
+      <span class="chip"><i>tts</i>Cartesia Sonic-3</span>
+      <span class="chip"><i>gate</i>Quiet window 0.6 s</span>
     </div>
   </section>
 </main>
 
-<section class="evidence" id="evidence" aria-label="Evidence">
-  <h2 class="section-title">Evidence on this page</h2>
-
-  <article class="ev-card glass ev-scored">
-    <h3><svg class="ic sm"><use href="#i-file"/></svg>Scored run · 4 October 2026 · housing self-correction</h3>
-    <p class="rule">This is the recorded run, kept here so a live failure does not replace it. Exact match with the organizer LLM judge off. It is not an organizer-normalized score. The replay below plays this recording's own trace with its original timestamps; it runs no new inference.</p>
-    <ol class="timeline" id="scored">
-      <li class="Heard"><b><svg class="ic xs"><use href="#i-ear"/></svg>Heard</b><span>One bedroom, then “actually, no. Wait,” then two bedrooms and sixteen hundred.</span></li>
-      <li class="Executed"><b><svg class="ic xs"><use href="#i-zap"/></svg>Executed</b><span>search_apartments · city “my city” · bedrooms 2 · max price 1600</span></li>
-      <li class="Said"><b><svg class="ic xs"><use href="#i-audio"/></svg>Said</b><span>“I found a two-bedroom apartment for rent at 1500 a month in your city. Would you like more details or help with anything else?”</span></li>
-      <li class="Result" id="scored-result"><b><svg class="ic xs"><use href="#i-x-circle"/></svg>Result</b><span>Strict check not passed: the corrected bedrooms and price matched, the city did not (expected “Austin”, got “my city”).</span></li>
-    </ol>
-    <div class="btn-row">
-      <button class="btn primary" id="replay-2" type="button"><svg class="ic sm"><use href="#i-play"/></svg>Replay this recording</button>
-      <small id="replay-meta">housing_11 · room eval-31fcf764 · idle gaps over 2.5 s are shortened</small>
-    </div>
-  </article>
-
-  <article class="ev-card glass ev-figures">
-    <h3><svg class="ic sm"><use href="#i-chart"/></svg>Run figures</h3>
-    <div class="figure-chips">
-      <span class="big"><b>70/100</b> strict</span>
-      <span class="big"><b>100/100</b> turn-take</span>
-      <span class="big"><b>4.452 s</b> average</span>
-      <span>Organizer LLM judge off</span>
-      <span>29 of 100 re-recorded after the Inference credit outage</span>
-    </div>
-    <p class="rule">70/100 strict and 100/100 turn-take from the pinned official evaluator on all 100 FDB-v3 recordings. 4.452 s average response latency excludes early interruptions.</p>
-  </article>
-
-  <article class="ev-card glass ev-gate">
-    <h3><svg class="ic sm"><use href="#i-gate"/></svg>How the gate works</h3>
-    <p class="rule">You speak. The model may plan a tool. The gate holds that call until you have been quiet. If you continue, the call is dropped before it is logged. If you finish, it runs once.</p>
-    <div class="models" id="models">
-      <span><i>stt</i>Deepgram Nova-3</span>
-      <span><i>llm</i>GPT-4.1 mini · temperature 0</span>
-      <span><i>tts</i>Cartesia Sonic-3</span>
-      <span><i>gate</i>Quiet window 0.6 s</span>
-    </div>
-  </article>
-
-  <article class="ev-card glass ev-run">
-    <h3><svg class="ic sm"><use href="#i-terminal"/></svg>Start both workers, then leave them running</h3>
-    <div class="btn-row">
-      <div class="cmd-tabs" role="tablist" aria-label="Shell">
-        <button type="button" role="tab" aria-selected="true" data-shell="bash">bash</button>
-        <button type="button" role="tab" aria-selected="false" data-shell="powershell">PowerShell</button>
-      </div>
-      <small>The voice worker is named interra-benchmark. The camera worker keeps the name interra-camera-troubleshooter; do not set the voice name there.</small>
-    </div>
-    <div class="cmd" data-shell="bash">
-      <pre><span class="c"># voice worker</span>
-INTERRA_FDB_AGENT_NAME=interra-benchmark .venv/bin/python -m agent.fdb_livekit dev
-<span class="c"># camera worker, second terminal</span>
-.venv/bin/python -m agent.extension_livekit dev
-<span class="c"># this page</span>
-.venv/bin/python -m agent.demo_page</pre>
-      <button class="icon-btn sm" type="button" data-copy aria-label="Copy commands"><svg class="ic sm"><use href="#i-copy"/></svg></button>
-    </div>
-    <div class="cmd" data-shell="powershell" hidden>
-      <pre><span class="c"># voice worker</span>
-$env:INTERRA_FDB_AGENT_NAME = "interra-benchmark"
-.\.venv\Scripts\python.exe -m agent.fdb_livekit dev
-<span class="c"># camera worker, second window</span>
-.\.venv\Scripts\python.exe -m agent.extension_livekit dev
-<span class="c"># this page</span>
-.\.venv\Scripts\python.exe -m agent.demo_page</pre>
-      <button class="icon-btn sm" type="button" data-copy aria-label="Copy commands"><svg class="ic sm"><use href="#i-copy"/></svg></button>
-    </div>
-  </article>
-</section>
-
-<footer class="footer">
-  <span class="brandline"><svg class="mark" aria-hidden="true"><use href="#logo-mark"/></svg>interra</span>
-  <span>Samsung PRISM · Theme 05 · interruptible real-time agent</span>
-  <span class="spacer"></span>
-  <span>Local page. Tokens are minted on this machine; no API key reaches the browser.</span>
-</footer>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script type="module" src="/app.js"></script>
+{{footer}}
+<script type="module" src="/static/shell.js"></script>
+<script type="module" src="/static/home.js"></script>
 </body>
 </html>

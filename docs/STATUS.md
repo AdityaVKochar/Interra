@@ -1,3 +1,26 @@
+# Judge pages split and retyped — 2026-10-20
+
+- The single judge page is now six pages served by `python -m agent.demo_page`:
+  Overview (`/`), Voice (`/voice`), Camera (`/camera`), Replay (`/replay`),
+  Logs (`/logs`) and Results (`/results`). They share a head, icon sprite,
+  header and footer from `src/agent/web/partials`, filled in by the server.
+- Type: Geist for the interface, Instrument Serif for titles and figures, and
+  Geist Mono only for timestamps, ids, code and JSON.
+- Logs is its own page: a sidebar of every room in the local trace (newest
+  first, with executed and dropped counts and a live marker) plus the recorded
+  run; two-line rows with pill tags, turn dividers, filters, search, interim
+  toggle, copy and download. Browser-side notes from a session tab reach an
+  open Logs tab through BroadcastChannel and are kept per room in localStorage.
+- Replay has play, pause, speed, a scrubber with event markers, `?t=` deep links,
+  and the evaluator's checks for housing_11 (city expected "Austin", got
+  "my city"; bedrooms and price matched).
+- APIs moved under `/api/`: `token`, `events` (now `since=0` for a whole room and
+  any trace room name for reading), `replay`, `config`, and new `sessions`.
+- Tests: `tests.unit.test_demo_page` covers every page's shell and links, static
+  file containment, the Results table against the README table, the sessions
+  index, and whole-room event streams. 257 tests pass (1 skipped).
+- Not verified: a live LiveKit call from these pages; the workers were not run.
+
 # Judge console redesign — 2026-10-20
 
 - Branch `ui-rework` from `parent-main`. `python -m agent.demo_page` now serves
