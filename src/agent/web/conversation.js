@@ -112,6 +112,19 @@ const OUTCOMES = {
   reused: { chip: "reused", title: "Reused", word: "Reused", icon: "history", now: "Reused", pulse: "reused" },
 };
 
+const SOURCES = { LLM: "language model", TTS: "voice", STT: "speech recognition" };
+
+/** What a worker error means for the person, or null when it fixes itself. */
+export function workerProblem(record) {
+  const text = String(record.error || "");
+  const part = SOURCES[record.source] || "model";
+  if (text.includes("inference_quota_exceeded") || /\b429\b|Too Many Requests/.test(text)) {
+    return "LiveKit Inference credit for the " + part + " is used up on this project, so the agent can hear you but cannot answer.";
+  }
+  if (record.recoverable !== false) return null;
+  return "The agent's " + part + " failed: " + text.slice(0, 140);
+}
+
 function wobble(time, seed) {
   return 0.5 + 0.25 * Math.sin(time * 7.3 + seed * 1.7) + 0.25 * Math.sin(time * 3.1 + seed * 0.9);
 }
@@ -279,9 +292,11 @@ export class Conversation {
       case "camera_frame":
         this.showFrame(record);
         break;
-      case "session_error":
-        if (source !== "replay") this.hint("Worker error: " + (record.error || "unknown"), true);
+      case "session_error": {
+        const message = source === "replay" ? null : workerProblem(record);
+        if (message) this.hint(message, true);
         break;
+      }
       default:
         break;
     }
