@@ -30,8 +30,10 @@ python scripts/fdb_v3.py agent
 ```
 
 Open the judge page after both workers are running. Voice uses the name
-`interra-benchmark`. Camera keeps its own name. The page shows the live gate
-decision beside the scored 4 October 2026 run:
+`interra-benchmark`. Camera keeps its own name. The page shows live captions,
+the worker trace as logs, and the gate decision beside the scored 4 October
+2026 run. Without workers, "Replay scored run" plays that run's recorded trace;
+label it as a replay if it appears in the video:
 
 ```bash
 # voice worker

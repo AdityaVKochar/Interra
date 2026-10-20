@@ -1061,11 +1061,11 @@ function visualState() {
 }
 
 function orbMix(state) {
-  if (state === "speaking") return 0.92;
+  if (state === "speaking") return 1;
   if (state === "thinking") return 0.64;
   if (state === "holding") return 0.42;
-  if (state === "listening") return app.userSpeaking ? 0.1 : 0.3;
-  return app.userSpeaking ? 0.12 : 0.5;
+  if (state === "listening") return app.userSpeaking ? 0.02 : 0.32;
+  return app.userSpeaking ? 0.04 : 0.5;
 }
 
 function drawBars(time, state, input, output) {

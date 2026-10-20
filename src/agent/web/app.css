@@ -530,6 +530,7 @@ body[data-mode="camera"] .seg-thumb { transform: translateX(100%); }
 
 .stage {
   position: relative;
+  container: stage / inline-size;
   display: flex; flex-direction: column; align-items: center;
   gap: 12px;
   min-height: 0;
@@ -585,7 +586,7 @@ body[data-mode="camera"] .seg-thumb { transform: translateX(100%); }
 
 .orb-wrap {
   position: relative;
-  width: min(100cqw, 100cqh, 380px);
+  width: min(100cqw, 100cqh, 420px);
   aspect-ratio: 1;
   display: grid; place-items: center;
 }
@@ -922,6 +923,22 @@ body[data-mode="camera"] .dock-btn.only-camera { display: inline-flex; }
 .call-btn[data-state="idle"]::before { animation: halo 2.6s ease-out infinite; }
 .call-btn[data-state="connecting"]::before { animation: halo 1.2s ease-out infinite; }
 
+/* The dock follows the stage width, not the window: camera mode adds a button. */
+@container stage (max-width: 600px) {
+  body[data-mode="camera"] .dock-btn .lbl { display: none; }
+  .mic-wave { width: 56px; }
+}
+@container stage (max-width: 480px) {
+  .dock-btn .lbl { display: none; }
+}
+@container stage (max-width: 430px) {
+  .dock { gap: 6px; padding: 6px; }
+  .dock-sep { display: none; }
+  .call-btn { min-width: 0; padding: 0 16px; }
+  .mic-wave { display: none; }
+  .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ---------- logs ---------- */
 
 .log-tools { display: flex; flex-direction: column; gap: 9px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
@@ -1098,7 +1115,7 @@ body[data-mode="camera"] .dock-btn.only-camera { display: inline-flex; }
   color: var(--text-2);
 }
 .figure-chips span.big { font-size: 13px; color: var(--text); border-color: var(--line-2); }
-.figure-chips span.big b { background: var(--brand-grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+.figure-chips span.big b { color: var(--text); font-weight: 700; }
 .models { display: flex; flex-wrap: wrap; gap: 6px; }
 .models span {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1201,7 +1218,7 @@ body[data-mode="camera"] .dock-btn.only-camera { display: inline-flex; }
 
 @media (max-width: 1180px) {
   .shell {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: auto minmax(420px, 62vh);
     height: auto;
     min-height: 0;
@@ -1221,7 +1238,10 @@ body[data-mode="camera"] .dock-btn.only-camera { display: inline-flex; }
   .topbar { height: auto; padding-top: 10px; row-gap: 10px; }
   .crumb, .conn span { display: none; }
   .segmented button { padding: 7px 10px; font-size: 12px; }
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto; padding: 12px; gap: 12px; }
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; padding: 12px; gap: 12px; }
+  .segmented { display: grid; grid-auto-columns: minmax(0, 1fr); }
+  .segmented button { min-width: 0; }
+  .segmented .long { display: none; }
   .stage { grid-column: 1; grid-row: auto; padding: 14px 12px; }
   .orb-zone { height: min(40vh, 320px); }
   .mobile-tabs {

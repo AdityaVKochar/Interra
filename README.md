@@ -291,6 +291,15 @@ scored 4 October 2026 run on one screen:
 python -m agent.demo_page
 ```
 
+Open `http://127.0.0.1:8780/`. The page shows live captions from the agent's
+LiveKit transcription, the worker trace as filterable logs (`.jsonl`
+download), and the gate's latest decision, including a call held during the
+quiet window before it runs or is dropped. "Replay scored run" plays the
+recorded housing_11 trace with its original timestamps and shows the pinned
+evaluator's result for it, which was not a pass. The replay needs no LiveKit
+room. The page lives in `src/agent/web/`; `--port` and `--host` change where
+it listens.
+
 ## Tests
 
 ```bash

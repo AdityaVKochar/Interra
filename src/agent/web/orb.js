@@ -91,7 +91,7 @@ void main() {
   float f = fbm(p * 0.9 + 1.5 * q + vec2(uFlow * 0.07, -uFlow * 0.05));
   float ribbon = 0.5 + 0.5 * sin(5.5 * f + 2.2 * q.y + uFlow * 0.55);
 
-  float m = clamp(uMix + (q.x - 0.5) * 0.85, 0.0, 1.0);
+  float m = clamp(uMix + (q.x - 0.5) * 1.9, 0.0, 1.0);
   vec3 warm = mix(uW1, uW2, smoothstep(0.25, 0.85, f));
   vec3 cool = mix(uC2, uC1, smoothstep(0.25, 0.85, f));
   vec3 col = mix(warm, cool, smoothstep(0.12, 0.88, m));
