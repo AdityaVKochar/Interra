@@ -1,3 +1,21 @@
+# Judge pages restyled after LiveKit Agents UI — 2026-10-20
+
+- Near-black surfaces, a hairline square grid and one cyan accent (`#1fd5f9`)
+  replace the orange-to-violet gradient, aurora backdrop, sunrise arc and grain.
+  White is the person and cyan is the agent. Public Sans (light weight for
+  titles) replaces DM Sans and DM Serif Display; DM Mono stays for data.
+- `orb.js` is now a 2D-canvas visualizer with five styles, after LiveKit's
+  Agents UI: aura, wave, radial, grid and bars. It keeps the old interface
+  (`set`, `render`, `radius`, `light`), so the pages that drive it did not
+  change. A row of tiles under it switches style and remembers the choice per
+  browser; the Overview cycles through the styles until one is picked.
+- The visualizer canvas overhangs its box and could cover the picker on Replay;
+  it no longer takes clicks.
+- New mark: a lowercase i with a cyan ring, in the header, footer and favicon.
+- Tests: `tests.unit.test_demo_page` passes. Checked in a browser at desktop
+  width on Overview, Voice, Camera and Replay; not checked with a live LiveKit
+  call.
+
 # Judge pages split and retyped — 2026-10-20
 
 - The single judge page is now six pages served by `python -m agent.demo_page`:

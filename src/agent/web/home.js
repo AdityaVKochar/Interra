@@ -1,7 +1,7 @@
 // Overview: the hero orb walks through the states a session goes through.
 // It is an illustration, not a session; the label says which state it shows.
 
-import { Orb } from "./orb.js";
+import { Orb, mountStylePicker } from "./orb.js";
 import { $, reduceMotion, renderModels } from "./shell.js";
 
 const STATES = [
@@ -20,6 +20,8 @@ orb.radius = 0.6;
 orb.light = document.documentElement.dataset.theme === "light" ? 1 : 0;
 if (!orb.ok) wrap.classList.add("no-webgl");
 window.addEventListener("interra:theme", (event) => { orb.light = event.detail === "light" ? 1 : 0; });
+// The overview steps through the visualizer styles until someone picks one.
+mountStylePicker($("viz-picker"), orb, { cycle: !reduceMotion });
 
 let index = 0;
 let since = performance.now();

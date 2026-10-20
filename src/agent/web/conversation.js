@@ -2,7 +2,7 @@
 // transcript, driven by worker trace records. Live sessions and the recorded
 // replay feed it the same records; neither invents one.
 
-import { Orb } from "./orb.js";
+import { Orb, mountStylePicker } from "./orb.js";
 import { $, clamp, fmtClock, fmtNumber, fmtShort, h, nowSeconds, reduceMotion, restartAnimation, svgIcon } from "./shell.js";
 import { callBlock, callDuration, callKey, callText, resultSummary } from "./trace.js";
 import { TranscriptView } from "./transcript.js";
@@ -154,6 +154,7 @@ export class Conversation {
     this.orb = new Orb(this.el.orbCanvas, { reduceMotion });
     this.orb.radius = mode === "camera" ? 0.6 : 0.56;
     if (!this.orb.ok) this.el.orbWrap.classList.add("no-webgl");
+    mountStylePicker($("viz-picker"), this.orb);
     this.bars = [];
     for (let i = 0; i < BAR_COUNT; i++) {
       const bar = document.createElement("i");
@@ -547,7 +548,7 @@ export class Conversation {
 
   readPalette() {
     const style = getComputedStyle(document.documentElement);
-    this.palette = { warm: style.getPropertyValue("--warm").trim() || "#ff7a1a", muted: style.getPropertyValue("--text-3").trim() || "#666" };
+    this.palette = { warm: style.getPropertyValue("--warm").trim() || "#ededed", muted: style.getPropertyValue("--text-3").trim() || "#666" };
     this.micDrawnEmpty = false;
   }
 
